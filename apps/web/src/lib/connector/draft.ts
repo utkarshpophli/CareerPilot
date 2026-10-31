@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createApplicationFromDocuments, type ApplicationDetails } from "@/lib/application-create";
 import type { Extracted } from "@/lib/application-data";
 import { readPostingJob } from "@/lib/jobs/read-posting";
+import { checkPosting } from "@/lib/posting-check";
 import { defineJob } from "@/lib/jobs/runner";
 import { writeDocumentsJob } from "@/lib/jobs/write-documents";
 import { loadSettings } from "@/lib/settings-data";
@@ -38,7 +39,8 @@ export const connectorDraftJob = defineJob({
     postingId: z.string().nullable(),
   }),
   result: z.object({ applicationId: z.string().min(1) }),
-  async run({ posting, postingUrl, note, postingId }, context) {
+  async run({ posting: raw, postingUrl, note, postingId }, context) {
+    const posting = await checkPosting(raw, "connector");
     const reading = await readPostingJob.run({ posting }, context);
     const settings = await loadSettings();
     const documents = await writeDocumentsJob.run(

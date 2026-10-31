@@ -11,12 +11,13 @@ import { readPostingJob } from "@/lib/jobs/read-posting";
 import { startJob } from "@/lib/jobs/runner";
 import { writeDocumentsJob } from "@/lib/jobs/write-documents";
 import { fetchPosting } from "@/lib/posting-fetch";
+import { checkPosting } from "@/lib/posting-check";
 import { prisma } from "@/lib/prisma";
 
 /** "Read the posting →": starts reading it in the background and returns the job's id (E7-2). */
 export const startReadingPosting = action(
   z.object({ posting: z.string().trim().min(1, "Paste a job posting first.").max(100_000) }),
-  ({ posting }) => startJob(readPostingJob, { posting }),
+  async ({ posting }) => startJob(readPostingJob, { posting: await checkPosting(posting, "paste") }),
 );
 
 /**

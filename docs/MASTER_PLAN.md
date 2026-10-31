@@ -181,3 +181,23 @@ Starting points already identified in the research:
 5. Name: keep "CareerPilot"?
 
 Until these are answered the plan assumes the recommended answers: Path B, single-user with seams, TypeScript/Next/PostgreSQL, name CareerPilot.
+
+## 12. Build status
+
+Updated 2026-11-01. "Done" means merged on the working branch with passing tests (about 1,880 unit and database tests, lint and typecheck clean).
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0. Foundation | Done | Layout (`apps/web`, `upstream/`), AGPL licence, notices, CI, ADR 0001. Workspace root deferred to the first shared package. |
+| 1. Skeleton | Partly | Dossier base runs on Node 24 and PostgreSQL with all baseline tests green. Still to do: `owner_id` and `Principal` seams, separate worker process. |
+| 2. Ledger and Activity | Done (first version) | `ActivityEvent` table; writers for application creation, status changes and undo, document versions, job queued and finished, MCP tool calls, scheduled and manual agent scans, posting checks; Activity page with filters and paging. Not yet: live progress streaming, cost per event, data export/import of events. |
+| 3. Safety core | Started | Posting guard ported from ai-job-search with a golden-corpus parity test against the Python original, wired into pasted, agent and connector postings. Not yet: SSRF guard unification, identity and dedup service, outbound privacy guard, merged fact gate. |
+| 4. Discovery and scoring | Not started | |
+| 5. Documents | Not started | Templates are already recorded per document; Insights groups by them. |
+| 6. Agent surfaces | Partly | MCP connector exists and is now attributed in the ledger (`docs/AGENTS.md`). Not yet: REST v1, CLI, scoped API tokens, exported skills. |
+| 7. Lifecycle | Not started | Gmail and Calendar come with the dossier base. |
+| 8. Insights | Done (first version) | Applications by platform and resume template, resume revisions, weekly activity, reply rates. |
+| 9. Importers | Not started | |
+| 10. Hardening | Not started | |
+
+Privacy changes already made: the usage ping no longer points at the original dossier server and stays off unless an operator sets `CAREERPILOT_USAGE_PING_HOST`. The update check still asks GitHub about releases of this repository once a day on production servers; making it opt-in is on the Phase 10 list.

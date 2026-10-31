@@ -11,6 +11,7 @@ import type { Extracted } from "@/lib/application-data";
 import { fullText } from "@/lib/job-search/find";
 import { postingText, type FoundPosting } from "@/lib/job-search/search";
 import { readPostingJob } from "@/lib/jobs/read-posting";
+import { checkPosting } from "@/lib/posting-check";
 import { cancelJob, defineJob, findUnfinishedJobs, type JobContext } from "@/lib/jobs/runner";
 import { writeDocumentsJob } from "@/lib/jobs/write-documents";
 import { logServerError } from "@/lib/log";
@@ -79,7 +80,7 @@ export async function draftCandidate(candidateId: string, context: JobContext): 
     // The source may have given only a snippet; the whole text writes a better draft.
     const description = (await fullText(found)) ?? candidate.description;
     if (!description.trim()) throw new ActionError("That posting has no text to write from. Open it and start an application by hand.");
-    const posting = postingText({ ...found, description });
+    const posting = await checkPosting(postingText({ ...found, description }), "agent");
 
     await context.step(`Reading the posting from ${name}`);
     const reading = await readPostingJob.run({ posting }, context);

@@ -20,6 +20,7 @@ export const ACTIONS = {
   jobFinished: "job.finished",
   mcpToolCalled: "mcp.tool_called",
   agentScanFinished: "agent.scan_finished",
+  postingChecked: "posting.checked",
 } as const;
 export type ActivityAction = (typeof ACTIONS)[keyof typeof ACTIONS];
 
