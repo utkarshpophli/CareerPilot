@@ -159,7 +159,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
               What an app reads through the connector goes to whoever runs it. For Claude, that&apos;s Anthropic, with your Claude account, as anything in a chat:
               your profile without its contact details, the postings and applications it works on, and your searches. Private notes and the letter&apos;s sender
               and signature stay out.{" "}
-              <a href="https://github.com/AienTech/dossier/wiki/Connecting-Claude" target="_blank" rel="noopener noreferrer" className={LINK}>
+              <a href="https://github.com/utkarshpophli/CareerPilot/wiki/Connecting-Claude" target="_blank" rel="noopener noreferrer" className={LINK}>
                 Connecting Claude
               </a>{" "}
               has the details.
