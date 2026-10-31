@@ -27,7 +27,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("UpdateNotice", () => {
   it("says a newer release is out, with what's new and how to update", () => {
     renderNotice();
-    const notice = screen.getByRole("region", { name: "Dossier 1.6.0 is out" });
+    const notice = screen.getByRole("region", { name: "CareerPilot 1.6.0 is out" });
     expect(notice).toHaveTextContent("You have 1.5.0. Update to get its fixes and features.");
     expect(screen.getByRole("link", { name: "What's new (opens in a new tab)" })).toHaveAttribute("href", release.url);
     expect(screen.getByRole("link", { name: "How to update (opens in a new tab)" })).toHaveAttribute("href", "https://github.com/utkarshpophli/CareerPilot/wiki/Upgrading");
@@ -48,20 +48,20 @@ describe("UpdateNotice", () => {
     renderNotice();
     await user.click(screen.getByRole("button", { name: "Not now" }));
     expect(toast).toHaveBeenCalledWith("You seem to be offline.");
-    expect(screen.getByRole("region", { name: "Dossier 1.6.0 is out" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "CareerPilot 1.6.0 is out" })).toBeInTheDocument();
   });
 
   it("is an icon with a dot in the collapsed sidebar, which opens it on the notice", async () => {
     const user = userEvent.setup();
     render(
-      <SidebarFrame initialCollapsed brand={<span>Dossier</span>}>
+      <SidebarFrame initialCollapsed brand={<span>CareerPilot</span>}>
         <UpdateNotice release={release} currentVersion="1.5.0" />
       </SidebarFrame>,
     );
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Dossier 1.6.0 is out" }));
+    await user.click(screen.getByRole("button", { name: "CareerPilot 1.6.0 is out" }));
     expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Dossier 1.6.0 is out" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "CareerPilot 1.6.0 is out" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "What's new (opens in a new tab)" })).toHaveFocus();
     expect(document.cookie).toContain("dossier_sidebar=expanded");
     document.cookie = "dossier_sidebar=; max-age=0; path=/";

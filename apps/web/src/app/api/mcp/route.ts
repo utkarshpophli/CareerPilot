@@ -9,11 +9,11 @@ import { ACTIONS, recordActivitySafe, runAsActor } from "@/lib/ledger";
 import { logServerError } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
 
-// The Claude connector (#221): Dossier as a remote MCP server (Streamable
+// The Claude connector (#221): CareerPilot as a remote MCP server (Streamable
 // HTTP) at /api/mcp, for Claude's custom connectors. Each request gets a
 // server of its own, without an MCP session, for the 2025 protocol Claude
 // speaks today and the 2026-07-28 one. It answers 404 while the connector is
-// off in Settings, and needs an access token from Dossier's own sign-in
+// off in Settings, and needs an access token from CareerPilot's own sign-in
 // (src/lib/connector/oauth.ts); the proxy lets it through without a session.
 
 // The address links in answers point to comes along with the token's details.
@@ -24,7 +24,7 @@ const handler = createMcpHandler(({ authInfo }) => createDossierServer(typeof au
 /** "Sign in first", with where Claude finds out how (RFC 9728). */
 function unauthorized(origin: string): Response {
   return Response.json(
-    { error: "invalid_token", error_description: "Connect Claude to Dossier first." },
+    { error: "invalid_token", error_description: "Connect Claude to CareerPilot first." },
     { status: 401, headers: { "www-authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/api/mcp", scope="${SCOPE}"` } },
   );
 }
@@ -48,7 +48,7 @@ async function handle(request: Request): Promise<Response> {
     });
   } catch (error) {
     logServerError(`MCP connector ${mcpUrl(origin)}`, error);
-    return Response.json({ jsonrpc: "2.0", error: { code: -32603, message: "Dossier couldn't answer that." }, id: null }, { status: 500 });
+    return Response.json({ jsonrpc: "2.0", error: { code: -32603, message: "CareerPilot couldn't answer that." }, id: null }, { status: 500 });
   }
 }
 

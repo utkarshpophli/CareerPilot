@@ -68,7 +68,7 @@ const SITES: Record<string, Record<string, string>> = {
   },
   "harbourlight.example": { "/careers": "<p>Write to careers@harbourlight.example</p>" },
   "quietco.example": { "/careers": "<p>We do not accept unsolicited applications.</p><p>hello@quietco.example</p>" },
-  "tulipworks.example": { "/robots.txt": "User-agent: Dossier\nDisallow: /", "/careers": "<p>jobs@tulipworks.example</p>" },
+  "tulipworks.example": { "/robots.txt": "User-agent: CareerPilot\nDisallow: /", "/careers": "<p>jobs@tulipworks.example</p>" },
 };
 /** The startups' pages the app asked for, with its user agent, so a spec can check it was polite. */
 const siteRequests: { url: string; userAgent: string }[] = [];

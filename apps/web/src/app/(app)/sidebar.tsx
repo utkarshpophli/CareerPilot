@@ -48,8 +48,8 @@ export function Sidebar({
         <>
           <BrandMark />
           <div className="flex min-w-0 flex-col group-data-collapsed/sidebar:hidden">
-            <span className="font-serif text-2xl leading-none font-medium tracking-[-0.01em]">Dossier</span>
-            <span className="truncate text-xs text-muted">Your job search, on your server</span>
+            <span className="font-serif text-2xl leading-none font-medium tracking-[-0.01em]">CareerPilot</span>
+            <span className="truncate text-xs text-muted">Your job search, in one place</span>
           </div>
         </>
       }

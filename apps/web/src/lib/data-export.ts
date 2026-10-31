@@ -30,7 +30,7 @@ import { decryptApiKey } from "@/lib/ai/api-key";
 import { decryptSecret, JOB_SOURCE_KEY } from "@/lib/secrets";
 import { appVersion } from "@/lib/version";
 
-// Everything a user keeps in Dossier as one JSON file (E10-4, SET-10): the
+// Everything a user keeps in CareerPilot as one JSON file (E10-4, SET-10): the
 // profile, custom themes, settings and applications with their history,
 // documents, chat and notes, the postings kept from Find jobs (E14-9) and
 // the job agent's candidates (E16), so its dedupe survives a restore, and

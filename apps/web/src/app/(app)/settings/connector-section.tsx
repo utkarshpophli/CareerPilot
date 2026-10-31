@@ -16,7 +16,7 @@ import { SettingsSectionIntro } from "./settings-screen";
 const LINK = "font-medium text-ink underline underline-offset-2";
 
 /**
- * Settings → MCP connector (#221, #281): Dossier as a connector for Claude
+ * Settings → MCP connector (#221, #281): CareerPilot as a connector for Claude
  * and other MCP apps, off until it's turned on here. Then it shows the
  * address to add in an app, Claude's steps, the other apps allowed to sign
  * in, and Disconnect all apps, which signs every one of them out.
@@ -54,7 +54,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
   return (
     <>
       <SettingsSectionIntro title="MCP connector">
-        Use Dossier from AI apps that speak MCP: Claude, in chats on claude.ai, in the Desktop and mobile apps and in its command-line app, or another app such as
+        Use CareerPilot from AI apps that speak MCP: Claude, in chats on claude.ai, in the Desktop and mobile apps and in its command-line app, or another app such as
         n8n. They can search for jobs, read your profile and applications, and save the applications and fit scores they write. They never send or delete anything.
       </SettingsSectionIntro>
 
@@ -63,7 +63,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
           label="Let apps connect"
           description={
             on
-              ? "On. Apps connect at the address below, once you've signed in to Dossier and allowed them."
+              ? "On. Apps connect at the address below, once you've signed in to CareerPilot and allowed them."
               : "Off. The connector's addresses aren't open on this server."
           }
           checked={on}
@@ -91,10 +91,10 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
                 Open <strong>Settings → Connectors</strong> and choose <strong>Add custom connector</strong>.
               </li>
               <li>
-                Name it <strong>Dossier</strong>, paste the address and press <strong>Add</strong>, then <strong>Connect</strong>.
+                Name it <strong>CareerPilot</strong>, paste the address and press <strong>Add</strong>, then <strong>Connect</strong>.
               </li>
               <li>
-                Claude opens Dossier: sign in if it asks, check what Claude may do, and press <strong>Allow</strong>.
+                Claude opens CareerPilot: sign in if it asks, check what Claude may do, and press <strong>Allow</strong>.
               </li>
             </ol>
             <p className="text-meta text-muted">
@@ -104,9 +104,9 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
             {!publicHttps && (
               <p role="note" className="rounded-card bg-warning-surface px-4 py-3 text-meta text-warning">
                 {local ? "This is a local address. " : "This address isn't HTTPS. "}
-                Claude on the web, Desktop and mobile, and apps in the cloud such as n8n Cloud, reach Dossier from their own servers, so they need a public HTTPS
-                address (set <code className="font-mono text-label">DOSSIER_PUBLIC_URL</code> if Dossier is reached at another one). Claude&apos;s command-line
-                app on the computer Dossier runs on can use this one.
+                Claude on the web, Desktop and mobile, and apps in the cloud such as n8n Cloud, reach CareerPilot from their own servers, so they need a public HTTPS
+                address (set <code className="font-mono text-label">DOSSIER_PUBLIC_URL</code> if CareerPilot is reached at another one). Claude&apos;s command-line
+                app on the computer CareerPilot runs on can use this one.
               </p>
             )}
           </Card>
@@ -115,8 +115,8 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
             <div className="flex flex-col gap-1.5">
               <h3 className="text-control font-medium">Other apps</h3>
               <p className="text-sm text-pretty text-muted">
-                After you allow an app, Dossier sends you back to the app&apos;s own address. Claude&apos;s are known; for any other app, add its address here
-                exactly as the app shows it (n8n calls it the OAuth Redirect URL). Whoever uses an app you add can read and change your Dossier through it.
+                After you allow an app, CareerPilot sends you back to the app&apos;s own address. Claude&apos;s are known; for any other app, add its address here
+                exactly as the app shows it (n8n calls it the OAuth Redirect URL). Whoever uses an app you add can read and change your CareerPilot through it.
               </p>
             </div>
             {redirects.length > 0 && (
@@ -165,7 +165,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
               has the details.
             </p>
             <p className="text-muted">
-              Without an AI model of Dossier&apos;s own, New application and Score in Find jobs hand the work to a new Claude chat, which saves it here through the
+              Without an AI model of CareerPilot&apos;s own, New application and Score in Find jobs hand the work to a new Claude chat, which saves it here through the
               connector.
             </p>
             <div>
