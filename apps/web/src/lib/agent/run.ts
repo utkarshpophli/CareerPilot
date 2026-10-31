@@ -3,7 +3,8 @@ import "server-only";
 import { z } from "zod";
 
 import { Prisma } from "@/generated/prisma/client";
-import { AgentCandidateStatus } from "@/generated/prisma/enums";
+import { ActivityActor, AgentCandidateStatus } from "@/generated/prisma/enums";
+import { ACTIONS, recordActivitySafe } from "@/lib/ledger";
 import { AiError } from "@/lib/ai/errors";
 import { searchPostings } from "@/lib/job-search";
 import { credentialsFor, loadJobSearchConfig, requestContext } from "@/lib/job-search/config";
@@ -107,6 +108,14 @@ export async function runAgentScan({ manual }: { manual: boolean }, context: Job
   const run = await recordRunStart(now, manual);
   const finish = async (result: AgentScanResult) => {
     await recordRunEnd(run, result.message);
+    // A click on "Run now" is the user's; the daily run is the schedule's.
+    await recordActivitySafe(prisma, {
+      action: ACTIONS.agentScanFinished,
+      summary: `Job agent scan: ${result.message}`,
+      targetType: "agent",
+      actor: manual ? { kind: ActivityActor.USER } : { kind: ActivityActor.SCHEDULER },
+      data: { manual },
+    });
     return result;
   };
 

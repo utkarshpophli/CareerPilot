@@ -18,6 +18,8 @@ export const ACTIONS = {
   documentVersionSaved: "document.version_saved",
   jobQueued: "job.queued",
   jobFinished: "job.finished",
+  mcpToolCalled: "mcp.tool_called",
+  agentScanFinished: "agent.scan_finished",
 } as const;
 export type ActivityAction = (typeof ACTIONS)[keyof typeof ACTIONS];
 

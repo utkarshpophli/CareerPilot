@@ -15,9 +15,14 @@ import { appVersion } from "@/lib/version";
 // question shown after sign-in or in Settings → About, or with
 // DOSSIER_TELEMETRY=on. DOSSIER_TELEMETRY wins while it's set. The receiving
 // end runs on the project's own server and isn't published with the app.
+//
+// CareerPilot has no receiver of its own, so the ping is off and the question
+// is never asked unless the operator names a receiver with
+// CAREERPILOT_USAGE_PING_HOST (a host name, for example one they run).
 
-export const USAGE_PING_HOST = "telemetry.dossier.aien.me";
-export const USAGE_PING_URL = `https://${USAGE_PING_HOST}/ping`;
+/** The host the ping goes to; empty (the default) means there is none, so nothing is sent or asked. */
+export const usagePingHost = () => process.env.CAREERPILOT_USAGE_PING_HOST?.trim() ?? "";
+export const usagePingUrl = () => `https://${usagePingHost()}/ping`;
 
 /** The UTC day this process last checked for, so later page loads that day skip the database. */
 const globalForPing = globalThis as unknown as { usagePingDay?: string };
@@ -30,8 +35,8 @@ const globalForPing = globalThis as unknown as { usagePingDay?: string };
 export const USAGE_PING_TEXT_VERSION = 1;
 
 /** Logged once at startup while the ping is on. */
-export const USAGE_PING_NOTICE =
-  `Usage ping: on each day Dossier is used, it sends ${USAGE_PING_HOST} a random install ID and its version number, once, ` +
+export const usagePingOnNotice = () =>
+  `Usage ping: on each day CareerPilot is used, it sends ${usagePingHost()} a random install ID and its version number, once, ` +
   "to count the installs in use. Nothing else is sent. Turn it off in Settings → About, or set DOSSIER_TELEMETRY=off.";
 
 /** Logged once at startup while nobody has answered yet. */
@@ -54,7 +59,7 @@ export function usagePingChoice(
 }
 
 /** Only production servers ever send it or ask; development servers and tests never do. */
-const sendsFromHere = () => process.env.NODE_ENV === "production";
+const sendsFromHere = () => process.env.NODE_ENV === "production" && usagePingHost() !== "";
 
 /** Whether this server sends the ping: in production, after a yes. */
 export function usagePingEnabled(settings: Pick<SettingsData, "usagePingChoice" | "usagePingChoiceText">): boolean {
@@ -95,7 +100,7 @@ export async function recordEnvChoice(fromEnv: "on" | "off" | undefined = env.DO
 
 /** The startup log line: what the ping sends while it's on, how to answer while nobody has; nothing otherwise. */
 export function usagePingNotice(settings: Pick<SettingsData, "usagePingChoice" | "usagePingChoiceText">): string | null {
-  if (usagePingEnabled(settings)) return USAGE_PING_NOTICE;
+  if (usagePingEnabled(settings)) return usagePingOnNotice();
   if (askForUsagePing(settings)) return USAGE_PING_QUESTION_NOTICE;
   return null;
 }
@@ -130,7 +135,7 @@ export async function pingIfNewDay({ now = new Date(), production = sendsFromHer
 }
 
 /** One request with the ID and the version; false if it doesn't arrive. Never throws. */
-export async function sendPing(id: string, fetchImpl: typeof fetch = fetch, url = env.DOSSIER_USAGE_PING_TEST_URL ?? USAGE_PING_URL): Promise<boolean> {
+export async function sendPing(id: string, fetchImpl: typeof fetch = fetch, url = env.DOSSIER_USAGE_PING_TEST_URL ?? usagePingUrl()): Promise<boolean> {
   try {
     const response = await fetchImpl(url, {
       method: "POST",

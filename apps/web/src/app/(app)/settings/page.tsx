@@ -22,7 +22,7 @@ import { scoringProblem } from "@/lib/scoring";
 import { loadScoringConfig, scoringView } from "@/lib/scoring/config";
 import { loadSettings } from "@/lib/settings-data";
 import { availableUpdate } from "@/lib/update-check";
-import { USAGE_PING_HOST, usagePingChoice } from "@/lib/usage-ping";
+import { usagePingChoice, usagePingHost } from "@/lib/usage-ping";
 
 import { AgentSection } from "./agent-section";
 import { AiBehaviour } from "./ai-behaviour";
@@ -229,5 +229,5 @@ async function aboutFacts(): Promise<AboutFacts> {
 /** The usage ping's switch in About (#172): the answer in effect, who gave it, and the install ID. */
 async function usagePingView(): Promise<UsagePingView> {
   const settings = await loadSettings();
-  return { host: USAGE_PING_HOST, ...usagePingChoice(settings), id: settings.usagePingId, production: process.env.NODE_ENV === "production" };
+  return { host: usagePingHost(), ...usagePingChoice(settings), id: settings.usagePingId, production: process.env.NODE_ENV === "production" && usagePingHost() !== "" };
 }

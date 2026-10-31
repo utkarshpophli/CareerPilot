@@ -1,9 +1,13 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
 
-import { connectorSince, mcpUrl, SCOPE, verifyAccessToken } from "@/lib/connector/oauth";
+import { ActivityActor } from "@/generated/prisma/enums";
+import { connectorSince, mcpUrl, readClient, SCOPE, verifyAccessToken } from "@/lib/connector/oauth";
+import { toolCallsIn } from "@/lib/connector/tool-calls";
 import { createDossierServer } from "@/lib/connector/tools";
 import { publicOrigin } from "@/lib/google/origin";
+import { ACTIONS, recordActivitySafe, runAsActor } from "@/lib/ledger";
 import { logServerError } from "@/lib/log";
+import { prisma } from "@/lib/prisma";
 
 // The Claude connector (#221): Dossier as a remote MCP server (Streamable
 // HTTP) at /api/mcp, for Claude's custom connectors. Each request gets a
@@ -31,8 +35,17 @@ async function handle(request: Request): Promise<Response> {
   const token = /^Bearer\s+(\S.*)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   const access = await verifyAccessToken(token);
   if (!access) return unauthorized(origin);
+  const name = (await readClient(access.clientId))?.name ?? "Claude";
+  const actor = { kind: ActivityActor.MCP, name };
   try {
-    return await handler.fetch(request, { authInfo: { token: token!, clientId: access.clientId, scopes: [SCOPE], extra: { origin } } });
+    // Everything this request does is recorded as done by that client (Activity Ledger).
+    return await runAsActor(actor, async () => {
+      if (request.method === "POST") {
+        const tools = toolCallsIn(await request.clone().json().catch(() => null));
+        for (const tool of tools) await recordActivitySafe(prisma, { action: ACTIONS.mcpToolCalled, summary: `${name} used ${tool}`, targetType: "tool", data: { tool } });
+      }
+      return handler.fetch(request, { authInfo: { token: token!, clientId: access.clientId, scopes: [SCOPE], extra: { origin } } });
+    });
   } catch (error) {
     logServerError(`MCP connector ${mcpUrl(origin)}`, error);
     return Response.json({ jsonrpc: "2.0", error: { code: -32603, message: "Dossier couldn't answer that." }, id: null }, { status: 500 });

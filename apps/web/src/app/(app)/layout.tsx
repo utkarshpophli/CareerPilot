@@ -9,7 +9,7 @@ import { loadSettings } from "@/lib/settings-data";
 import { COLOR_SCHEME_COOKIE, parseColorScheme, parseSidebarCollapsed, SIDEBAR_COOKIE } from "@/lib/ui-preferences";
 import { rememberBrowserTimeZone, userTimeZone } from "@/lib/time-zone";
 import { checkForUpdatesDaily, updateNotice } from "@/lib/update-check";
-import { askForUsagePing, notePageLoad, USAGE_PING_HOST } from "@/lib/usage-ping";
+import { askForUsagePing, notePageLoad, usagePingHost } from "@/lib/usage-ping";
 import { appVersion } from "@/lib/version";
 
 import { Sidebar } from "./sidebar";
@@ -64,7 +64,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </main>
       </div>
       {/* Asked once, until answered (#172); nothing is sent before a yes. */}
-      {askForUsagePing(settings) && <UsagePingDialog host={USAGE_PING_HOST} />}
+      {askForUsagePing(settings) && <UsagePingDialog host={usagePingHost()} />}
     </div>
   );
 }

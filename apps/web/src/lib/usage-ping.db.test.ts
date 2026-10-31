@@ -10,10 +10,10 @@ import {
   recordEnvChoice,
   saveUsagePingChoice,
   sendPing,
-  USAGE_PING_NOTICE,
+  usagePingOnNotice,
   USAGE_PING_QUESTION_NOTICE,
   USAGE_PING_TEXT_VERSION,
-  USAGE_PING_URL,
+  usagePingUrl,
   usagePingChoice,
   usagePingEnabled,
   usagePingNotice,
@@ -57,6 +57,7 @@ beforeEach(async () => {
   telemetry.value = undefined;
   telemetry.testUrl = undefined;
   vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("CAREERPILOT_USAGE_PING_HOST", "telemetry.example.test");
   await resetDatabase(prisma());
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -94,11 +95,18 @@ describe("whether the usage ping goes (#172)", () => {
     }
   });
 
+  it("never sends or asks without a receiver named, even in production", () => {
+    vi.stubEnv("CAREERPILOT_USAGE_PING_HOST", "");
+    expect(usagePingEnabled(answered("on"))).toBe(false);
+    expect(askForUsagePing(unanswered)).toBe(false);
+    expect(usagePingNotice(answered("on"))).toBeNull();
+  });
+
   it("logs what it sends while it's on, how to answer while nobody has, and nothing once it's off", () => {
-    expect(usagePingNotice(answered("on"))).toBe(USAGE_PING_NOTICE);
+    expect(usagePingNotice(answered("on"))).toBe(usagePingOnNotice());
     expect(usagePingNotice(unanswered)).toBe(USAGE_PING_QUESTION_NOTICE);
     expect(usagePingNotice(answered("off"))).toBeNull();
-    expect(USAGE_PING_NOTICE).not.toMatch(/Cloudflare/);
+    expect(usagePingOnNotice()).not.toMatch(/Cloudflare/);
   });
 });
 
@@ -185,7 +193,7 @@ describe("the usage ping", () => {
     const { usagePingId, usagePingDay } = await loadSettings();
     expect(usagePingId).toMatch(UUID);
     expect(usagePingDay).toBe("2026-10-16");
-    expect(sent(fetchImpl)).toEqual([{ url: USAGE_PING_URL, method: "POST", body: { id: usagePingId, version: appVersion } }]);
+    expect(sent(fetchImpl)).toEqual([{ url: usagePingUrl(), method: "POST", body: { id: usagePingId, version: appVersion } }]);
   });
 
   it("goes once a day, even across a restart, and the next day with the same ID", async () => {

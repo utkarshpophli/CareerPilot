@@ -1,6 +1,7 @@
 import "server-only";
 
-import { AgentCandidateStatus } from "@/generated/prisma/enums";
+import { ActivityActor, AgentCandidateStatus } from "@/generated/prisma/enums";
+import { runAsActor } from "@/lib/ledger";
 import { addDays, dayOf } from "@/lib/calendar-view";
 import { zonedTime } from "@/lib/google/slots";
 import { findUnfinishedJobs, startJob } from "@/lib/jobs/runner";
@@ -51,7 +52,7 @@ export async function startDueRun(now = new Date()): Promise<string | null> {
   if (!settings.agentEnabled) return null;
   if (!scheduledRunDue(now, settings.agentHour, await lastKnownTimeZone(), settings.agentRuns)) return null;
   if ((await findUnfinishedJobs(AGENT_JOB_KEY)).length > 0) return null;
-  return startJob(agentScanJob, { manual: false }, { key: AGENT_JOB_KEY });
+  return runAsActor({ kind: ActivityActor.SCHEDULER }, () => startJob(agentScanJob, { manual: false }, { key: AGENT_JOB_KEY }));
 }
 
 /** After a restart, a candidate left DRAFTING has no job to finish it. */
