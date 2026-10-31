@@ -1,0 +1,11 @@
+{
+  "name": "@careerpilot/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "pilot: a command-line client for CareerPilot's REST API. No dependencies.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": { "pilot": "./pilot.mjs" },
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" }
+}

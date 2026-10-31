@@ -8,6 +8,9 @@ import { PRINT_TOKEN_HEADER, verifyPrintToken } from "@/lib/pdf/print-token";
 /** The Claude connector's endpoint, its sign-in and the metadata that points to them. */
 const CONNECTOR_PATHS = /^\/(?:api\/(?:mcp|oauth)(?:\/|$)|\.well-known\/oauth-(?:authorization-server|protected-resource)(?:\/|$))/;
 
+/** The REST API: its routes check the bearer token themselves (src/lib/api-v1.ts). */
+const API_PATHS = /^\/api\/v1(?:\/|$)/;
+
 /**
  * Sends signed-out visitors to /login before a page renders (PRD AUTH-1),
  * and gives every page its Content-Security-Policy (E11-5). The sign-in check
@@ -21,6 +24,8 @@ export async function proxy(request: NextRequest) {
   // The Claude connector (#221) brings its own credentials, an OAuth token,
   // which its routes check; they answer 404 while it's off.
   if (CONNECTOR_PATHS.test(pathname)) return NextResponse.next();
+  // The REST API (and the pilot CLI) bring a bearer token, which the routes check.
+  if (API_PATHS.test(pathname)) return NextResponse.next();
 
   const session = await decodeSession(
     request.cookies.get(SESSION_COOKIE)?.value,

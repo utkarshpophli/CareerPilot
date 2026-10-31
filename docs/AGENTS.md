@@ -22,6 +22,21 @@ Client setup changes between versions; if a command above no longer matches, use
 - Activity page: each tool call (`Claude Code used search_jobs`), and the changes it caused, with the client's name.
 - Posting checks: postings that arrive through an assistant go through the same hidden-text and prompt-injection check as pasted ones. Warnings appear in Activity as counts only.
 
-## Not built yet
+## The `pilot` command line and REST API
 
-A command-line client (`pilot`) and per-agent API tokens are planned (see `MASTER_PLAN.md`, phase 6). Until then MCP is the way in for assistants.
+For assistants that work through a shell (Claude Code, Codex and others), and for scripts. It needs Node 20 or later and no installation: run `apps/cli/pilot.mjs`.
+
+1. Make a token. On the server: `yarn create-token "claude-code on my laptop" write` (use `read` for a read-only token). The token is shown once; only a hash is stored. The name you give is what the Activity page shows for everything the token does.
+2. Point the client at your server:
+
+```bash
+export CAREERPILOT_URL=https://careerpilot.example.com
+export CAREERPILOT_TOKEN=cp_...
+node apps/cli/pilot.mjs status
+```
+
+Commands: `status`, `apps [--status SENT]`, `activity [--actor MCP] [--limit N]`, `insights`, and `check <file|->`, which cleans a job posting of hidden text and flags lines that try to instruct an AI (needs a write token; exits 3 when it finds something). Add `--json` for machine-readable output. `pilot --help` has the rest.
+
+The same data is available over HTTP at `/api/v1/status`, `/applications`, `/activity`, `/insights` and `POST /api/v1/postings/check`, with `Authorization: Bearer <token>`. Answers are `{"data": ...}` or `{"error": {"code", "message"}}`. The client refuses plain `http://` except for localhost, so a token never travels unprotected by accident.
+
+Not built yet: managing tokens from the Settings page (for now use the script; revoke by setting `revokedAt` in the database), rate limiting, and write endpoints for applications.

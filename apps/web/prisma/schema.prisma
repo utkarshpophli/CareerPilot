@@ -981,3 +981,26 @@ model ActivityEvent {
   @@index([applicationId, at])
   @@index([actorKind, at])
 }
+
+// ─── API tokens (CareerPilot) ────────────────────────────────────────────────
+
+enum ApiScope {
+  READ
+  WRITE
+}
+
+/// A token for the REST API and the pilot command-line client. Only a hash is
+/// kept: the token itself is shown once, when it is made.
+model ApiToken {
+  id         String    @id @default(cuid())
+  /// What the person calls it ("claude-code on my laptop"); also the actor name in the Activity Ledger.
+  name       String
+  /// SHA-256 of the token, in hex.
+  tokenHash  String    @unique
+  /// The first characters of the token, to tell tokens apart in a list.
+  prefix     String
+  scope      ApiScope  @default(READ)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+}

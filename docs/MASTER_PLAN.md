@@ -184,7 +184,7 @@ Until these are answered the plan assumes the recommended answers: Path B, singl
 
 ## 12. Build status
 
-Updated 2026-11-01. "Done" means merged on the working branch with passing tests (about 1,880 unit and database tests, lint and typecheck clean).
+Updated 2026-11-01. "Done" means on the working branch with passing tests (about 1,900 unit and database tests, 8 CLI tests, the full browser suite of about 145 specs, lint and typecheck clean). The app was also run for real: production build, PostgreSQL with demo data, logged in through a browser, status changed in the UI and checked in Activity, and the CLI used against the live server.
 
 | Phase | Status | Notes |
 |---|---|---|
@@ -194,7 +194,7 @@ Updated 2026-11-01. "Done" means merged on the working branch with passing tests
 | 3. Safety core | Started | Posting guard ported from ai-job-search with a golden-corpus parity test against the Python original, wired into pasted, agent and connector postings. Not yet: SSRF guard unification, identity and dedup service, outbound privacy guard, merged fact gate. |
 | 4. Discovery and scoring | Not started | |
 | 5. Documents | Not started | Templates are already recorded per document; Insights groups by them. |
-| 6. Agent surfaces | Partly | MCP connector exists and is now attributed in the ledger (`docs/AGENTS.md`). Not yet: REST v1, CLI, scoped API tokens, exported skills. |
+| 6. Agent surfaces | Mostly | MCP connector attributed in the ledger; REST `/api/v1` (status, applications, activity, insights, posting check) with hashed, revocable, read/write tokens; dependency-free `pilot` CLI (`apps/cli`). Not yet: token management in Settings, rate limiting, write endpoints, exported skills. |
 | 7. Lifecycle | Not started | Gmail and Calendar come with the dossier base. |
 | 8. Insights | Done (first version) | Applications by platform and resume template, resume revisions, weekly activity, reply rates. |
 | 9. Importers | Not started | |

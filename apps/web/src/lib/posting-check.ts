@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ActionError } from "@/lib/action";
-import { hasAlarm, guard } from "@/lib/guards/posting-guard";
+import { guard, hasAlarm, type GuardFindings } from "@/lib/guards/posting-guard";
 import { ACTIONS, recordActivitySafe } from "@/lib/ledger";
 import { prisma } from "@/lib/prisma";
 
@@ -11,10 +11,15 @@ import { prisma } from "@/lib/prisma";
 // only: the quoted lines stay out of it, since they are the attacker's text.
 
 /** Where the posting came from, for the ledger. */
-export type PostingEntry = "paste" | "agent" | "connector";
+export type PostingEntry = "paste" | "agent" | "connector" | "api";
 
 /** The cleaned text of a posting. Throws an ActionError when nothing readable is left. */
 export async function checkPosting(raw: string, entry: PostingEntry): Promise<string> {
+  return (await inspectPosting(raw, entry)).text;
+}
+
+/** Cleans a posting and says what was found; what was found is noted in the ledger. Throws when nothing readable is left. */
+export async function inspectPosting(raw: string, entry: PostingEntry): Promise<{ text: string; findings: GuardFindings }> {
   const [text, findings] = guard(raw, "auto");
   const removed = findings.hidden_blocks.length + findings.hidden_urls.length + Object.keys(findings.invisible_chars).length;
   if (hasAlarm(findings) || removed > 0) {
@@ -34,5 +39,5 @@ export async function checkPosting(raw: string, entry: PostingEntry): Promise<st
     });
   }
   if (!text.trim()) throw new ActionError("Nothing readable was left in that posting once hidden content was removed. Paste the text you can see on the page.");
-  return text;
+  return { text, findings };
 }
