@@ -935,3 +935,49 @@ model Job {
   @@index([status])
   @@index([applicationId])
 }
+
+// ─── Activity Ledger (CareerPilot) ───────────────────────────────────────────
+
+/// Who did something: the person in the dashboard, a schedule, a CLI or MCP client, or the system itself.
+enum ActivityActor {
+  USER
+  SCHEDULER
+  CLI
+  MCP
+  SYSTEM
+}
+
+enum ActivityOutcome {
+  OK
+  ERROR
+}
+
+/// An append-only record of something the app or an agent did, so the
+/// dashboard can show what is happening and what happened. Written in the same
+/// transaction as the change it describes. No foreign keys: the record of an
+/// action outlives the thing it acted on.
+model ActivityEvent {
+  id            String          @id @default(cuid())
+  at            DateTime        @default(now())
+  actorKind     ActivityActor   @default(USER)
+  /// Which client, for example "claude-code" or "codex"; empty for the dashboard itself.
+  actorName     String          @default("")
+  /// A dotted name such as "application.created" (see src/lib/activity.ts).
+  action        String
+  targetType    String          @default("")
+  targetId      String?
+  applicationId String?
+  /// The job board or site the work concerns, normalised (see src/lib/platform.ts).
+  platform      String          @default("")
+  /// The AI model used, when one was.
+  model         String          @default("")
+  outcome       ActivityOutcome @default(OK)
+  /// One line a person can read.
+  summary       String          @default("")
+  data          Json?
+
+  @@index([at])
+  @@index([action, at])
+  @@index([applicationId, at])
+  @@index([actorKind, at])
+}

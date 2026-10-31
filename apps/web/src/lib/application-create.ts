@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AgentCandidateStatus, ApplicationOrigin, type Tone } from "@/generated/prisma/enums";
+import { ACTIONS, recordActivity } from "@/lib/ledger";
 import { ActionError } from "@/lib/action";
 import { summaryText, tailoringSummary } from "@/lib/ai/tailoring-summary";
 import { calendarDay } from "@/lib/application-documents";
@@ -11,6 +12,7 @@ import type { WriteDocumentsResult } from "@/lib/jobs/write-documents";
 import { newFrame, withFrame } from "@/lib/letter-frame";
 import { logServerError } from "@/lib/log";
 import { describeTrim, fitResumeToPages } from "@/lib/page-limit";
+import { platformFromUrl } from "@/lib/platform";
 import { prisma } from "@/lib/prisma";
 import { loadProfile } from "@/lib/profile-data";
 import { maxPages } from "@/lib/settings";
@@ -161,6 +163,17 @@ export async function createApplicationFromDocuments({ reading, documents, match
         messages: { create: { role: "AI", text: summaryText(summary) } },
       },
       select: { id: true },
+    });
+
+    await recordActivity(tx, {
+      action: ACTIONS.applicationCreated,
+      summary: `Created application: ${details.title || [details.role, details.company].filter(Boolean).join(" · ") || "Untitled application"}`,
+      targetType: "application",
+      targetId: application.id,
+      applicationId: application.id,
+      platform: platformFromUrl(postingUrl),
+      model: documents.resumeWith ?? "",
+      data: { origin: claim.kind === "agent" ? "AGENT" : "MANUAL" },
     });
 
     if (claim.kind === "manual") {

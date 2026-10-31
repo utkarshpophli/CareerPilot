@@ -3,7 +3,9 @@ import "server-only";
 import type { PrismaClient, StatusEvent } from "@/generated/prisma/client";
 import type { ApplicationStatus } from "@/generated/prisma/enums";
 
-import { advance, undoChange } from "./status";
+import { ACTIONS, recordActivity } from "./ledger";
+import { platformFromUrl } from "./platform";
+import { advance, statusInfo, undoChange } from "./status";
 
 // Database side of the status model: every status change is written here, in
 // a transaction, together with its StatusEvent.
@@ -25,7 +27,7 @@ export async function applyStatusChange(
     await tx.$queryRaw`SELECT 1 FROM "Application" WHERE id = ${applicationId} FOR UPDATE`;
     const application = await tx.application.findUnique({
       where: { id: applicationId },
-      select: { status: true, furthestStage: true, sentAt: true },
+      select: { status: true, furthestStage: true, sentAt: true, title: true, postingUrl: true },
     });
     if (!application) return { outcome: "not-found" };
 
@@ -34,6 +36,15 @@ export async function applyStatusChange(
 
     await tx.application.update({ where: { id: applicationId }, data: change.update });
     const event = await tx.statusEvent.create({ data: { applicationId, ...change.event } });
+    await recordActivity(tx, {
+      action: ACTIONS.applicationStatusChanged,
+      summary: `${application.title || "Application"}: ${statusInfo(application.status).label} to ${statusInfo(to).label}`,
+      targetType: "application",
+      targetId: applicationId,
+      applicationId,
+      platform: platformFromUrl(application.postingUrl),
+      data: { from: application.status, to },
+    });
     return { outcome: "changed", event };
   });
 }
@@ -64,6 +75,16 @@ export async function undoStatusChange(db: PrismaClient, eventId: string): Promi
     const restored = undoChange(event);
     await tx.application.update({ where: { id: event.applicationId }, data: restored });
     await tx.statusEvent.delete({ where: { id: event.id } });
+    const application = await tx.application.findUnique({ where: { id: event.applicationId }, select: { title: true, postingUrl: true } });
+    await recordActivity(tx, {
+      action: ACTIONS.applicationStatusUndone,
+      summary: `${application?.title || "Application"}: undid the move to ${statusInfo(event.to).label}`,
+      targetType: "application",
+      targetId: event.applicationId,
+      applicationId: event.applicationId,
+      platform: platformFromUrl(application?.postingUrl ?? ""),
+      data: { from: event.to, to: event.from },
+    });
     return { outcome: "undone", status: restored.status };
   });
 }

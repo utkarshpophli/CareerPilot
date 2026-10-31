@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
 import type { VersionCause } from "@/generated/prisma/enums";
+import { ACTIONS, recordActivity } from "@/lib/ledger";
 import type { Unit } from "@/lib/application-data";
 
 // Versions of a tailored document (E8-10, APP-13): saved after each AI
@@ -26,6 +27,18 @@ export async function saveVersion(tx: Prisma.TransactionClient, documentId: stri
   await tx.documentVersion.create({
     data: { documentId, units: units as Prisma.InputJsonValue, cause, detail: detail.trim().slice(0, 200), createdAt: nextTime() },
   });
+  const document = await tx.document.findUnique({ where: { id: documentId }, select: { applicationId: true, kind: true, writtenWith: true } });
+  if (document) {
+    await recordActivity(tx, {
+      action: ACTIONS.documentVersionSaved,
+      summary: `Saved a ${document.kind === "RESUME" ? "resume" : document.kind === "COVER_LETTER" ? "cover letter" : "email"} version (${cause.toLowerCase().replace(/_/g, " ")})`,
+      targetType: "document",
+      targetId: documentId,
+      applicationId: document.applicationId,
+      model: document.writtenWith ?? "",
+      data: { cause, kind: document.kind },
+    });
+  }
   const older = await tx.documentVersion.findMany({
     where: { documentId },
     orderBy: { createdAt: "desc" },

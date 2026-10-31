@@ -22,7 +22,7 @@ function currentItem(path: string) {
 }
 
 describe("NavLinks", () => {
-  it("lists the sections in the prototype's order", () => {
+  it("lists the sections in order", () => {
     render(<NavLinks />);
     expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Dashboard",
@@ -33,6 +33,8 @@ describe("NavLinks", () => {
       "Agent",
       "Applications",
       "Inbox",
+      "Activity",
+      "Insights",
       "Settings",
     ]);
   });

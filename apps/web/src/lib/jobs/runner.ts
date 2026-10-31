@@ -3,7 +3,8 @@ import "server-only";
 import type { z } from "zod";
 
 import { Prisma } from "@/generated/prisma/client";
-import { JobStatus } from "@/generated/prisma/enums";
+import { ActivityActor, ActivityOutcome, JobStatus } from "@/generated/prisma/enums";
+import { ACTIONS, recordActivitySafe } from "@/lib/ledger";
 import { loadAiConfig } from "@/lib/ai/config";
 import { AiError } from "@/lib/ai/errors";
 import { providerOption } from "@/lib/ai/provider-options";
@@ -125,6 +126,14 @@ export async function startJob<I, R>(
     },
     select: { id: true },
   });
+  await recordActivitySafe(prisma, {
+    action: ACTIONS.jobQueued,
+    summary: `Queued ${definition.type}`,
+    targetType: "job",
+    targetId: job.id,
+    applicationId: options.applicationId ?? null,
+    data: { type: definition.type },
+  });
   enqueue(job.id);
   return job.id;
 }
@@ -184,8 +193,26 @@ async function finish(
   id: string,
   data: { status: JobStatus; result?: Prisma.InputJsonValue; error?: string },
 ): Promise<void> {
-  const { count } = await prisma.job.updateMany({ where: { id }, data: { ...data, finishedAt: new Date() } });
-  if (count > 0) await notify(id);
+  const finishedAt = new Date();
+  const { count } = await prisma.job.updateMany({ where: { id }, data: { ...data, finishedAt } });
+  if (count > 0) {
+    const job = await prisma.job.findUnique({ where: { id }, select: { type: true, applicationId: true, createdAt: true, startedAt: true } });
+    if (job) {
+      const failed = data.status === JobStatus.FAILED;
+      await recordActivitySafe(prisma, {
+        action: ACTIONS.jobFinished,
+        summary: `${job.type} ${failed ? "failed" : "finished"}`,
+        targetType: "job",
+        targetId: id,
+        applicationId: job.applicationId,
+        outcome: failed ? ActivityOutcome.ERROR : ActivityOutcome.OK,
+        // Jobs run on their own, after the request that queued them has gone.
+        actor: { kind: ActivityActor.SYSTEM },
+        data: { type: job.type, millis: finishedAt.getTime() - (job.startedAt ?? job.createdAt).getTime(), ...(failed && data.error ? { error: data.error.slice(0, 200) } : {}) },
+      });
+    }
+    await notify(id);
+  }
 }
 
 function enqueue(id: string): void {
