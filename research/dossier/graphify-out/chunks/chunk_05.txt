@@ -1,0 +1,6 @@
+C:\Projects\project_rho\dossier\public\next.svg
+C:\Projects\project_rho\dossier\public\vercel.svg
+C:\Projects\project_rho\dossier\public\window.svg
+C:\Projects\project_rho\dossier\site\og.png
+C:\Projects\project_rho\dossier\src\app\apple-icon.png
+C:\Projects\project_rho\dossier\src\app\icon.svg

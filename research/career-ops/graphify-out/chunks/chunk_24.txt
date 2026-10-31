@@ -1,0 +1,7 @@
+C:\Projects\project_rho\career-ops\web\README.md
+C:\Projects\project_rho\career-ops\web\docs\china-employer-preset.md
+C:\Projects\project_rho\career-ops\web\src\assets\fonts\README.md
+C:\Projects\project_rho\career-ops\web\src\assets\fonts\instrument-serif\OFL.txt
+C:\Projects\project_rho\career-ops\web\src\assets\fonts\inter\OFL.txt
+C:\Projects\project_rho\career-ops\web\src\lib\report\FORMAT.md
+C:\Projects\project_rho\career-ops\writing-samples\README.md

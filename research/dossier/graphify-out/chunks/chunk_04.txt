@@ -1,0 +1,6 @@
+C:\Projects\project_rho\dossier\.github\images\inbox.png
+C:\Projects\project_rho\dossier\.github\images\new-application.png
+C:\Projects\project_rho\dossier\.github\images\profile.png
+C:\Projects\project_rho\dossier\.github\images\resume.png
+C:\Projects\project_rho\dossier\public\file.svg
+C:\Projects\project_rho\dossier\public\globe.svg
