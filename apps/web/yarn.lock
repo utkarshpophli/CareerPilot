@@ -320,7 +320,7 @@ __metadata:
     tailwindcss: "npm:^4"
     tsx: "npm:^4.23.15"
     typescript: "npm:^5"
-    unpdf: "npm:^1.9.1"
+    unpdf: "npm:^2.0.0"
     vite: "npm:^8.3.5"
     vitest: "npm:^5.0.5"
     zod: "npm:^4.6.5"
@@ -9268,15 +9268,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unpdf@npm:^1.9.1":
-  version: 1.9.1
-  resolution: "unpdf@npm:1.9.1"
+"unpdf@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "unpdf@npm:2.0.0"
   peerDependencies:
     "@napi-rs/canvas": ^0.1.69 || ^1.0.0
   peerDependenciesMeta:
     "@napi-rs/canvas":
       optional: true
-  checksum: 10c0/250adbe66f8beb68f567e2a5a0eb8115f518bb0daf6c3a88157bc7c4292c9757395a52d6d07cc7900afd3fc730fa045862766318f47e724dd347b7f748e66a3c
+  checksum: 10c0/d10a97c2780bf04cde09cc704566e55dd897e5a3fc66b8bd905f24e6654786b1ddb2aa277a9d315c783e28d748d2385f31f37225c601a3d0110b2708f6de604f
   languageName: node
   linkType: hard
 
