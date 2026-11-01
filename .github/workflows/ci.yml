@@ -122,4 +122,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build the production image (no push)
-        run: docker build --file apps/web/Dockerfile --target production --tag careerpilot:ci apps/web
+        run: docker build --file apps/web/Dockerfile --target production --build-arg GIT_SHA=${{ github.sha }} --tag careerpilot:ci apps/web

@@ -1,7 +1,7 @@
 # CareerPilot with Docker Compose. There is no published image yet, so build
 # your own from this repository (never run an image you did not build or trust):
 #
-#   docker build --file apps/web/Dockerfile --target production --tag careerpilot apps/web
+#   docker build --file apps/web/Dockerfile --target production --build-arg GIT_SHA=$(git rev-parse HEAD) --tag careerpilot apps/web
 #
 # Put CAREERPILOT_IMAGE=careerpilot, POSTGRES_PASSWORD, CAREERPILOT_PASSWORD (a
 # hash of your password, from `docker run --rm -it careerpilot hash-password`)

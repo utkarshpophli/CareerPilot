@@ -63,11 +63,15 @@ RUN node_modules/.bin/esbuild scripts/hash-password.ts --bundle --platform=node 
   && chmod 755 /tools/hash-password.mjs
 
 FROM base AS production
+# The commit this image was built from, shown with the source link (AGPL source offer).
+# Build with: --build-arg GIT_SHA=$(git rev-parse HEAD)
+ARG GIT_SHA=""
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    CAREERPILOT_DATA_DIR=/data
+    CAREERPILOT_DATA_DIR=/data \
+    CAREERPILOT_COMMIT=${GIT_SHA}
 # Chromium for PDFs with its system libraries and fonts, matching the app's
 # playwright-core, as in the dev image. Its CLI is only mounted for this.
 RUN --mount=type=bind,from=deps,source=/app/node_modules/playwright-core,target=/tmp/playwright-core \

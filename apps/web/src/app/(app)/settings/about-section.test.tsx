@@ -21,6 +21,18 @@ const facts = [
 beforeEach(() => vi.clearAllMocks());
 
 describe("About (E10-9)", () => {
+  // Audit C-02: the licence and the source of the running version are always shown.
+  it("shows the licence and a link to the source of this version", () => {
+    render(<AboutSection facts={facts} updates={updates} source={{ url: "https://github.com/utkarshpophli/CareerPilot/tree/abc1234", commit: "abc1234" }} />);
+    expect(screen.getByRole("link", { name: /Source code/ })).toHaveAttribute("href", "https://github.com/utkarshpophli/CareerPilot/tree/abc1234");
+    expect(screen.getByText(/GNU Affero General Public License/)).toBeInTheDocument();
+  });
+
+  it("falls back to the repository when no source link is given", () => {
+    render(<AboutSection facts={facts} updates={updates} />);
+    expect(screen.getByRole("link", { name: /Source code/ })).toHaveAttribute("href", "https://github.com/utkarshpophli/CareerPilot");
+  });
+
   it("lists the install's facts", () => {
     render(<AboutSection facts={facts} updates={updates} />);
     expect(screen.getByRole("heading", { name: "About this install" })).toBeInTheDocument();

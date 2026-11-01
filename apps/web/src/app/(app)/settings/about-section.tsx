@@ -7,7 +7,8 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Toggle } from "@/components/ui/toggle";
-import { RELEASES_REPOSITORY, UPGRADE_GUIDE_URL, type Release } from "@/lib/releases";
+import { SourceNotice } from "@/components/source-notice";
+import { RELEASES_REPOSITORY, REPOSITORY_URL, UPGRADE_GUIDE_URL, type Release } from "@/lib/releases";
 
 import { checkUpdates, updateSettings } from "./actions";
 import { SettingsSectionIntro } from "./settings-screen";
@@ -30,7 +31,7 @@ const LINK = "font-medium text-ink underline underline-offset-2";
  * Settings → About (E10-9, SET-12): facts about this install, and the update
  * check: off by default, daily only once switched on, and whenever asked.
  */
-export function AboutSection({ facts, updates }: { facts: AboutFacts; updates: UpdatesView }) {
+export function AboutSection({ facts, updates, source }: { facts: AboutFacts; updates: UpdatesView; source?: { url: string; commit: string | null } }) {
   const [check, setCheck] = useState<Check>(updates.available ? { status: "newer", ...updates.available } : { status: "idle" });
   const [daily, setDaily] = useState(updates.daily);
   const track = useTrackSave();
@@ -102,6 +103,7 @@ export function AboutSection({ facts, updates }: { facts: AboutFacts; updates: U
       <p className="text-meta text-muted">
         {`Checking contacts api.github.com for the releases of ${RELEASES_REPOSITORY} and sends nothing about you or this install. Nothing is contacted unless you turn on the daily check or press Check for updates.`}
       </p>
+      <SourceNotice sourceUrl={source?.url ?? REPOSITORY_URL} commit={source?.commit ?? null} />
     </>
   );
 }

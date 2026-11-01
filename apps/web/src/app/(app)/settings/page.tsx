@@ -35,6 +35,8 @@ import { JobSearchSection } from "./job-search-section";
 import { ScoringSection } from "./scoring-section";
 import { AboutSection, type AboutFacts } from "./about-section";
 import { ApiTokensSection } from "./api-tokens-section";
+import { buildCommit, sourceUrlFor } from "@/lib/source-offer";
+
 import { SecuritySection } from "./security-section";
 import { ConnectorSection } from "./connector-section";
 import { settingsSectionFromParam } from "./sections";
@@ -139,7 +141,11 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           preview={await filePreview()}
         />
       ) : (
-        <AboutSection facts={await aboutFacts()} updates={{ daily: settings.updateCheck, available: availableUpdate(settings) }} />
+        <AboutSection
+          facts={await aboutFacts()}
+          updates={{ daily: settings.updateCheck, available: availableUpdate(settings) }}
+          source={{ url: sourceUrlFor(buildCommit()), commit: buildCommit() ?? null }}
+        />
       )}
     </SettingsScreen>
   );

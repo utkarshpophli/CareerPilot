@@ -57,7 +57,7 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Replace `ghcr.io/aientech/dossier` and `AienTech/dossier` everywhere: no default image in `compose.production.yml` (you build your own until one is published), docs and messages point at this project, upstream site, issue templates and wiki links removed | C-01, C-16 | DONE |
 | Rename `DOSSIER_*` to `CAREERPILOT_*`; the old names are copied over at startup with a one-line reminder, and the new name wins | C-25 | DONE |
 | Delete the usage ping; update check off until turned on, queries only this project's releases | C-05, C-15 | DONE |
-| Visible "Source code (AGPL-3.0-only)" link tied to the build, in sidebar, About and login | C-02 | NEXT |
+| Visible licence notice and Source code link on the sign-in page and in Settings > About, tied to the commit the image was built from (`--build-arg GIT_SHA`); the repository must be public before a shared deployment | C-02 | DONE |
 | `THIRD_PARTY_NOTICES.md` complete (fonts with OFL texts, MIT-ported code, dependencies); licence texts shipped in the image | C-03, C-20 | NEXT |
 | Copyright and modification notice; rewrite SECURITY.md, PRIVACY.md, README for CareerPilot | C-04, C-06 | NEXT |
 | Remove personal data and agent config from `upstream/`; fix `.gitignore`; untrack generated graphs | C-13, C-23, C-12, C-14 | DONE |

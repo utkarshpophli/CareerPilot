@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
+import { SourceNotice } from "@/components/source-notice";
 import { getSession } from "@/lib/auth/session";
+import { buildCommit, sourceUrlFor } from "@/lib/source-offer";
 
 import { LoginForm } from "./login-form";
 
@@ -31,6 +33,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <code className="font-mono text-label">CAREERPILOT_PASSWORD</code>. Forgot it? Make a new hash with{" "}
           <code className="font-mono text-label">hash-password</code> and restart.
         </p>
+        <SourceNotice sourceUrl={sourceUrlFor(buildCommit())} commit={buildCommit() ?? null} />
       </div>
       </div>
       <div
