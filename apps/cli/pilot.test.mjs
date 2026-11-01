@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -113,6 +113,28 @@ test("skills export writes the files, and will not overwrite them without --forc
     assert.equal(forced.code, 0);
     const printed = await pilot(["skills", "export", "--target", "generic", "--stdout"]);
     assert.match(printed.out, /CareerPilot instructions for AI assistants/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("skills export --target opencode never overwrites the user's own opencode.json, even with --force", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "pilot-opencode-"));
+  try {
+    const first = await pilot(["skills", "export", "--target", "opencode", "--dir", dir], { env: { CAREERPILOT_URL: "http://localhost:3100", CAREERPILOT_TOKEN: "" } });
+    assert.equal(first.code, 0, first.err);
+    const config = join(dir, "opencode.json");
+    assert.deepEqual(JSON.parse(readFileSync(config, "utf8")).mcp, { careerpilot: { type: "remote", url: "http://localhost:3100/api/mcp" } });
+    assert.ok(existsSync(join(dir, ".opencode/careerpilot.md")));
+
+    // The user now has their own settings in it.
+    const theirs = JSON.stringify({ theme: "tokyonight", model: "x/y" });
+    writeFileSync(config, theirs);
+    const again = await pilot(["skills", "export", "--target", "opencode", "--dir", dir, "--force"], { env: { CAREERPILOT_URL: "", CAREERPILOT_TOKEN: "" } });
+    assert.equal(again.code, 0, again.err);
+    assert.equal(readFileSync(config, "utf8"), theirs, "opencode.json must be left alone");
+    assert.match(again.out, /opencode\.json already exists; left as it is/);
+    assert.match(again.out, /"instructions"/, "tells them what to merge");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

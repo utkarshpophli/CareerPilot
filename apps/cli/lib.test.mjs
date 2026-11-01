@@ -117,6 +117,25 @@ test("the generic instructions carry the same rules, and unknown targets are ref
   assert.equal(file.path, "CAREERPILOT_AGENT.md");
   assert.match(file.content, /Never submit, send or apply/);
   assert.throws(() => skillFiles("emacs"), UsageError);
+  assert.throws(() => skillFiles("emacs"), /claude-code, opencode or generic/);
+});
+
+test("the OpenCode target writes the instructions, and an opencode.json OpenCode's own validator accepts", () => {
+  const [instructions, config] = skillFiles("opencode");
+  assert.equal(instructions.path, ".opencode/careerpilot.md");
+  assert.match(instructions.content, /Never submit, send or apply/);
+  assert.equal(config.path, "opencode.json");
+  assert.equal(config.createOnly, true, "the user's own config is never overwritten");
+  assert.deepEqual(JSON.parse(config.content), { $schema: "https://opencode.ai/config.json", instructions: [".opencode/careerpilot.md"] });
+});
+
+test("the OpenCode config adds the remote MCP server when the address is known", () => {
+  const [, config] = skillFiles("opencode", { server: "https://cp.example.com" });
+  assert.deepEqual(JSON.parse(config.content).mcp, { careerpilot: { type: "remote", url: "https://cp.example.com/api/mcp" } });
+});
+
+test("only the OpenCode config is create-only", () => {
+  for (const target of ["claude-code", "generic"]) for (const file of skillFiles(target)) assert.notEqual(file.createOnly, true, file.path);
 });
 
 test("parseArgs knows --force and --stdout take no value", () => {

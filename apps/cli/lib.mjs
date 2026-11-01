@@ -166,8 +166,15 @@ Setup: \`CAREERPILOT_URL\` (the server) and \`CAREERPILOT_TOKEN\` (a write token
 
 const SKILL_DESCRIPTION = "Work on the user's job search through CareerPilot: track applications, check postings, and report progress as runs the user can watch in their dashboard.";
 
-/** The instruction files `pilot skills export` can write for a target. */
-export function skillFiles(target) {
+const OPENCODE_INSTRUCTIONS = ".opencode/careerpilot.md";
+
+/**
+ * The instruction files `pilot skills export` can write for a target.
+ * `createOnly` marks a file that belongs to the user (their own tool config):
+ * it is created when missing and never replaced, not even with --force.
+ * `options.server` is the CareerPilot address, when known, for configs that name it.
+ */
+export function skillFiles(target, options = {}) {
   if (target === "claude-code") {
     return [
       {
@@ -179,7 +186,16 @@ export function skillFiles(target) {
   if (target === "generic") {
     return [{ path: "CAREERPILOT_AGENT.md", content: `# CareerPilot instructions for AI assistants\n\n${SKILL_DESCRIPTION}\n\n${COMMANDS}\n\n${RULES}\n` }];
   }
-  throw new UsageError(`Unknown target "${target}". Use claude-code or generic (for Codex, Gemini CLI and others: add the generic text to AGENTS.md or GEMINI.md).`);
+  if (target === "opencode") {
+    // The shape OpenCode's own validator accepts (opencode 1.19.4, checked 2026-11-02): `instructions` is an array of paths,
+    // a remote MCP server is { type: "remote", url }.
+    const config = { $schema: "https://opencode.ai/config.json", ...(options.server ? { mcp: { careerpilot: { type: "remote", url: `${options.server}/api/mcp` } } } : {}), instructions: [OPENCODE_INSTRUCTIONS] };
+    return [
+      { path: OPENCODE_INSTRUCTIONS, content: `# CareerPilot instructions for AI assistants\n\n${SKILL_DESCRIPTION}\n\n${COMMANDS}\n\n${RULES}\n` },
+      { path: "opencode.json", content: `${JSON.stringify(config, null, 2)}\n`, createOnly: true },
+    ];
+  }
+  throw new UsageError(`Unknown target "${target}". Use claude-code, opencode or generic (for Codex, Gemini CLI and others: add the generic text to AGENTS.md or GEMINI.md).`);
 }
 
 /** Where the server is, from the environment: no trailing slash, and https unless it is this machine. */

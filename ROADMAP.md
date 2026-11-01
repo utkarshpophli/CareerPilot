@@ -69,7 +69,7 @@ Goal: install in about ten minutes on Windows, macOS or Linux, sign in, and know
 
 Risks: e2e specs assume Linux and a fixed clock in places; some failures may be genuine bugs hidden until now.
 
-### M2. Connect an assistant on one screen: NEXT (about 1.5 weeks)
+### M2. Connect an assistant on one screen: IN PROGRESS (about 1.5 weeks)
 
 Goal: someone who has never seen the project connects Claude Code and OpenCode in under five minutes each and sees their first run.
 
@@ -86,7 +86,7 @@ Goal: someone who has never seen the project connects Claude Code and OpenCode i
 | # | Task | Notes and tests |
 |---|---|---|
 | 2.1 | `lib/connect/instructions.ts`: pure functions producing each tool's commands and files from an address and a token name | Unit tests; snapshot of each output |
-| 2.2 | OpenCode target: verify config schema, write `skillFiles("opencode")`, test against the real OpenCode | Run `opencode mcp add`/config with a local server; record the result; if OAuth over localhost is awkward, document the bearer-header route |
+| 2.2 | OpenCode target: verify config schema, write `skillFiles("opencode")`, test against the real OpenCode | **DONE 2026-11-02**, with two gaps. Verified with the real OpenCode 1.19.4 (your version): its own validator accepts `{ "$schema", "mcp": { name: { "type": "remote", "url" } }, "instructions": [path] }` and rejects wrong shapes (`uri`, a string for `instructions`); `opencode mcp add NAME --url URL` runs without prompts and writes the global config; its OAuth sign-in returns to `http://127.0.0.1:19876/mcp/oauth/callback` (read from its own code), which the connector must allow. `pilot skills export --target opencode` writes `.opencode/careerpilot.md` and creates `opencode.json` only when missing (never overwrites yours, even with `--force`); the real CLI accepts what it writes. **Not reached:** `https://opencode.ai/config.json` itself (blocked from this sandbox by network policy; the types in `@opencode-ai/sdk` and the CLI's validator were used instead), and proof that the instructions text reaches a model (needs a model for `opencode run`; its debug commands do not show the loaded prompt). A bearer-header route is not offered: the MCP endpoint takes OAuth tokens only |
 | 2.3 | MCP client last-seen: store on each authorised call; list clients with names | DB test; the ledger already names the client |
 | 2.4 | `/connect` page + client component with copy buttons and the waiting state | dom tests; e2e: make a token, see the commands |
 | 2.5 | Live check: a script that connects real Claude Code and OpenCode to a running dev server and performs one `run start/step/finish` and one `apps add` | Manual verification recorded in this file; not automatable in CI |

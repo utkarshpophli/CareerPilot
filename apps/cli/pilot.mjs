@@ -41,7 +41,7 @@ Commands:
   run step <id> <summary>             add a step (--data found=12,boards=3)
   run finish <id> [summary]           close a run (--status ok|failed|cancelled, default ok)
   run show <id>                       a run with its steps
-  skills export                       write instructions for an AI assistant (--target claude-code|generic, --dir PATH, --stdout, --force)
+  skills export                       write instructions for an AI assistant (--target claude-code|opencode|generic, --dir PATH, --stdout, --force)
 
 Options:
   --json     print the server's answer as JSON
@@ -86,9 +86,15 @@ const need = (args, count, usage) => {
   if (args.length < count) throw new UsageError(`Usage: pilot ${usage}`);
 };
 
-/** `pilot skills export`: writes the instruction files, or prints them. Never overwrites without --force. */
-function exportSkills(flags) {
-  const files = skillFiles(flags.target || "claude-code");
+/** `pilot skills export`: writes the instruction files, or prints them. Never overwrites without --force, and never overwrites a tool's own config. */
+function exportSkills(flags, env) {
+  let server;
+  try {
+    server = env.CAREERPILOT_URL?.trim() ? serverFrom(env) : undefined;
+  } catch {
+    server = undefined; // a bad address only means the config will not name the server
+  }
+  const files = skillFiles(flags.target || "claude-code", { server });
   const dir = flags.dir || ".";
   if (flags.stdout) {
     for (const file of files) console.log(file.content);
@@ -96,10 +102,14 @@ function exportSkills(flags) {
   }
   for (const file of files) {
     const path = join(dir, file.path);
-    if (existsSync(path) && !flags.force) throw new UsageError(`${path} already exists. Use --force to replace it, or --stdout to print instead.`);
+    if (!file.createOnly && existsSync(path) && !flags.force) throw new UsageError(`${path} already exists. Use --force to replace it, or --stdout to print instead.`);
   }
   for (const file of files) {
     const path = join(dir, file.path);
+    if (file.createOnly && existsSync(path)) {
+      console.log(`${path} already exists; left as it is. Merge this into it yourself:\n\n${file.content}`);
+      continue;
+    }
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, file.content);
     console.log(`Wrote ${path}`);
@@ -114,8 +124,8 @@ async function main(argv, env) {
   }
   if (!COMMANDS.has(command)) throw new UsageError(`Unknown command "${command}". Try: pilot --help`);
   if (command === "skills") {
-    if (args[0] !== "export") throw new UsageError("Usage: pilot skills export [--target claude-code|generic] [--dir PATH] [--stdout] [--force]");
-    exportSkills(flags);
+    if (args[0] !== "export") throw new UsageError("Usage: pilot skills export [--target claude-code|opencode|generic] [--dir PATH] [--stdout] [--force]");
+    exportSkills(flags, env);
     return 0;
   }
 
