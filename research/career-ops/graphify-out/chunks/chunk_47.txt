@@ -1,5 +1,0 @@
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\zh-minimal-zh-short-no-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\zh-minimal-zh-short-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\fixtures\avatar-8x8.png
-C:\Projects\project_rho\career-ops\web\public\bimi-logo.svg
-C:\Projects\project_rho\career-ops\web\src\app\icon.svg

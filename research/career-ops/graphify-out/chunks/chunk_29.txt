@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\docs\logo.png
-C:\Projects\project_rho\career-ops\docs\manifesto-wall.svg
-C:\Projects\project_rho\career-ops\docs\og-image.jpg
-C:\Projects\project_rho\career-ops\docs\press\business-insider-dark.svg
-C:\Projects\project_rho\career-ops\docs\press\business-insider.svg
-C:\Projects\project_rho\career-ops\docs\press\producthunt.svg

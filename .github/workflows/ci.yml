@@ -64,3 +64,62 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: node --test
+
+  # The project is developed on Windows too: type-check, lint and run the tests that need no database.
+  windows:
+    name: Windows (types, lint, unit tests, CLI)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: corepack enable
+      - name: Install, generate, check
+        working-directory: apps/web
+        run: |
+          yarn install --immutable
+          yarn prisma generate
+          yarn lint
+          yarn typecheck
+          yarn vitest run --project node --project dom
+      - name: pilot CLI
+        working-directory: apps/cli
+        run: node --test
+
+  # Known vulnerabilities (audit C-07). The production dependency tree must have no high advisory;
+  # the full tree (build and test tools) is reported but does not block.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: corepack enable
+      - name: "Production dependencies (no high advisory allowed)"
+        run: yarn npm audit --environment production --severity high
+      - name: "Whole tree (report only)"
+        continue-on-error: true
+        run: yarn npm audit --all --recursive --severity high
+
+  # The image people actually run must build (audit C-08).
+  docker:
+    name: Production image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the production image (no push)
+        run: docker build --file apps/web/Dockerfile --target production --tag careerpilot:ci apps/web

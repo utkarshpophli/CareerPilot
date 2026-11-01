@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\docs\press\wired-dark.svg
-C:\Projects\project_rho\career-ops\docs\press\wired.svg
-C:\Projects\project_rho\career-ops\docs\roadmap-phases.jpg
-C:\Projects\project_rho\career-ops\docs\sponsors\serpapi.svg
-C:\Projects\project_rho\career-ops\docs\vision-banner.jpg
-C:\Projects\project_rho\career-ops\docs\wordmark-dark.svg

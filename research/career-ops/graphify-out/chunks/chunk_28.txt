@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\docs\how-it-works-dark.svg
-C:\Projects\project_rho\career-ops\docs\how-it-works-id-dark.svg
-C:\Projects\project_rho\career-ops\docs\how-it-works-id-light.svg
-C:\Projects\project_rho\career-ops\docs\how-it-works-light.svg
-C:\Projects\project_rho\career-ops\docs\how-it-works-vi-dark.svg
-C:\Projects\project_rho\career-ops\docs\how-it-works-vi-light.svg

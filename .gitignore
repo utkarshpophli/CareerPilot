@@ -4,3 +4,32 @@ node_modules/
 !.env.example
 .DS_Store
 *.log
+
+# Agent and tool state: per machine, can hold memory and permission grants.
+.continuum/
+.claude-flow/
+**/.claude-flow/
+.claude/settings.local.json
+.claude/proven-config*
+.claude/.proven-config-version
+
+# Generated analysis output (graphify), derived from the three source projects.
+graphify-out/
+**/graphify-out/
+
+# Secrets and local data that must never be committed.
+*.pem
+*.key
+*.p12
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+data/
+coverage/
+.next/
+*.tsbuildinfo
+
+# Written by `next dev`; machine generated.
+apps/web/AGENTS.md

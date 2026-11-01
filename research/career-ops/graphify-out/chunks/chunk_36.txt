@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-en-short-no-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-en-short-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-zh-long-no-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-zh-long-no-photo-page-2.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-zh-long-photo-page-1.png
-C:\Projects\project_rho\career-ops\tests\cv-visual\__screenshots__\executive-zh-long-photo-page-2.png

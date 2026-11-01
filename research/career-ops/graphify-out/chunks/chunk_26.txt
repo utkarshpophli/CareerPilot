@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\docs\architecture-component-map-light.svg
-C:\Projects\project_rho\career-ops\docs\architecture-data-flow-dark.svg
-C:\Projects\project_rho\career-ops\docs\architecture-data-flow-light.svg
-C:\Projects\project_rho\career-ops\docs\architecture-system-overview-dark.svg
-C:\Projects\project_rho\career-ops\docs\architecture-system-overview-light.svg
-C:\Projects\project_rho\career-ops\docs\avatar-santiago-pixel.png

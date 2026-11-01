@@ -1,5 +1,0 @@
-C:\Projects\project_rho\ai-job-search\assets\mascot\pip_flight_loop.gif
-C:\Projects\project_rho\ai-job-search\assets\readme\apply.svg
-C:\Projects\project_rho\ai-job-search\assets\readme\hero.svg
-C:\Projects\project_rho\ai-job-search\assets\readme\letters.svg
-C:\Projects\project_rho\ai-job-search\assets\readme\route.svg

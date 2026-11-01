@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\antigravity-directory\assets\logo.png
-C:\Projects\project_rho\career-ops\claude-directory\.claude-plugin\icon.png
-C:\Projects\project_rho\career-ops\cursor-directory\assets\logo.png
-C:\Projects\project_rho\career-ops\docs\architecture-batch-processing-dark.svg
-C:\Projects\project_rho\career-ops\docs\architecture-batch-processing-light.svg
-C:\Projects\project_rho\career-ops\docs\architecture-component-map-dark.svg

@@ -1,0 +1,11 @@
+# Every change is reviewed by the maintainer; security-sensitive paths are listed so they stay visible.
+*                                  @utkarshpophli
+/apps/web/src/lib/auth/            @utkarshpophli
+/apps/web/src/lib/api-v1.ts        @utkarshpophli
+/apps/web/src/lib/agent-status-policy.ts @utkarshpophli
+/apps/web/src/lib/connector/       @utkarshpophli
+/apps/web/src/lib/guards/          @utkarshpophli
+/apps/web/Dockerfile               @utkarshpophli
+/apps/web/compose*.yml             @utkarshpophli
+/.github/                          @utkarshpophli
+/docs/security/                    @utkarshpophli

@@ -1,6 +1,0 @@
-C:\Projects\project_rho\career-ops\docs\avatar-santifer.png
-C:\Projects\project_rho\career-ops\docs\builders-stack-dark.svg
-C:\Projects\project_rho\career-ops\docs\builders-stack-light.svg
-C:\Projects\project_rho\career-ops\docs\demo.gif
-C:\Projects\project_rho\career-ops\docs\hero-banner.jpg
-C:\Projects\project_rho\career-ops\docs\hired-wall.svg

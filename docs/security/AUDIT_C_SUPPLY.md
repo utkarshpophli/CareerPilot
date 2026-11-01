@@ -138,7 +138,7 @@ Command: `corepack yarn npm audit --all --recursive` (worked). 5 high, 8 moderat
 ### Repo hygiene
 
 #### C-13 MEDIUM: `upstream/` vendors other people's personal data, contradicting `THIRD_PARTY_NOTICES.md`
-- Location: `upstream/career-ops/{SIGNATURES,HIRED,CONTRIBUTORS,MAINTAINERS}.md` (tracked). `THIRD_PARTY_NOTICES.md:19` says "Do not copy ... (personal data)", yet the vendored copy already contains them. `HIRED.md` lists third parties' GitHub handles with job titles and story links; `SIGNATURES.md` lists handles, display names and sentences. About 3,300 tracked files (58 MB) are vendored and include real maintainer emails (for example `hi@santifer.io` in policies).
+- Location: `upstream/career-ops/{SIGNATURES,HIRED,CONTRIBUTORS,MAINTAINERS}.md` (tracked). `THIRD_PARTY_NOTICES.md:19` says "Do not copy ... (personal data)", yet the vendored copy already contains them. `HIRED.md` lists third parties' GitHub handles with job titles and story links; `SIGNATURES.md` lists handles, display names and sentences. About 3,300 tracked files (58 MB) are vendored and include real maintainer emails (for example `[email omitted]` in policies).
 - Impact: republishing people's names and employment stories in a repo that may become public; GDPR-style removal requests would land on this repo. Not shipped in any artifact (see section 2). FACT.
 - Fix: `git rm` those four files and anything else not needed as reference (translated READMEs, `.github/`, `web/`, `batch/` scripts, `graphify-out`); better, keep only the paths the port needs, or replace `upstream/` with a pinned submodule/commit reference plus a `PORTED_FROM.md`. Effort S-M (history still contains them; rewriting history is optional).
 
@@ -148,7 +148,7 @@ Command: `corepack yarn npm audit --all --recursive` (worked). 5 high, 8 moderat
 - Fix: strip `.claude/`, `.claude-plugin/`, `hooks/`, `.github/`, `CLAUDE.md`, `AGENTS.md`, `CODEX.md`, `GEMINI.md`, `KIMI.md`, `OPENCODE.md` and the batch scripts from `upstream/`, or move reference code to a non-agent folder name and add a root note "do not run". Effort S.
 
 #### C-14 LOW: generated analysis artifacts committed
-- 362 tracked `graphify-out` files (`research/*/graphify-out/**`, `apps/web/graphify-out/cache/stat-index.json`), about 47 MB under `research/`. They embed absolute local paths (`C:\Projects\project_rho\...`, FACT in `research/ai-job-search/.graphify_detect.json`) and derived content from three projects. Research markdown also contains the maintainers' emails (`hi@aien.me`, `alih.qureshi@hotmail.com`, `hi@santifer.io`), which are in the upstream histories but are not needed.
+- 362 tracked `graphify-out` files (`research/*/graphify-out/**`, `apps/web/graphify-out/cache/stat-index.json`), about 47 MB under `research/`. They embed absolute local paths (`C:\Projects\project_rho\...`, FACT in `research/ai-job-search/.graphify_detect.json`) and derived content from three projects. Research markdown also contains the maintainers' emails (`[email omitted]`, `[email omitted]`, `[email omitted]`), which are in the upstream histories but are not needed.
 - Fix: untrack the caches (`git rm -r --cached`, ignore `graphify-out/`), redact the emails in `research/LICENSE_AND_ATTRIBUTION_AUDIT.md`. Effort S.
 
 #### C-16 LOW: dead upstream metadata in `apps/web/.github` and `site/`

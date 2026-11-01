@@ -1,6 +1,0 @@
-C:\Projects\project_rho\dossier\.github\images\application.png
-C:\Projects\project_rho\dossier\.github\images\applications.png
-C:\Projects\project_rho\dossier\.github\images\calendar.png
-C:\Projects\project_rho\dossier\.github\images\dashboard.png
-C:\Projects\project_rho\dossier\.github\images\demo.gif
-C:\Projects\project_rho\dossier\.github\images\find-jobs.png
