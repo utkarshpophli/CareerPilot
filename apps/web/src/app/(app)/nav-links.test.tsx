@@ -36,6 +36,7 @@ describe("NavLinks", () => {
       "Runs",
       "Activity",
       "Insights",
+      "Connect",
       "Settings",
     ]);
   });
@@ -47,6 +48,7 @@ describe("NavLinks", () => {
     expect(currentItem("/jobs")).toEqual(["Find jobs"]);
     expect(currentItem("/startups")).toEqual(["Startups"]);
     expect(currentItem("/settings")).toEqual(["Settings"]);
+    expect(currentItem("/connect")).toEqual(["Connect"]);
   });
 
   it("keeps Applications current on an application and in the new application flow", () => {

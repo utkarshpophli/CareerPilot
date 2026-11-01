@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "McpClient" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "firstSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "McpClient_pkey" PRIMARY KEY ("id")
+);

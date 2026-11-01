@@ -33,17 +33,17 @@ Verified: about 2,000 app tests and 24 CLI tests pass; typecheck, lint, producti
 
 **Not verified / known open:**
 
-1. **Full e2e run on Windows, 2026-11-02: 141 passed, 6 failed (of 147).**
-   - `calendar.spec.ts:25` and `dashboard.spec.ts:55`: time zone. The machine is UTC+5:30; the calendar value is off by exactly 19,800,000 ms and the dashboard says "Interview today at 17:30" where the spec expects "tomorrow". Fix the specs (and any fixture date maths) to pin the browser time zone, for example `timezoneId` in the Playwright config, and to build "tomorrow" in that zone.
-   - `email.spec.ts` lines 18, 44, 54, 64: time out waiting for `getByRole('group', { name: 'Subject' })`. **Not diagnosed.** Could be a real bug or an environment issue. Open the traces in `apps/web/test-results/*/trace.zip` (`yarn playwright show-trace`) and the page snapshot in each `error-context.md`.
-2. The new `e2e` CI job has never run on Linux. The Docker image has never been built here. Both are task 1.5 and 1.6 in `ROADMAP.md`.
-3. A stray folder `career-ops/examples/...` appeared at the repo root (untracked, only a `cv.md`). It is not part of the project and was left out of the commit. Check what created it (probably a skill or tool run in the wrong directory) and delete it.
+1. **E2E on Windows, 2026-11-02: 141 passed, 6 failed (of 147).** Two are explained and fixed, four are not.
+   - Fixed (test problems, no product bug): `calendar.spec.ts:25` (the `sql` helper read UTC timestamps in the machine's zone) and `dashboard.spec.ts:55` (assumed the local date equals the UTC date). The helper now reads UTC and the browser and app server are pinned to UTC. Reproduced on Linux with `TZ=Asia/Kolkata`; on Linux with that zone the suite is now 152 of 152.
+   - **Not explained: `email.spec.ts` lines 18, 44, 54, 64** (time out waiting for `getByRole('group', { name: 'Subject' })`). They pass 4 of 4 on Linux alone, in the full suite, and with the machine in UTC+5:30, so it is not the time zone or the spec order, and nothing on the path is platform-specific. To diagnose it I need, from your Windows machine, `apps/web/test-results/email-*/error-context.md` (the page snapshot) for one failing spec, or the output of `corepack yarn playwright test email` there. Unverified guesses to check first: the Chromium or PDF step on Windows, and line endings from `autocrlf` in the checkout.
+2. CI has never run: nothing is pushed. The `e2e` job and the Linux commands of every job were run by hand on Linux (all green, see `ROADMAP.md` 1.4 and 1.6), and the `docker` job now also smoke-tests the image. **The image has still never been built**: the cloud sandbox could not pull the base image (Docker Hub 429, mirror 403). The `windows` job could not be run at all.
+3. The stray `career-ops/examples/...` folder is not in the cloud checkout (it was untracked on your machine) and nothing in the repository refers to it. Delete it on your machine.
 4. Owner to-dos (cannot be done by an agent): enable branch protection and secret scanning on GitHub; make the repository public before any shared use; push `main`.
 
 ## Next steps, in order
 
-1. Finish M1: fix the six e2e failures (diagnose the email ones first), get `yarn test:e2e` green locally, push a branch and confirm the CI jobs (`check`, `cli`, `windows`, `audit`, `docker`, `e2e`) pass on a clean Linux runner. Smoke-test the production image against Postgres (`/api/health`, sign in).
-2. M2: the **Connect** screen at `/connect` (make a token, pick Claude Code or OpenCode or other, copy the commands, "Test connection", list of connected assistants), plus the OpenCode export target. Details and tasks are in `ROADMAP.md` M2. Verify the OpenCode config against `https://opencode.ai/config.json` and the real `opencode mcp add`.
+1. Finish M1: push a branch and watch CI (`check`, `cli`, `windows`, `audit`, `docker` with the new smoke test, `e2e`); diagnose the four Windows email failures (see above).
+2. Finish M2: the Connect screen at `/connect`, the OpenCode export target and MCP last-seen are built and verified with the real OpenCode (see `ROADMAP.md` M2). Still to do: complete Claude Code's sign-in by hand (`/mcp`), and run a real task through each tool (`run start/step/finish`, `apps add`).
 3. M3: dashboard cards. Then M4a to M4d. Keep going down `ROADMAP.md`.
 
 Update the status words and tick tasks in `ROADMAP.md` in the same commit as the code.

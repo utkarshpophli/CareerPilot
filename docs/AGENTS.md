@@ -4,18 +4,23 @@ CareerPilot exposes its tools to AI assistants through the Model Context Protoco
 
 What the tools can do: search jobs, read your profile and applications, save applications and fit scores, and move applications along. By design there is no tool that sends email or deletes anything.
 
+## The quick way: the Connect screen
+
+Open **Connect** in the sidebar. It walks through four things: make a token (your password is asked again), pick your tool (Claude Code, OpenCode or other) and copy the commands, filled in with this server's address; press **Wait for the first call** and make your assistant call CareerPilot, and it shows up on the screen; and see every connected assistant with when it was last seen, what it did today and how many runs it reported. The rest of this page explains what the screen does for you.
+
 ## Turn the connector on
 
-In the app: Settings, then the connector section. The endpoint answers 404 while the connector is off. Sign-in uses OAuth, so you approve each client once in the browser.
+In the app: Settings, then the connector section (the Connect screen's OpenCode tab has one button that turns it on and allows OpenCode's sign-in address for you). The endpoint answers 404 while the connector is off. Sign-in uses OAuth, so you approve each client once in the browser.
 
 ## Connect a client
 
 The address is your server's public address plus `/api/mcp`, for example `https://careerpilot.example.com/api/mcp`.
 
 - Claude Code: `claude mcp add --transport http careerpilot https://careerpilot.example.com/api/mcp`, then run `/mcp` inside Claude Code and sign in when asked.
+- OpenCode: `opencode mcp add careerpilot --url https://careerpilot.example.com/api/mcp`, then `opencode mcp auth careerpilot`, which opens your browser. OpenCode comes back to `http://127.0.0.1:19876/mcp/oauth/callback`, so that address must be on the connector's allow-list (Settings, MCP connector): the Connect screen's button adds it. Or put a remote server in your `opencode.json`: `{ "mcp": { "careerpilot": { "type": "remote", "url": "https://careerpilot.example.com/api/mcp" } } }`.
 - Codex and other MCP clients that support remote (Streamable HTTP) servers with OAuth: add a server with that address in the client's MCP settings and complete the sign-in.
 
-Client setup changes between versions; if a command above no longer matches, use the client's own MCP documentation with the address above.
+Client setup changes between versions; if a command above no longer matches, use the client's own MCP documentation with the address above. The commands here were checked against Claude Code 2.1.316 and OpenCode 1.19.4 on 2026-11-02 (the Connect screen says the same). Note that the MCP endpoint takes only the OAuth sign-in above, not API tokens; tokens are for the `pilot` command line and the REST API.
 
 ## What you will see
 
@@ -64,10 +69,11 @@ node apps/cli/pilot.mjs run finish $ID --status ok "12 new postings"   # or --st
 
 ```bash
 node apps/cli/pilot.mjs skills export                       # Claude Code: .claude/skills/careerpilot/SKILL.md
+node apps/cli/pilot.mjs skills export --target opencode     # OpenCode: .opencode/careerpilot.md, and opencode.json if you have none
 node apps/cli/pilot.mjs skills export --target generic      # CAREERPILOT_AGENT.md for any assistant
 node apps/cli/pilot.mjs skills export --target generic --stdout >> AGENTS.md    # Codex, or GEMINI.md for Gemini CLI
 ```
 
-It never overwrites a file without `--force`.
+It never overwrites a file without `--force`, and never overwrites your own `opencode.json`, even with `--force`: if you already have one, it prints what to merge into it instead.
 
 Not built yet: rate limiting on the REST API, per-token scopes finer than read and write, and delete or send endpoints (by design, never).

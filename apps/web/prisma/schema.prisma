@@ -1044,3 +1044,15 @@ model ApiToken {
   lastUsedAt DateTime?
   revokedAt  DateTime?
 }
+
+// ─── Connected assistants (CareerPilot) ──────────────────────────────────────
+
+/// An AI app that has used the MCP connector, and when it was last seen, for the Connect screen. Only a hash of the
+/// OAuth client id is kept (the id itself is a signed note that is not needed again).
+model McpClient {
+  /// SHA-256 of the client id, in hex.
+  id          String   @id
+  name        String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+}

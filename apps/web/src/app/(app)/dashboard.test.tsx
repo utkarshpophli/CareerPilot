@@ -151,7 +151,7 @@ describe("the dashboard (E9-7)", () => {
       expect.stringContaining("Connect an assistant"),
     ]);
     expect(screen.getByRole("link", { name: "Find or paste a posting" })).toHaveAttribute("href", "/new?fresh=1");
-    expect(screen.getByRole("link", { name: "Connect an assistant" })).toHaveAttribute("href", "/settings?section=tokens");
+    expect(screen.getByRole("link", { name: "Connect an assistant" })).toHaveAttribute("href", "/connect");
   });
 
   it("shows the calendar after the cards, outside the time filter (E15-6)", () => {

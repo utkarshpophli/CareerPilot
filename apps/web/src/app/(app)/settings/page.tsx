@@ -9,6 +9,7 @@ import { providerOption } from "@/lib/ai/provider-options";
 import { lastNightlyBackup } from "@/lib/backup-schedule";
 import { backupsDir } from "@/lib/backups";
 import { apiTokenRows } from "@/lib/api-tokens";
+import { requestOrigin, serverAddress } from "@/lib/request-origin";
 import { mcpUrl } from "@/lib/connector/oauth";
 import { exportFileName } from "@/lib/data-export";
 import { formatShortDate } from "@/lib/dates";
@@ -105,10 +106,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       ) : section === "connector" ? (
         <ConnectorSection
           initial={{ on: settings.connectorEnabledAt !== null, redirects: settings.connectorRedirects }}
-          address={mcpUrl(env.CAREERPILOT_PUBLIC_URL ?? (await requestOrigin()))}
+          address={mcpUrl(await serverAddress())}
         />
       ) : section === "tokens" ? (
-        <ApiTokensSection initial={await apiTokenRows()} address={env.CAREERPILOT_PUBLIC_URL ?? (await requestOrigin())} />
+        <ApiTokensSection initial={await apiTokenRows()} address={await serverAddress()} />
       ) : section === "security" ? (
         <SecuritySection />
       ) : section === "data" ? (
@@ -169,14 +170,6 @@ async function googleView() {
 async function googleClientView() {
   const { id, idState, secretState } = await loadGoogleClientConfig();
   return { id, idState, secretState };
-}
-
-/** The address this page was reached at, for the redirect URI to register. */
-async function requestOrigin(): Promise<string> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host")?.split(",")[0]?.trim() || requestHeaders.get("host") || "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim() || (host.startsWith("localhost") ? "http" : "https");
-  return `${protocol}://${host}`;
 }
 
 /** The file name preview uses your name and your latest application, or sample values (SET-8). */

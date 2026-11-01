@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/env", () => ({ env: { CAREERPILOT_SECRET: "s".repeat(40), CAREERPILOT_PASSWORD: "argon2id:m=19456,t=2,p=1:c2FsdA:aGFzaA" } }));
 const settings = vi.hoisted(() => ({ connectorEnabledAt: "2026-10-23T09:00:00.000Z" as string | null }));
 vi.mock("@/lib/settings-data", () => ({ loadSettings: async () => settings }));
-const db = vi.hoisted(() => ({ postingSearch: { findUnique: vi.fn() }, postingScore: { upsert: vi.fn() } }));
+const db = vi.hoisted(() => ({
+  postingSearch: { findUnique: vi.fn() },
+  postingScore: { upsert: vi.fn() },
+  mcpClient: { updateMany: vi.fn(async () => ({ count: 0 })), createMany: vi.fn(async () => ({ count: 1 })) },
+}));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
 vi.mock("@/lib/ai/config", () => ({ isAiUsable: async () => false }));
 vi.mock("@/lib/profile-data", async () => {
@@ -60,9 +64,31 @@ const tool = async (name: string, args: Record<string, unknown>) => {
 beforeEach(() => {
   settings.connectorEnabledAt = "2026-10-23T09:00:00.000Z";
   searches.ran = [];
+  db.mcpClient.updateMany.mockClear();
+  db.mcpClient.createMany.mockClear();
 });
 
 describe("the Claude connector at /api/mcp (#221)", () => {
+  // The Connect screen lists assistants and waits for the first call from one.
+  it("notes which app called, by name and a hash of its id, for the Connect screen", async () => {
+    const token = await accessToken();
+    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, token)).status).toBe(200);
+    expect(db.mcpClient.createMany).toHaveBeenCalledTimes(1);
+    const [{ data, skipDuplicates }] = db.mcpClient.createMany.mock.calls[0] as unknown as [{ data: { id: string; name: string }[]; skipDuplicates: boolean }];
+    expect(data[0]).toMatchObject({ name: "Claude" });
+    expect(data[0]!.id).toMatch(/^[0-9a-f]{64}$/);
+    expect(skipDuplicates).toBe(true);
+  });
+
+  it("notes nothing for a call that is refused, and a failure to note never fails a call", async () => {
+    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" })).status).toBe(401);
+    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, "not-a-token")).status).toBe(401);
+    expect(db.mcpClient.createMany).not.toHaveBeenCalled();
+
+    db.mcpClient.updateMany.mockRejectedValueOnce(new Error("database is down"));
+    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, await accessToken())).status).toBe(200);
+  });
+
   it("isn't there while the connector is off", async () => {
     const token = await accessToken();
     settings.connectorEnabledAt = null;
