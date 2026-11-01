@@ -29,17 +29,12 @@ describe("parseEnv", () => {
       ...valid,
       DOSSIER_DATA_DIR: path.resolve("/data"),
       DOSSIER_BACKUP_RETENTION_DAYS: 14,
-      DOSSIER_TELEMETRY: undefined,
     });
   });
 
-  it("reads whether the usage ping is on", () => {
-    // Unset or empty: not decided, so CareerPilot asks (#172).
-    expect(parseEnv({ ...valid, DOSSIER_TELEMETRY: "" }).DOSSIER_TELEMETRY).toBeUndefined();
-    expect(parseEnv(valid).DOSSIER_TELEMETRY).toBeUndefined();
-    expect(parseEnv({ ...valid, DOSSIER_TELEMETRY: "ON" }).DOSSIER_TELEMETRY).toBe("on");
-    expect(parseEnv({ ...valid, DOSSIER_TELEMETRY: " Off " }).DOSSIER_TELEMETRY).toBe("off");
-    expect(problems({ ...valid, DOSSIER_TELEMETRY: "false" })).toEqual(['DOSSIER_TELEMETRY must be on or off (got "false").']);
+  it("no longer reads DOSSIER_TELEMETRY: the usage ping is gone, so a leftover value is ignored", () => {
+    expect(parseEnv({ ...valid, DOSSIER_TELEMETRY: "on" })).not.toHaveProperty("DOSSIER_TELEMETRY");
+    expect(() => parseEnv({ ...valid, DOSSIER_TELEMETRY: "false" })).not.toThrow();
   });
 
   it("reads the optional variables", () => {

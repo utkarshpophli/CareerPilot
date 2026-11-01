@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { encryptApiKey } from "@/lib/ai/api-key";
-import { EXPORT_FORMAT, EXPORT_SCHEMA_VERSION, EXPORT_SCHEMA_VERSIONS, exportSchema, INSTALL_SETTINGS, SECRET_SETTINGS, type DossierExport } from "@/lib/data-export";
+import { EXPORT_FORMAT, EXPORT_SCHEMA_VERSION, EXPORT_SCHEMA_VERSIONS, exportSchema, INSTALL_SETTINGS, RETIRED_SETTINGS, SECRET_SETTINGS, type DossierExport } from "@/lib/data-export";
 import { encryptSecret, JOB_SOURCE_KEY } from "@/lib/secrets";
 
 // Restoring from an export file (E10-6, SET-10): everything is replaced in
@@ -75,7 +75,7 @@ const jsonList = (value: unknown) => (Array.isArray(value) ? value : []) as Pris
  * key (the AI provider's, the job sources') stays as it is unless the file
  * carries one, which is then encrypted with this server's secret; the
  * TypeSafe key, which exports never carry, always stays. The install's own
- * settings (the usage ping's) stay as they are.
+ * settings (INSTALL_SETTINGS) stay as they are; retired ones are dropped.
  */
 export async function importExport(db: PrismaClient, data: DossierExport): Promise<void> {
   const { profile, themes, settings, applications, postings, searches, agentCandidates, startups, startupBlocks, apiKey, jobSourceKeys } = data;
@@ -134,7 +134,12 @@ export async function importExport(db: PrismaClient, data: DossierExport): Promi
       await tx.reference.createMany({ data: profile.references });
       await tx.fact.createMany({ data: profile.facts });
       await tx.theme.createMany({ data: themes.map((theme) => ({ ...theme, builtIn: false })) });
-      await tx.setting.createMany({ data: settings.filter((setting) => !SECRET_SETTINGS.includes(setting.key) && !INSTALL_SETTINGS.includes(setting.key)) });
+      // Retired settings in old files (the usage ping's) are dropped; the old rows went with the delete above.
+      await tx.setting.createMany({
+        data: settings.filter(
+          (setting) => !SECRET_SETTINGS.includes(setting.key) && !INSTALL_SETTINGS.includes(setting.key) && !RETIRED_SETTINGS.includes(setting.key),
+        ),
+      });
       for (const [key, value] of Object.entries(fromFile)) if (value) await tx.setting.create({ data: { key, value } });
 
       const themeIds = new Set((await tx.theme.findMany({ select: { id: true } })).map((theme) => theme.id));

@@ -63,7 +63,7 @@ describe("buildExport (E10-4)", () => {
     expect(withKey.settings.map((setting) => setting.key)).not.toContain("apiKeyEnc");
   });
 
-  it("leaves out the install's own settings: the usage ping's ID, day and answer", async () => {
+  it("never exports the retired usage ping settings that an older install may still hold", async () => {
     await prisma().setting.createMany({
       data: [
         { key: "usagePingId", value: "6f1c0e5a-9b1d-4c3e-8f2a-1d2e3f4a5b6c" },

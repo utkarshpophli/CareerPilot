@@ -49,13 +49,21 @@ export const EXPORT_SCHEMA_VERSIONS: readonly number[] = [1, 2, 3, 4, 5, 6, 7];
 const API_KEY_SETTING = "apiKeyEnc";
 /** The settings that hold encrypted keys, which only this server can read: never exported as they are. */
 export const SECRET_SETTINGS: readonly string[] = [API_KEY_SETTING, "jsearchKeyEnc", "adzunaKeyEnc", "typesafeKeyEnc"];
-/** The settings that belong to this install rather than its data (the usage ping's and its consent, the update check's, the Google client and the browser's time zone): never exported, and kept by an import. */
-export const INSTALL_SETTINGS: readonly string[] = [
+/**
+ * RETIRED settings: keys that earlier versions stored (the removed usage ping's
+ * install ID, day and consent) and that no longer exist. They are never
+ * exported, and an import drops them if an old export file still carries them,
+ * so those files keep importing. Never add a live setting here.
+ */
+export const RETIRED_SETTINGS: readonly string[] = [
   "usagePingId",
   "usagePingDay",
   "usagePingChoice",
   "usagePingChoiceAt",
   "usagePingChoiceText",
+];
+/** The settings that belong to this install rather than its data (the update check's, the Google client and the browser's time zone): never exported, and kept by an import. */
+export const INSTALL_SETTINGS: readonly string[] = [
   // The job agent's runs count against this server's job source key (E16).
   "agentRuns",
   // When Startups was last opened and what its last refresh found (#222).
@@ -465,7 +473,9 @@ export async function buildExport(
         facts,
       },
       themes,
-      settings: settings.filter((setting) => !SECRET_SETTINGS.includes(setting.key) && !INSTALL_SETTINGS.includes(setting.key)),
+      settings: settings.filter(
+        (setting) => !SECRET_SETTINGS.includes(setting.key) && !INSTALL_SETTINGS.includes(setting.key) && !RETIRED_SETTINGS.includes(setting.key),
+      ),
       ...(apiKey ? { apiKey } : {}),
       ...(Object.keys(jobSourceKeys).length > 0 ? { jobSourceKeys } : {}),
       applications,

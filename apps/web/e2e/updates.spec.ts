@@ -43,7 +43,7 @@ test("says a newer release is out until Not now, and again for the next one", as
 
   await page.goto("/settings?section=about");
   await expect(page.getByText("Version 99.0.0 is available.")).toBeVisible();
-  await expect(page.getByRole("switch", { name: "Check for updates daily" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("switch", { name: "Check for updates daily" })).toHaveAttribute("aria-checked", "false");
 
   await notice.getByRole("button", { name: "Not now" }).click();
   await expect(notice).toBeHidden();

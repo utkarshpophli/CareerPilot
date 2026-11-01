@@ -108,31 +108,19 @@ describe("importExport (E10-6)", () => {
     expect(decryptApiKey(saved.value, secret)).toBe("sk-current");
   });
 
-  it("keeps this install's usage ping ID, day and answer, whatever the file says", async () => {
+  // The usage ping was removed; export files from older versions may still carry its settings.
+  it("ignores the retired usagePing* settings in a file, and imports the rest", async () => {
     const file = await asFile();
-    await prisma().setting.createMany({
-      data: [
-        { key: "usagePingId", value: "6f1c0e5a-9b1d-4c3e-8f2a-1d2e3f4a5b6c" },
-        { key: "usagePingDay", value: "2026-09-28" },
-        { key: "usagePingChoice", value: "on" },
-        { key: "usagePingChoiceAt", value: "2026-10-20T08:00:00.000Z" },
-        { key: "usagePingChoiceText", value: "1" },
-      ],
-    });
-    const fromElsewhere = [
+    const retired = [
       { key: "usagePingId", value: "00000000-0000-4000-8000-000000000000" },
       { key: "usagePingDay", value: "2026-01-01" },
-      { key: "usagePingChoice", value: "off" },
-    ];
-    await importExport(prisma(), { ...file, settings: [...file.settings, ...fromElsewhere] });
-    const kept = await prisma().setting.findMany({ where: { key: { startsWith: "usagePing" } }, orderBy: { key: "asc" } });
-    expect(kept.map(({ key, value }) => ({ key, value }))).toEqual([
       { key: "usagePingChoice", value: "on" },
       { key: "usagePingChoiceAt", value: "2026-10-20T08:00:00.000Z" },
       { key: "usagePingChoiceText", value: "1" },
-      { key: "usagePingDay", value: "2026-09-28" },
-      { key: "usagePingId", value: "6f1c0e5a-9b1d-4c3e-8f2a-1d2e3f4a5b6c" },
-    ]);
+    ];
+    await importExport(prisma(), { ...file, settings: [...file.settings, ...retired] });
+    expect(await prisma().setting.count({ where: { key: { startsWith: "usagePing" } } })).toBe(0);
+    expect(await prisma().setting.count()).toBeGreaterThan(0);
   });
 
   // Audit B-10: a file from someone else must not point the AI at their server (the saved key would be sent there),

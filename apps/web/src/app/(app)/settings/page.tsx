@@ -23,7 +23,6 @@ import { scoringProblem } from "@/lib/scoring";
 import { loadScoringConfig, scoringView } from "@/lib/scoring/config";
 import { loadSettings } from "@/lib/settings-data";
 import { availableUpdate } from "@/lib/update-check";
-import { usagePingChoice, usagePingHost } from "@/lib/usage-ping";
 
 import { AgentSection } from "./agent-section";
 import { AiBehaviour } from "./ai-behaviour";
@@ -34,7 +33,7 @@ import { GoogleSection } from "./google-section";
 import { GoogleNotice } from "./google-notice";
 import { JobSearchSection } from "./job-search-section";
 import { ScoringSection } from "./scoring-section";
-import { AboutSection, type AboutFacts, type UsagePingView } from "./about-section";
+import { AboutSection, type AboutFacts } from "./about-section";
 import { ApiTokensSection } from "./api-tokens-section";
 import { SecuritySection } from "./security-section";
 import { ConnectorSection } from "./connector-section";
@@ -140,11 +139,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           preview={await filePreview()}
         />
       ) : (
-        <AboutSection
-          facts={await aboutFacts()}
-          usagePing={await usagePingView()}
-          updates={{ daily: settings.updateCheck, available: availableUpdate(settings) }}
-        />
+        <AboutSection facts={await aboutFacts()} updates={{ daily: settings.updateCheck, available: availableUpdate(settings) }} />
       )}
     </SettingsScreen>
   );
@@ -231,10 +226,4 @@ async function aboutFacts(): Promise<AboutFacts> {
     { label: "AI", value: [providerOption(ai.provider).name, ai.model].filter(Boolean).join(" · ") },
     { label: "Applications", value: String(applications) },
   ];
-}
-
-/** The usage ping's switch in About (#172): the answer in effect, who gave it, and the install ID. */
-async function usagePingView(): Promise<UsagePingView> {
-  const settings = await loadSettings();
-  return { host: usagePingHost(), ...usagePingChoice(settings), id: settings.usagePingId, production: process.env.NODE_ENV === "production" && usagePingHost() !== "" };
 }

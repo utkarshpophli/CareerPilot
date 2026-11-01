@@ -122,7 +122,16 @@ describe("the daily check", () => {
     expect(dailyCheckRuns()).toBe(false);
   });
 
+  it("never touches the network on a fresh install: the setting is off until the owner turns it on", async () => {
+    const fetch = releaseOf("0.2.0");
+    expect((await loadSettings()).updateCheck).toBe(false);
+    expect(await checkIfNewDay({ now: morning, runs: true, fetchImpl: fetch })).toBe("skipped");
+    expect(await checkIfNewDay({ now: nextDay, runs: true, fetchImpl: fetch })).toBe("skipped");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("asks once a day, even across restarts", async () => {
+    await saveSettings({ updateCheck: true });
     const fetch = releaseOf("0.2.0");
     expect(await checkIfNewDay({ now: morning, runs: true, fetchImpl: fetch })).toBe("checked");
     expect(await checkIfNewDay({ now: evening, runs: true, fetchImpl: fetch })).toBe("skipped");
@@ -144,6 +153,7 @@ describe("the daily check", () => {
   });
 
   it("doesn't try again the same day when GitHub doesn't answer", async () => {
+    await saveSettings({ updateCheck: true });
     const offline = vi.fn<typeof fetch>(async () => Promise.reject(new TypeError("fetch failed")));
     expect(await checkIfNewDay({ now: morning, runs: true, fetchImpl: offline })).toBe("checked");
     restart();

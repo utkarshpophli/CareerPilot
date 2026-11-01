@@ -86,25 +86,13 @@ function startups(path: string, request: IncomingMessage, response: ServerRespon
 
 /** How many JSearch searches were asked for, so a spec can tell a kept search came from the database. */
 let searches = 0;
-/** The usage pings the app sent here (DOSSIER_USAGE_PING_TEST_URL), so a spec can tell whether one went (#172). */
-const pings: unknown[] = [];
 
 createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://localhost:${port}`);
   if (url.pathname === "/health") return send(response, 200, { ok: true });
   if (url.pathname === "/searches") return send(response, 200, { searches });
-  if (url.pathname === "/pings") return send(response, 200, { pings });
   if (url.pathname === "/startup-requests") return send(response, 200, { requests: siteRequests });
   if (url.pathname.startsWith("/startups/")) return startups(url.pathname, request, response);
-  if (url.pathname === "/ping" && request.method === "POST") {
-    let body = "";
-    request.on("data", (chunk: Buffer) => (body += chunk.toString()));
-    request.on("end", () => {
-      pings.push(JSON.parse(body));
-      response.writeHead(204).end();
-    });
-    return;
-  }
   // Jev (DOSSIER_TYPESAFE_TEST_BASE_URL, #274): each question answered from
   // its id and line, so a spec knows the score: every Score at its top level
   // but past work one below, a line with "years", "skills" or "experience"
