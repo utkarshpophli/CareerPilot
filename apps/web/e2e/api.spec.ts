@@ -34,3 +34,26 @@ test("answers a JSON 401 without a token, and works with one", async () => {
   expect((await anonymous.get("/api/v1/status", { headers: { authorization: `Bearer ${TOKEN}` } })).status()).toBe(401);
   await anonymous.dispose();
 });
+
+test("makes a token in Settings, shows it once, and revoking it stops it working", async ({ page, playwright }) => {
+  await page.goto("/settings?section=tokens");
+  await page.getByLabel("Name").fill("e2e from settings");
+  await page.getByRole("button", { name: "Make token" }).click();
+  const shown = page.getByRole("status").locator("code");
+  await expect(shown).toHaveText(/^cp_[A-Za-z0-9_-]{43}$/);
+  const token = (await shown.textContent())!;
+  await expect(page.getByRole("list", { name: "API tokens" })).toContainText("e2e from settings");
+
+  const client = await playwright.request.newContext({ baseURL: BASE, storageState: undefined });
+  const ok = await client.get("/api/v1/status", { headers: { authorization: `Bearer ${token}` } });
+  expect(ok.status()).toBe(200);
+  expect(await ok.json()).toMatchObject({ data: { token: { name: "e2e from settings", scope: "READ" } } });
+
+  // After a reload the secret is gone from the page, and only a prefix is shown.
+  await page.reload();
+  await expect(page.getByText(token)).toHaveCount(0);
+  await page.getByRole("button", { name: "Revoke e2e from settings" }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: "e2e from settings" })).toContainText("Revoked");
+  expect((await client.get("/api/v1/status", { headers: { authorization: `Bearer ${token}` } })).status()).toBe(401);
+  await client.dispose();
+});

@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { AiProvider, Creativity, DateFormat, JobStatus, PaperSize, Tone } from "@/generated/prisma/enums";
+import { AiProvider, ApiScope, Creativity, DateFormat, JobStatus, PaperSize, Tone } from "@/generated/prisma/enums";
 import { action, ActionError } from "@/lib/action";
+import { apiTokenRows, createApiToken, revokeApiToken } from "@/lib/api-tokens";
 import { AiError, createProvider } from "@/lib/ai";
 import { applyApiKeyChange } from "@/lib/ai/api-key";
 import { keyStateOf, loadAiConfig, resolveAiConfig } from "@/lib/ai/config";
@@ -367,4 +368,25 @@ export const removeConnectorRedirect = action(z.object({ uri: z.string().max(200
   const redirects = (await loadSettings()).connectorRedirects.filter((entry) => entry !== uri);
   await saveSettings({ connectorRedirects: redirects });
   return { redirects };
+});
+
+// ─── API tokens ──────────────────────────────────────────────────────────────
+
+/** The most tokens kept at once, revoked or not, so the list stays short. */
+const MAX_TOKENS = 50;
+
+/** Makes an API token for the pilot command line and the REST API. The token is in the answer once; only its hash is kept. */
+export const createToken = action(
+  z.object({ name: z.string().trim().min(1, "Give the token a name.").max(60), scope: z.enum([ApiScope.READ, ApiScope.WRITE]) }),
+  async ({ name, scope }) => {
+    if ((await prisma.apiToken.count()) >= MAX_TOKENS) throw new ActionError(`That's ${MAX_TOKENS} tokens already. Revoked ones stay in the list; delete the database rows you no longer need, or reuse a token.`);
+    const { token } = await createApiToken(name, scope);
+    return { token, tokens: await apiTokenRows() };
+  },
+);
+
+/** Stops a token working at once. */
+export const revokeToken = action(z.object({ id: z.string().min(1).max(64) }), async ({ id }) => {
+  if (!(await revokeApiToken(id))) throw new ActionError("That token is gone or was revoked already.");
+  return { tokens: await apiTokenRows() };
 });

@@ -194,7 +194,7 @@ Updated 2026-11-01. "Done" means on the working branch with passing tests (about
 | 3. Safety core | Started | Posting guard ported from ai-job-search with a golden-corpus parity test against the Python original, wired into pasted, agent and connector postings. Not yet: SSRF guard unification, identity and dedup service, outbound privacy guard, merged fact gate. |
 | 4. Discovery and scoring | Not started | |
 | 5. Documents | Not started | Templates are already recorded per document; Insights groups by them. |
-| 6. Agent surfaces | Mostly | MCP connector attributed in the ledger; REST `/api/v1` (status, applications, activity, insights, posting check) with hashed, revocable, read/write tokens; dependency-free `pilot` CLI (`apps/cli`). Not yet: token management in Settings, rate limiting, write endpoints, exported skills. |
+| 6. Agent surfaces | Mostly | MCP connector attributed in the ledger; REST `/api/v1` (status, applications, activity, insights, posting check) with hashed, revocable, read/write tokens; dependency-free `pilot` CLI (`apps/cli`). Tokens are made and revoked in Settings. Not yet: rate limiting, write endpoints, exported skills. |
 | 7. Lifecycle | Not started | Gmail and Calendar come with the dossier base. |
 | 8. Insights | Done (first version) | Applications by platform and resume template, resume revisions, weekly activity, reply rates. |
 | 9. Importers | Not started | |

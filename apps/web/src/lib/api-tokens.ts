@@ -47,3 +47,18 @@ export async function revokeApiToken(id: string, now = new Date()): Promise<bool
 
 /** Whether a token's scope allows what a route needs. */
 export const allows = (principal: TokenPrincipal, needed: ApiScope) => needed === ApiScope.READ || principal.scope === ApiScope.WRITE;
+
+export type TokenRow = {
+  id: string;
+  name: string;
+  prefix: string;
+  scope: ApiScope;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+};
+
+/** The tokens as plain data for the Settings page: no hash, times as ISO text. */
+export async function apiTokenRows(): Promise<TokenRow[]> {
+  return (await listApiTokens()).map((row) => ({ ...row, createdAt: row.createdAt.toISOString(), lastUsedAt: row.lastUsedAt?.toISOString() ?? null, revokedAt: row.revokedAt?.toISOString() ?? null }));
+}

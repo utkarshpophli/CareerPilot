@@ -26,7 +26,7 @@ Client setup changes between versions; if a command above no longer matches, use
 
 For assistants that work through a shell (Claude Code, Codex and others), and for scripts. It needs Node 20 or later and no installation: run `apps/cli/pilot.mjs`.
 
-1. Make a token. On the server: `yarn create-token "claude-code on my laptop" write` (use `read` for a read-only token). The token is shown once; only a hash is stored. The name you give is what the Activity page shows for everything the token does.
+1. Make a token: in the app, Settings, then **API tokens** (name it, choose read or write, copy the token once). Or on the server: `yarn create-token "claude-code on my laptop" write`. Only a hash is stored. Revoke a token in the same Settings page and it stops working at once. The name you give is what the Activity page shows for everything the token does.
 2. Point the client at your server:
 
 ```bash
@@ -39,4 +39,4 @@ Commands: `status`, `apps [--status SENT]`, `activity [--actor MCP] [--limit N]`
 
 The same data is available over HTTP at `/api/v1/status`, `/applications`, `/activity`, `/insights` and `POST /api/v1/postings/check`, with `Authorization: Bearer <token>`. Answers are `{"data": ...}` or `{"error": {"code", "message"}}`. The client refuses plain `http://` except for localhost, so a token never travels unprotected by accident.
 
-Not built yet: managing tokens from the Settings page (for now use the script; revoke by setting `revokedAt` in the database), rate limiting, and write endpoints for applications.
+Not built yet: rate limiting and write endpoints for applications.
