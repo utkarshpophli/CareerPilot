@@ -1,3 +1,5 @@
+import { replaceElements } from "@/lib/html-scan";
+
 import type { EmailLabel } from "./types";
 
 // Reading startups' text (#222): HTML from posts and pages to plain text,
@@ -21,18 +23,17 @@ export function decodeEntities(text: string): string {
 
 /** HTML as plain text, with paragraphs and line breaks kept, and links written as their address. */
 export function htmlToText(html: string): string {
-  return decodeEntities(
-    html
-      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
-      .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href: string, label: string) => {
-        const url = decodeEntities(href);
-        const text = label.replace(/<[^<>]+>/g, "").trim();
-        return text && decodeEntities(text) !== url ? `${text} (${url})` : url;
-      })
-      .replace(/<\s*(p|br|li|div|h\d)[^>]*>/gi, "\n")
-      .replace(/<[^<>]+>/g, ""),
-  )
+  // This text comes from other people's pages, so no pattern here may rescan the text from every opener (audit B-05).
+  const withoutBlocks = replaceElements(html.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"), "script", () => " ");
+  const withoutStyles = replaceElements(withoutBlocks, "style", () => " ");
+  const withLinks = replaceElements(withoutStyles, "a", (attributes, label) => {
+    const href = /(?:^|\s)href="([^"]*)"/i.exec(attributes)?.[1];
+    if (href === undefined) return undefined; // no usable link: the tag is stripped below, the text stays
+    const url = decodeEntities(href);
+    const text = label.replace(/<[^<>]+>/g, "").trim();
+    return text && decodeEntities(text) !== url ? `${text} (${url})` : url;
+  });
+  return decodeEntities(withLinks.replace(/<\s*(p|br|li|div|h\d)[^<>]*>/gi, "\n").replace(/<[^<>]+>/g, ""))
     .replace(/[ \t ]+/g, " ")
     // The line above left single spaces only.
     .replace(/ ?\n ?/g, "\n")

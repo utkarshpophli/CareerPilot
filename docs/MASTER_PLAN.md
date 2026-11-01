@@ -222,3 +222,76 @@ Baseline (measured 2026-11-01 on Windows 11, Node 24.13): typecheck clean, lint 
 After Sprint 1 (Sprint 2): `owner_id` and `Principal` seams (the large schema change, done on its own), separate worker process and queue, then Phase 3 remainder (SSRF unification, identity and dedup service, outbound privacy guard, merged fact gate) and Phase 4 discovery. The security review of the architecture runs after Sprint 1, before Phase 4, because the agent tokens and write endpoints are the new attack surface.
 
 Dev environment notes (Windows): use `corepack yarn ...` in `apps/web` (no global yarn). Database tests need PostgreSQL; the repo's author machine runs one container on port 55432 (`docker run -d --name careerpilot-dev-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dossier -p 55432:5432 postgres:17`) and sets `DATABASE_URL=postgresql://postgres:postgres@localhost:55432/dossier`; tests use the `_test` database beside it.
+
+## 14. The plan from here (written after Sprint 1)
+
+Goal restated: one dashboard where a job seeker, or any agent working for them, does the whole search, and every step is visible. Sprint 1 built the visibility and the agent doorway. What is missing is the safety around that doorway, and then the actual job-search abilities from career-ops and ai-job-search (discovery, scoring, tailoring, follow-up, interview prep) running on top of it.
+
+### Where each of your asks stands
+
+| You asked for | Status |
+|---|---|
+| Dashboard as the main surface | Done (dossier base, renamed) |
+| Run it from Claude Code, Codex or any agent | Done: MCP, REST, `pilot` CLI, skill export |
+| See what is happening in the background | Done: Runs page, Running now card, live |
+| How many applications, which platforms | Done, first version (Insights) |
+| How many times a resume changed, which template | Done, first version (Insights); needs the Documents phase to be rich |
+| All features of the three projects, duplicates merged | Roughly a sixth; discovery, scoring, tailoring, follow-up and prep are still to port (merge map in section 5) |
+| Security | Not yet reviewed; next |
+
+### Sprint 2: make it safe (about 1 week)
+
+Security review of what Sprint 1 opened, then fixes with tests. Output: `docs/SECURITY.md` (threat model, requirements per phase) and the fixes.
+
+1. Agent doorway: scoped tokens (separate read, write-tracking and "mark as sent" scopes); require a person's confirmation for statuses that mean "I sent it"; rate limits and login throttling; token expiry and a last-used view; CSRF and origin review of the new REST routes.
+2. Untrusted text: every path that brings text in (paste, API, MCP, scans later) goes through the posting guard; AI tasks that read it get no tools; add the outbound privacy guard (what leaves for a model).
+3. Fetching: one SSRF-safe fetch used by every source (ported from career-ops `_ip-guard`), plus the robots check from ai-job-search.
+4. Secrets: encrypted keys with versioning, startup checks, no secrets in logs or run steps (add a redactor for run steps).
+5. Fork hygiene: replace leftover upstream names and endpoints (`DOSSIER_*` variables, `ghcr.io/aientech/dossier` in messages, the update-check repository, README links), make the update check opt-in, add the AGPL source link and `THIRD_PARTY_NOTICES` entries, record that dossier lists no copyright holder.
+6. Supply chain: dependency and licence scan in CI (the career-ops web lockfile carries LGPL and MPL transitives; check ours), pin and audit.
+
+Done when: threat model written, every item fixed or consciously accepted in an ADR, CI runs the scans.
+
+### Sprint 3: the safe core and the worker (about 1.5 weeks)
+
+1. `owner_id` and a `Principal` passed to every service (the large schema change, done alone, with data-migration tests).
+2. Separate worker process and a PostgreSQL queue, so scans survive a web restart; scheduled jobs; each job reports as a run.
+3. Identity and dedup service (career-ops stack plus the ai-job-search canonical key) used by applications, postings and scans.
+4. One fact gate for generated documents (career-ops hard gate plus dossier heuristics).
+
+Done when: a scheduled scan job runs in the worker and shows live in Runs, and restarting the web app does not lose it.
+
+### Sprint 4: discovery and scoring (about 2 weeks)
+
+Source adapter framework from career-ops; first adapters Greenhouse, Lever, Ashby and FreeHire plus dossier's four aggregators; liveness check; deterministic scoring with evidence (ai-job-search weights, career-ops A to G as structured output); review queue; daily scan as a run. Skip LinkedIn scraping.
+
+Done when: a daily scan fills a review queue with deduplicated, live, scored postings, each with the reasons for its score.
+
+### Sprint 5: documents and resume studio (about 2 weeks)
+
+Tailored resume and letter on the unit model; template and theme recorded per version; version history with diffs; ATS lint; PDF with page limit; reviewer pass. This is what makes "how many times did my resume change, which template" rich rather than just counted.
+
+Done when: a tailored PDF passes the fact gate, and Insights compares replies by template and by resume version.
+
+### Sprint 6: lifecycle (about 2 weeks)
+
+Follow-up cadence, Gmail and Calendar reply handling with proposed status changes, interview records, story bank and prep, outreach drafts, weekly digest.
+
+### Sprint 7: importers and release (about 2 weeks)
+
+Importers for existing career-ops data, ai-job-search workspaces and dossier exports; accessibility and browser-test gates; backups; compose-based install; a second security review of the finished product; release.
+
+### Housekeeping first (about half a day)
+
+Push the branch; add the CLI tests and a Windows job to CI; run the Playwright suite on Windows; write the Windows quick start in the README; decide what to do with the generated `apps/web/AGENTS.md`; remove the smoke-test data from the dev database.
+
+### New ideas worth pulling in (section 9 has the rest)
+
+Run replay and a token cost view (cheap now that runs exist), duplicate-application guard across platforms (first form already shipped), budget caps on AI spend, platform scorecards.
+
+### Decisions (answered by the user, 2026-11-01)
+
+1. Sprint 2 (security) goes next: started.
+2. **Local only, no hosted service from us.** The project is open source and people host it themselves as they like. Consequence for security: we do not run anything for anyone, but a self-hoster may put the app on the internet behind a reverse proxy, so the defaults must be safe when exposed (strong password required, secure cookies behind HTTPS, login throttling, no telemetry, no default credentials). No multi-tenant work: `owner_id` and `Principal` stay as seams only. The AGPL source link must stay working for people who host a modified copy.
+3. **Agent tools to support first: Claude Code and OpenCode.** Claude Code: MCP plus the exported skill (done). OpenCode: needs an export target and a tested setup guide (it reads `AGENTS.md` and takes MCP servers in its own config; verify against its current docs before writing the target). Codex and Gemini CLI keep working through the generic export but are not tested first.
+4. **First release includes all the proposed new ideas:** run replay, token and cost view, budget caps with fallback to a cheaper or local model, duplicate-application guard across platforms, platform scorecards, plus the others in section 9 as capacity allows. Scheduling: run replay and cost view in Sprint 3 (they need the worker and per-event cost), budget caps in Sprint 4 (they gate scans and scoring), scorecards in Sprint 5 with the Documents work.

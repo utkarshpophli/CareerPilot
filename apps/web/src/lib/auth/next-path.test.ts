@@ -24,6 +24,11 @@ describe("safeNextPath", () => {
       "/\t/evil.example",
       "javascript:alert(1)",
       "evil.example",
+      // Dot segments collapse into a protocol-relative "//evil.example" (audit B-09).
+      "/.//evil.example",
+      "/foo/..//evil.example",
+      "/a/./..//evil.example/path?x=1",
+      "/%2e//evil.example",
     ]) {
       expect(safeNextPath(next), next).toBe("/");
     }

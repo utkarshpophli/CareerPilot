@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 
+import { removeElements } from "@/lib/html-scan";
+
 // Building and reading email messages (RFC 5322, MIME) for Gmail (E15-2,
 // E15-3). Only what CareerPilot sends and reads: a plain text body with PDF
 // attachments, and the text of replies.
@@ -143,8 +145,8 @@ export function stripQuoted(text: string): string {
 
 /** HTML mail as plain text, for when there's no text part. */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+  // Mail comes from anyone, so no pattern here may rescan the text from every opener (audit B-03).
+  return removeElements(html, ["script", "style"])
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|tr|h\d)>/gi, "\n")
     .replace(/<[^<>]+>/g, "")

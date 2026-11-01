@@ -15,5 +15,8 @@ export function safeNextPath(next: string | null | undefined): string {
   }
   if (url.origin !== BASE) return "/";
   if (url.pathname === "/login" || url.pathname.startsWith("/login/")) return "/";
+  // Dot segments such as "/.//evil.example" collapse to "//evil.example", which a
+  // browser reads as another site. After normalising, only a single leading slash will do.
+  if (/^[/\\]{2}/.test(url.pathname)) return "/";
   return `${url.pathname}${url.search}${url.hash}`;
 }
