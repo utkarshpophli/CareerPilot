@@ -303,14 +303,14 @@ __metadata:
     eslint: "npm:^9"
     eslint-config-next: "npm:16.4.3"
     fflate: "npm:^0.8.3"
-    jose: "npm:^6.2.13"
+    jose: "npm:^6.2.14"
     jsdom: "npm:^30.1.3"
-    lucide-react: "npm:^1.61.0"
+    lucide-react: "npm:^1.64.0"
     mammoth: "npm:^1.13.0"
     next: "npm:16.4.3"
     node-html-parser: "npm:^9.0.5"
     ollama: "npm:^0.6.4"
-    openai: "npm:^7.43.0"
+    openai: "npm:^7.45.1"
     pg: "npm:^8.23.1"
     playwright-core: "npm:^1.64.1"
     prisma: "npm:^7.10.1"
@@ -6592,10 +6592,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jose@npm:^6.2.13":
-  version: 6.2.13
-  resolution: "jose@npm:6.2.13"
-  checksum: 10c0/a7a175057fd42e129200026320d535deba5c869e764bdb130d4aecb7cc2a22c07eab2bf9fc848188b45b89d95f8e0ba4ce01a8259a4fa45c84bec34f66f2918e
+"jose@npm:^6.2.14":
+  version: 6.2.14
+  resolution: "jose@npm:6.2.14"
+  checksum: 10c0/3db121220793e391c24803edae1ede848e7a67e2c3d37f9864f3e3e245c4b2d318f176d17f0f8ab02be07e210a3db5453612c8d5716af2deeaaa4e5d50e70641
   languageName: node
   linkType: hard
 
@@ -7107,16 +7107,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^1.61.0":
-  version: 1.61.0
-  resolution: "lucide-react@npm:1.61.0"
+"lucide-react@npm:^1.64.0":
+  version: 1.64.0
+  resolution: "lucide-react@npm:1.64.0"
   peerDependencies:
     "@types/react": "*"
     react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/85576d32aef43d5dccf5a1fac06b67c2ccbb70eb33b996123f49aab108111fffa6bdd517c7d406db67a14432c45924279c2ec7212a166864d3355ce68b361494
+  checksum: 10c0/fe02e02a8c6a58fad4e27f0be0791fd4a6015ac02eec026bb51299e9e6221ed28b9e735229acb711e3fdfc27055ea89f326077249d63ff00fd5968d3e93f703f
   languageName: node
   linkType: hard
 
@@ -7556,14 +7556,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"openai@npm:^7.43.0":
-  version: 7.43.0
-  resolution: "openai@npm:7.43.0"
+"openai@npm:^7.45.1":
+  version: 7.45.1
+  resolution: "openai@npm:7.45.1"
   peerDependencies:
     "@aws-sdk/credential-provider-node": ">=3.972.0 <4"
     "@smithy/hash-node": ">=4.3.0 <5"
     "@smithy/signature-v4": ">=5.4.0 <6"
-    google-auth-library: ">=9.15.1 <11"
+    google-auth-library: ">=9.15.1 <12"
     undici: ">=5 <9"
     ws: ^8.21.0
     zod: ^3.25 || ^4.0
@@ -7582,7 +7582,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10c0/09b253ca2131db1f23f782441d6e3bf0161d8c2e72fa20e57f9cac0589902350a1cb1cb83ede99710fb0606120c11af7b30615846f3ca7f3c69aba636322b2d1
+  checksum: 10c0/5376321a1d165f5b2c1ffb1c1bc353aeaad99ed278b2a53d03b263c244c7ee6deed194b6c6ac3bd6c63cd1c8a137141b137f036d68517d95ce84ad42fffe0ca8
   languageName: node
   linkType: hard
 
