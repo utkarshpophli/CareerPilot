@@ -17,7 +17,7 @@ Defaults I took without asking (change them if wrong): drop the unofficial Bunde
 
 ## Groups, in order
 
-Status: DONE, NEXT, LATER (with the sprint it moves to).
+Status: DONE, ACCEPTED, LATER (with the sprint it moves to). Updated 2026-11-01 at the end of Sprint 2.
 
 ### 1. Quick wins (small, no design choices)
 
@@ -42,7 +42,7 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Refuse progress statuses for tokens and the connector (interim of the decision above); refuse moves on applications awaiting review or archived; the connector no longer approves agent drafts | A-05, A-09 | DONE |
 | REST: 120 requests a minute per token (burst 100), a shared small allowance for bad tokens, 500 steps per run, 50 runs going at once, step data at most 4,000 characters and 4 levels deep, request bodies refused by announced length and while streaming | A-06, A-14, B-20 | DONE for `/api/v1`. The connector (`/api/mcp`) now has a per-client limit (burst 60, then 1 a second), a tighter one for tools that spend job-source quota or AI money (`search_jobs`, `more_jobs`, `draft_application`: burst 10, then one every 6 seconds, counted per tool in a batch) and a 1 MB body cap |
 | Posting guard on every connector posting path (`get_posting`, `save_application`, paste hand-off), labelled as untrusted with a warning when instructions are found | A-10, B-01 | DONE; search snippets and stored Find jobs text are still unguarded (B-08, LATER) |
-| Login throttle: the global limit slows sign-in (3 s per check) instead of refusing the right password, so a stranger cannot lock the owner out; password checks run one at a time with the block re-tested inside the queue, so a parallel burst cannot all pass it; passwords over 256 characters are refused without hashing | A-02, A-03 | DONE; configurable trusted-proxy hop count for the client IP not done (NEXT) |
+| Login throttle: the global limit slows sign-in (3 s per check) instead of refusing the right password, so a stranger cannot lock the owner out; password checks run one at a time with the block re-tested inside the queue, so a parallel burst cannot all pass it; passwords over 256 characters are refused without hashing | A-02, A-03 | DONE; configurable trusted-proxy hop count for the client IP not done (LATER, Sprint 3) |
 | Session epoch: "Sign out everywhere" in Settings → Security makes every cookie stale at once; kept by Delete everything, never exported or imported | A-04 | DONE |
 | Password required to create an API token, through the same throttled check as signing in (one shared function) | A-20 | DONE |
 | Best-effort redaction of credentials (API tokens, provider keys, bearer tokens, JWTs, private keys, `name=value` secrets) in run titles, steps and every ledger summary and data field | (plan) | DONE |
@@ -58,18 +58,18 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Rename `DOSSIER_*` to `CAREERPILOT_*`; the old names are copied over at startup with a one-line reminder, and the new name wins | C-25 | DONE |
 | Delete the usage ping; update check off until turned on, queries only this project's releases | C-05, C-15 | DONE |
 | Visible licence notice and Source code link on the sign-in page and in Settings > About, tied to the commit the image was built from (`--build-arg GIT_SHA`); the repository must be public before a shared deployment | C-02 | DONE |
-| `THIRD_PARTY_NOTICES.md` complete (fonts with OFL texts, MIT-ported code, dependencies); licence texts shipped in the image | C-03, C-20 | NEXT |
-| Copyright and modification notice; rewrite SECURITY.md, PRIVACY.md, README for CareerPilot | C-04, C-06 | NEXT |
+| `THIRD_PARTY_NOTICES.md`: fonts with OFL texts and reserved names, MIT text for the ported code, modified-version notice: DONE. A generated npm dependency licence list shipped inside the image: not done | C-03, C-20 | PARTLY DONE; the generated list is LATER, Sprint 3 |
+| Copyright and modification notice; root SECURITY.md; app SECURITY.md, PRIVACY.md, DEVELOPMENT.md, CONTRIBUTING.md and README renamed and corrected for CareerPilot (agent-access section added) | C-04, C-06 | DONE |
 | Remove personal data and agent config from `upstream/`; fix `.gitignore`; untrack generated graphs | C-13, C-23, C-12, C-14 | DONE |
 
 ### 4. Supply chain and CI
 
 | Item | Finding | Status |
 |---|---|---|
-| Bump or dedupe vulnerable transitives, re-run audit | C-07 | NEXT |
-| Root CI: Windows job, `yarn npm audit` (production tree must have no high advisory), production Docker build, CLI tests | C-08 | DONE except e2e and a licence check (NEXT) |
+| Vulnerable transitives: the production tree has no high advisory (CI enforces it). The 15 advisories left (5 high, 8 moderate, 2 low) are in build, test and Prisma-CLI code that is not in the production image; reported by CI, reviewed on each Dependabot update | C-07 | ACCEPTED, with CI check |
+| Root CI: Windows job, `yarn npm audit` (production tree must have no high advisory), production Docker build, CLI tests | C-08 | DONE except e2e and a licence check (LATER, Sprint 3) |
 | Dependabot (npm, actions, docker), CODEOWNERS, root SECURITY.md | C-09 | DONE (branch protection and secret scanning are GitHub settings the owner must switch on) |
-| Dockerfile `/tools` install from the lockfile; Yarn install-script allow-list and release-age gate | C-10, C-18 | NEXT |
+| Dockerfile `/tools` install from the lockfile (today `npm install` pins Prisma and dotenv but resolves their dependencies fresh); Yarn install-script allow-list and release-age gate | C-10, C-18 | LATER, Sprint 3 (needs a Docker build to verify) |
 
 ### 5. Untrusted-text deep work (moves to later sprints, designed together)
 

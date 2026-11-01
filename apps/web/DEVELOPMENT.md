@@ -1,6 +1,6 @@
-# Developing Dossier
+# Developing CareerPilot
 
-Next.js 16 (App Router) + Prisma 7 + PostgreSQL 18, run with Docker Compose and Yarn 4. Nothing runs on the host: every command goes through the containers. For installing and running Dossier, see the [README](README.md); for how it's secured, [SECURITY.md](SECURITY.md).
+Next.js 16 (App Router) + Prisma 7 + PostgreSQL 18, run with Docker Compose and Yarn 4. Nothing runs on the host: every command goes through the containers. For installing and running CareerPilot, see the [README](README.md); for how it's secured, [SECURITY.md](SECURITY.md).
 
 ## Getting started
 
@@ -123,7 +123,7 @@ Both get the session from `getSession()` in `src/lib/auth/session.ts` (see [Sign
 
 ## Sign-in
 
-Dossier has one user and no accounts: you sign in with the password that `CAREERPILOT_PASSWORD` is a hash of. The session is an encrypted token (JWE, keyed from `CAREERPILOT_SECRET`) in an HttpOnly, SameSite=Lax cookie, so nothing is stored on the server. It lasts until the browser closes, but at most 24 hours; with "Keep me signed in", 30 days.
+CareerPilot has one user and no accounts: you sign in with the password that `CAREERPILOT_PASSWORD` is a hash of. The session is an encrypted token (JWE, keyed from `CAREERPILOT_SECRET`) in an HttpOnly, SameSite=Lax cookie, so nothing is stored on the server. It lasts until the browser closes, but at most 24 hours; with "Keep me signed in", 30 days.
 
 The hash is argon2id with OWASP's settings (19 MiB, 2 passes, 1 lane) from Node's own `crypto.argon2`, made by `docker/bin/yarn hash-password` (`scripts/hash-password.ts`, which the image bundles as the `hash-password` command). Checking a password against it is in `src/lib/auth/password-hash.ts`, and `src/lib/env.ts` refuses anything that isn't a hash. It's written as `argon2id:m=19456,t=2,p=1:<salt>:<hash>` rather than the usual `$argon2id$v=19$…`, because Next.js and Docker Compose expand `$` in `.env` files, even inside quotes. The settings are part of each hash, so stronger ones can come later without breaking existing hashes.
 
@@ -135,7 +135,7 @@ Failed sign-ins are rate-limited in Postgres: after 5 failures within a minute f
 
 ## AI provider
 
-Dossier reads job postings and writes drafts with the model you choose in Settings → AI provider: a local model through Ollama or llama.cpp, LM Studio, any OpenAI-compatible server, Anthropic or Mistral. Until you save a choice there, the `CAREERPILOT_AI_*` variables decide (see `.env.example`). API keys are stored encrypted with a key derived from `CAREERPILOT_SECRET`, and never sent back to the browser.
+CareerPilot reads job postings and writes drafts with the model you choose in Settings → AI provider: a local model through Ollama or llama.cpp, LM Studio, any OpenAI-compatible server, Anthropic or Mistral. Until you save a choice there, the `CAREERPILOT_AI_*` variables decide (see `.env.example`). API keys are stored encrypted with a key derived from `CAREERPILOT_SECRET`, and never sent back to the browser.
 
 A server that speaks OpenAI's API with a difference (an address people tend to get wrong, a header it requires, a field every request needs) doesn't need a provider of its own: give it an entry in `src/lib/ai/providers/servers.ts` and a case in `servers.test.ts`. DeepSeek, OpenRouter and OpenCode are there already.
 

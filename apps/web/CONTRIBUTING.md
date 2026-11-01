@@ -1,12 +1,12 @@
-# Contributing to Dossier
+# Contributing to CareerPilot
 
-Thanks for wanting to help. Bugs and ideas go in the issue forms; this page is about pull requests. How to set Dossier up and run its checks is in [DEVELOPMENT.md](DEVELOPMENT.md).
+Thanks for wanting to help. Bugs and ideas go in the issue forms; this page is about pull requests. How to set CareerPilot up and run its checks is in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 Please read the three rules below before you start. I'll close a pull request that doesn't follow them, however much work went into it.
 
-## 1. Before adding an AI provider, check the ones Dossier has
+## 1. Before adding an AI provider, check the ones CareerPilot has
 
-Many AI services speak OpenAI's API, and Dossier's **OpenAI-compatible** provider works with any of them: you enter the server's address, your API key and the model. OpenRouter, DeepSeek, Ollama's cloud, vLLM and Azure OpenAI are all used this way. So try the service with OpenAI-compatible first.
+Many AI services speak OpenAI's API, and CareerPilot's **OpenAI-compatible** provider works with any of them: you enter the server's address, your API key and the model. OpenRouter, DeepSeek, Ollama's cloud, vLLM and Azure OpenAI are all used this way. So try the service with OpenAI-compatible first.
 
 - **It works:** there's nothing to add. If the docs do not mention it, open an issue and it will be added.
 - **It almost works,** because the server differs in a small way (its API is at another path, it needs a header, every request needs a field): add an entry in [`src/lib/ai/providers/servers.ts`](src/lib/ai/providers/servers.ts) and a test in `servers.test.ts`, not a provider of its own. The AI provider section of DEVELOPMENT.md explains how.
@@ -18,7 +18,7 @@ A job source receives a search from the user's server and nothing more: the keyw
 
 - **Send only what the search needs.** No name, email, profile, resume or applications, and nothing that ties searches to a person beyond the key the source itself requires.
 - **Check the source before writing code.** Read its privacy policy and terms. It mustn't gather information about the people searching or build profiles of them. Link both in the pull request, and say what it collects.
-- **Keep it on the server.** Searches go from Dossier's server to the source's own address. The browser never talks to a job source, so it can't be tracked there.
+- **Keep it on the server.** Searches go from CareerPilot's server to the source's own address. The browser never talks to a job source, so it can't be tracked there.
 - **Update PRIVACY.md.** Its table says who receives what, and a new source adds itself there.
 
 ## 3. AI-written code is welcome, but review it yourself first
