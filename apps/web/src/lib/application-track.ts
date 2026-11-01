@@ -3,6 +3,7 @@ import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { ApplicationStatus } from "@/generated/prisma/enums";
 import { ActionError } from "@/lib/action";
+import { assertAgentMayMove } from "@/lib/agent-status-policy";
 import { ACTIONS, recordActivity } from "@/lib/ledger";
 import { platformFromUrl } from "@/lib/platform";
 import { inspectPosting } from "@/lib/posting-check";
@@ -88,8 +89,13 @@ export async function trackApplication(db: PrismaClient, input: TrackInput): Pro
 
 export type StatusMove = { id: string; status: ApplicationStatus; changed: boolean; eventId: string | null };
 
-/** Moves an application to `to` through the status machine; `eventId` is what undoes the move. */
+/**
+ * Moves an application to `to` through the status machine; `eventId` is what
+ * undoes the move. For assistants only: they may record DRAFT, REJECTED and
+ * DECLINED, never progress (see agent-status-policy.ts).
+ */
 export async function moveApplication(db: PrismaClient, id: string, to: ApplicationStatus): Promise<StatusMove> {
+  await assertAgentMayMove(db, id, to);
   const result = await applyStatusChange(db, id, to);
   if (result.outcome === "not-found") throw new ServiceError("not_found", "No such application.");
   if (result.outcome === "changed") return { id, status: to, changed: true, eventId: result.event.id };

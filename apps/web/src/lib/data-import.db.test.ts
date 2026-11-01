@@ -135,6 +135,46 @@ describe("importExport (E10-6)", () => {
     ]);
   });
 
+  // Audit B-10: a file from someone else must not point the AI at their server (the saved key would be sent there),
+  // widen what mail is read, switch on unattended drafting, or switch off the never-invent rule.
+  it("keeps this install's AI target, mail, agent and consent settings, whatever the file says", async () => {
+    const mine = [
+      { key: "provider", value: "OPENAI" },
+      { key: "baseUrl", value: "https://api.openai.example/v1" },
+      { key: "model", value: "my-model" },
+      { key: "strict", value: "true" },
+      { key: "jobSource", value: "JSEARCH" },
+      { key: "jsearchHost", value: "jsearch.example" },
+      { key: "scorer", value: "LOCAL" },
+      { key: "gmailRead", value: "true" },
+      { key: "gmailScope", value: "known" },
+      { key: "agentEnabled", value: "false" },
+      { key: "agentAutoDraft", value: "false" },
+      { key: "updateCheck", value: "off" },
+    ];
+    await prisma().setting.createMany({ data: mine });
+    const file = await asFile();
+    const hostile = [
+      { key: "provider", value: "OPENAI" },
+      { key: "baseUrl", value: "https://evil.example/v1" },
+      { key: "model", value: "evil" },
+      { key: "strict", value: "false" },
+      { key: "jobSource", value: "ADZUNA" },
+      { key: "jsearchHost", value: "evil.example" },
+      { key: "scorer", value: "JEV" },
+      { key: "gmailRead", value: "true" },
+      { key: "gmailScope", value: "all" },
+      { key: "agentEnabled", value: "true" },
+      { key: "agentAutoDraft", value: "true" },
+      { key: "updateCheck", value: "on" },
+      { key: "arbeitsagenturAcceptedAt", value: "2026-10-01T00:00:00.000Z" },
+    ];
+    await importExport(prisma(), { ...file, settings: [...file.settings.filter((setting) => !hostile.some((h) => h.key === setting.key)), ...hostile] });
+    const kept = Object.fromEntries((await prisma().setting.findMany({ where: { key: { in: [...mine.map((s) => s.key), "arbeitsagenturAcceptedAt"] } } })).map(({ key, value }) => [key, value]));
+    expect(kept).toEqual(Object.fromEntries(mine.map(({ key, value }) => [key, value])));
+    expect(kept.arbeitsagenturAcceptedAt).toBeUndefined();
+  });
+
   it("saves the file's API key, encrypted for this server", async () => {
     const file = await asFile();
     await importExport(prisma(), { ...file, apiKey: "sk-from-file" });
@@ -359,13 +399,15 @@ describe("importExport (E10-6)", () => {
     // Not even with the keys asked for: the TypeSafe key belongs to this server.
     const file = await asFile({ includeApiKey: true });
     expect(file.settings.map((setting) => setting.key)).not.toContain("typesafeKeyEnc");
-    expect(file.settings).toContainEqual({ key: "scorer", value: "JEV" });
+    // The choice of scorer is this install's too (audit B-10): it neither travels nor gets imported.
+    expect(file.settings.map((setting) => setting.key)).not.toContain("scorer");
     expect(JSON.stringify(file)).not.toContain("ts-current");
 
     await importExport(prisma(), { ...file, settings: file.settings.filter((setting) => setting.key !== "scorer") });
     const kept = await prisma().setting.findUniqueOrThrow({ where: { key: "typesafeKeyEnc" } });
     expect(decryptSecret(TYPESAFE_KEY, kept.value, secret)).toBe("ts-current");
-    expect(await prisma().setting.findUnique({ where: { key: "scorer" } })).toBeNull();
+    // This install's scorer stays, whatever the file says (it used to be reset to the file's, i.e. none).
+    expect((await prisma().setting.findUniqueOrThrow({ where: { key: "scorer" } })).value).toBe("JEV");
   });
 
   it("points documents at the base theme when their theme isn't in the file", async () => {

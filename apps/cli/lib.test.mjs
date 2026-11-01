@@ -16,6 +16,16 @@ test("table aligns columns and collapses whitespace", () => {
   assert.equal(table(["A", "BB"], [["xxx", "y\nz"], ["1", ""]]), "A    BB\nxxx  y z\n1");
 });
 
+test("text from the server cannot drive the terminal (audit A-22)", () => {
+  const hostile = "ok\u001b[2J\u001b[1;1Hfake prompt\u001b]0;pwned\u0007\r\u009b31mred";
+  const text = formatActivity([{ at: "2026-11-01T12:30:00.000Z", actorKind: "CLI", actorName: "evil\u001b[31m", summary: hostile }]);
+  assert.doesNotMatch(text, /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/);
+  assert.match(text, /ok.*fake prompt/);
+  assert.match(formatRuns([{ id: "r\u001b[1m", status: "OK", stalled: false, stepCount: 1, actorKind: "CLI", actorName: "", title: "t\u001b[0m" }]), /^[^\u001b]*$/);
+  assert.doesNotMatch(formatRun({ title: "x\u001b[1m", kind: "k", status: "OK", stalled: false, stepCount: 0, events: [{ at: "2026-11-01T12:00:00Z", summary: "s\u001b[2J" }] }), /\u001b/);
+  assert.doesNotMatch(formatApplications([{ status: "DRAFT", platform: "p\u001b[1m", sentAt: null, title: "t\u0007" }]), /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/);
+});
+
 test("formatters handle empty lists", () => {
   assert.equal(formatApplications([]), "No applications.");
   assert.equal(formatActivity([]), "No activity.");

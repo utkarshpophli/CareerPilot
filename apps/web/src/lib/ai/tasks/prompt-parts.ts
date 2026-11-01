@@ -4,6 +4,7 @@ import { citationText } from "@/lib/citation";
 import { factTexts, formatDateRange, languageLevelLabel, resumePublications, type ProfileData } from "@/lib/profile";
 
 import type { AIProvider } from "../provider";
+import { neutralizeFences } from "../untrusted";
 
 // Building blocks shared by the AI tasks (E6-5, PRD §7).
 
@@ -87,7 +88,7 @@ export function profileForPrompt(profile: ProfileData, { includeReferences = fal
 
 /** The posting, marked as material to read rather than instructions to follow. */
 export function postingForPrompt(posting: string): string {
-  return `<posting>\n${posting.trim().slice(0, MAX_POSTING_CHARACTERS)}\n</posting>`;
+  return `<posting>\n${neutralizeFences(posting.trim().slice(0, MAX_POSTING_CHARACTERS))}\n</posting>`;
 }
 
 /** What the model knows about the job for writing tasks. */

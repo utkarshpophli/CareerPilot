@@ -70,6 +70,27 @@ describe("addRunStep", () => {
   });
 });
 
+// Audit A-06, A-14: a stolen or runaway token must not be able to fill the database with steps or open runs.
+describe("limits", () => {
+  it("refuses more steps than a run may have, and tells the agent to finish it", async () => {
+    const run = await startRun(db, { kind: "scan", title: "Scan" });
+    await addRunStep(db, run.id, { summary: "one" }, { maxSteps: 2 });
+    await addRunStep(db, run.id, { summary: "two" }, { maxSteps: 2 });
+    await expect(addRunStep(db, run.id, { summary: "three" }, { maxSteps: 2 })).rejects.toMatchObject({ code: "conflict", message: expect.stringContaining("finish it") });
+    expect((await db.agentRun.findUniqueOrThrow({ where: { id: run.id } })).stepCount).toBe(2);
+    await expect(finishRun(db, run.id, { status: "OK" })).resolves.toMatchObject({ status: "OK" });
+  });
+
+  it("refuses to open more runs than may be going at once, but a retry of one that exists still works", async () => {
+    await startRun(db, { kind: "scan", title: "A", idempotencyKey: "k1" }, { maxRunning: 2 });
+    const b = await startRun(db, { kind: "scan", title: "B" }, { maxRunning: 2 });
+    await expect(startRun(db, { kind: "scan", title: "C" }, { maxRunning: 2 })).rejects.toMatchObject({ code: "conflict", message: expect.stringContaining("finish") });
+    expect((await startRun(db, { kind: "scan", title: "A", idempotencyKey: "k1" }, { maxRunning: 2 })).title).toBe("A");
+    await finishRun(db, b.id, { status: "OK" });
+    await expect(startRun(db, { kind: "scan", title: "C" }, { maxRunning: 2 })).resolves.toMatchObject({ title: "C" });
+  });
+});
+
 describe("finishRun", () => {
   it("closes the run and writes run.finished", async () => {
     const run = await startRun(db, { kind: "scan", title: "Scan" });

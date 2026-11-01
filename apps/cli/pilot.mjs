@@ -17,6 +17,7 @@ import {
   formatRuns,
   parseArgs,
   parseData,
+  plain,
   serverFrom,
   skillFiles,
   tokenFrom,
@@ -31,7 +32,7 @@ Commands:
   status                              check the token and the server
   apps [--status SENT]                list applications
   apps add --company C --role R       track an application as a draft (--url, --location, --file posting.txt)
-  apps status <id> <STATUS>           move an application (DRAFT SENT SCREENING INTERVIEW OFFER ACCEPTED REJECTED DECLINED)
+  apps status <id> <STATUS>           DRAFT, REJECTED or DECLINED (SENT and later are the user's to set in the dashboard)
   activity [--actor MCP]              recent activity (--limit N, --action application.)
   insights                            applications by platform and resume template
   check <file|->                      clean a job posting and flag hidden instructions (needs a write token)
@@ -121,7 +122,8 @@ async function main(argv, env) {
   const server = serverFrom(env);
   const token = tokenFrom(env);
   const call = (path, options) => request(server, token, path, options);
-  const show = (data, text) => console.log(flags.json ? JSON.stringify(data, null, 2) : text);
+  // Whatever the server sent is cleaned of control characters before it reaches the terminal (audit A-22).
+  const show = (data, text) => console.log(flags.json ? JSON.stringify(data, null, 2) : plain(text));
 
   if (command === "status") {
     const data = await call("/api/v1/status");

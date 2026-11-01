@@ -85,6 +85,30 @@ describe("a run's life over the API", () => {
   });
 });
 
+describe("limits (audit A-06)", () => {
+  it("answers 429 with Retry-After once a token has used its allowance, and other tokens are not affected", async () => {
+    const busy = await writeToken("busy");
+    const other = await writeToken("other");
+    let refused: Response | undefined;
+    for (let request = 0; request < 400 && !refused; request++) {
+      const response = await call(listRuns, busy, { method: "GET" });
+      if (response.status === 429) refused = response;
+    }
+    expect(refused, "expected a 429 within 400 requests").toBeDefined();
+    expect(Number(refused!.headers.get("retry-after"))).toBeGreaterThanOrEqual(1);
+    expect((await json(refused!)).error?.code).toBe("rate_limited");
+    expect((await call(listRuns, other, { method: "GET" })).status).toBe(200);
+  });
+
+  it("400 for step data that is too big or nested too deep", async () => {
+    const token = await writeToken();
+    const { data } = await json(await call(startRun, token, { body: { kind: "scan", title: "t" } }));
+    expect((await call(postStep, token, { id: data.id, body: { summary: "x", data: { text: "y".repeat(5000) } } })).status).toBe(400);
+    expect((await call(postStep, token, { id: data.id, body: { summary: "x", data: { a: { b: { c: { d: { e: { f: 1 } } } } } } } })).status).toBe(400);
+    expect((await call(postStep, token, { id: data.id, body: { summary: "x", data: { found: 3 } } })).status).toBe(200);
+  });
+});
+
 describe("mistakes get plain answers", () => {
   it("400 for a missing kind or title, or a bad body", async () => {
     const token = await writeToken();

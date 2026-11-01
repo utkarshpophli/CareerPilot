@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { env } from "@/lib/env";
+
 import { endSession, getSession, SESSION_COOKIE, SESSION_LIFETIME, startSession, verifySession } from "./session";
 
 const jar = vi.hoisted(() => ({ values: new Map<string, string>(), set: vi.fn(), remove: vi.fn(), proto: null as string | null }));
@@ -44,6 +46,21 @@ describe("the session cookie (E3-1)", () => {
     jar.proto = "https, http";
     await startSession({ persistent: true });
     expect(jar.set).toHaveBeenCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: true, maxAge: SESSION_LIFETIME.persistent }));
+  });
+
+  // Audit A-13: a proxy that forgets X-Forwarded-Proto must not turn an HTTPS site's cookie into a cleartext one.
+  it("is secure whenever the public address is https, even if the proxy says nothing", async () => {
+    const settings = env as { DOSSIER_PUBLIC_URL?: string };
+    settings.DOSSIER_PUBLIC_URL = "https://careerpilot.example.com";
+    try {
+      await startSession({ persistent: false });
+      expect(jar.set).toHaveBeenCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: true }));
+      settings.DOSSIER_PUBLIC_URL = "http://192.168.1.20:3000";
+      await startSession({ persistent: false });
+      expect(jar.set).toHaveBeenLastCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: false }));
+    } finally {
+      delete settings.DOSSIER_PUBLIC_URL;
+    }
   });
 
   it("reads no session from a missing or forged cookie", async () => {

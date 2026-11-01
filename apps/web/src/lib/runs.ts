@@ -22,6 +22,11 @@ export { isStale, STALE_AFTER_MS } from "@/lib/runs-view";
 
 export const RUNS_PAGE_SIZE = 50;
 
+/** A run may have this many steps; an agent that needs more should finish it and start another. */
+export const MAX_STEPS_PER_RUN = 500;
+/** This many runs may be going at once (audit A-06): a runaway or stolen token cannot open them without end. */
+export const MAX_RUNNING_RUNS = 50;
+
 const FINAL_STATUSES: readonly RunStatus[] = [RunStatus.OK, RunStatus.FAILED, RunStatus.CANCELLED];
 
 const isUniqueViolation = (error: unknown) => typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
@@ -34,7 +39,7 @@ export type StartRunInput = {
 };
 
 /** Opens a run for the acting client. With an idempotency key, a retry gets the same run back. */
-export async function startRun(db: PrismaClient, input: StartRunInput): Promise<AgentRun> {
+export async function startRun(db: PrismaClient, input: StartRunInput, { maxRunning = MAX_RUNNING_RUNS }: { maxRunning?: number } = {}): Promise<AgentRun> {
   const kind = input.kind.trim().toLowerCase().slice(0, KIND_MAX);
   const title = input.title.trim().slice(0, TITLE_MAX);
   if (!kind) throw new RunStateError("bad_request", "A run needs a kind, for example 'scan'.");
@@ -49,6 +54,10 @@ export async function startRun(db: PrismaClient, input: StartRunInput): Promise<
   const actor = currentActor();
   try {
     return await db.$transaction(async (tx) => {
+      const going = await tx.agentRun.count({ where: { status: RunStatus.RUNNING } });
+      if (going >= maxRunning) {
+        throw new RunStateError("conflict", `${going} runs are already going. Finish them (a run ends with "finish") before starting another.`);
+      }
       const run = await tx.agentRun.create({
         data: { kind, title, actorKind: actor.kind, actorName: actor.name ?? "", applicationId: input.applicationId ?? null, idempotencyKey },
       });
@@ -75,16 +84,16 @@ export async function startRun(db: PrismaClient, input: StartRunInput): Promise<
 export type RunStepInput = { summary: string; data?: Prisma.InputJsonValue };
 
 /** Adds a step to a RUNNING run: bumps the counter and writes run.step. */
-export async function addRunStep(db: PrismaClient, runId: string, input: RunStepInput): Promise<AgentRun> {
+export async function addRunStep(db: PrismaClient, runId: string, input: RunStepInput, { maxSteps = MAX_STEPS_PER_RUN }: { maxSteps?: number } = {}): Promise<AgentRun> {
   const summary = input.summary.trim().slice(0, SUMMARY_MAX);
   if (!summary) throw new RunStateError("bad_request", "A step needs a summary.");
 
   return db.$transaction(async (tx) => {
     const { count } = await tx.agentRun.updateMany({
-      where: { id: runId, status: RunStatus.RUNNING },
+      where: { id: runId, status: RunStatus.RUNNING, stepCount: { lt: maxSteps } },
       data: { stepCount: { increment: 1 }, lastStep: summary, lastActivityAt: new Date() },
     });
-    if (count === 0) throw await whyNotRunning(tx, runId);
+    if (count === 0) throw await whyNotRunning(tx, runId, maxSteps);
     const run = await tx.agentRun.findUniqueOrThrow({ where: { id: runId } });
     await recordActivity(tx, {
       action: ACTIONS.runStep,
@@ -132,9 +141,11 @@ export async function finishRun(db: PrismaClient, runId: string, input: FinishRu
   });
 }
 
-async function whyNotRunning(tx: Pick<Prisma.TransactionClient, "agentRun">, runId: string): Promise<RunStateError> {
+async function whyNotRunning(tx: Pick<Prisma.TransactionClient, "agentRun">, runId: string, maxSteps: number): Promise<RunStateError> {
   const run = await tx.agentRun.findUnique({ where: { id: runId }, select: { status: true } });
-  return run ? new RunStateError("conflict", `This run already finished as ${run.status}.`) : new RunStateError("not_found", "No such run.");
+  if (!run) return new RunStateError("not_found", "No such run.");
+  if (run.status !== RunStatus.RUNNING) return new RunStateError("conflict", `This run already finished as ${run.status}.`);
+  return new RunStateError("conflict", `This run has reached its limit of ${maxSteps} steps; finish it and start another.`);
 }
 
 export type RunDetail = AgentRun & { events: ActivityEvent[] };

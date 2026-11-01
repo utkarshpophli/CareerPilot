@@ -101,8 +101,13 @@ export function passwordMatches(candidate: string, hash = env.DOSSIER_PASSWORD):
   return verifyPassword(candidate, hash);
 }
 
-/** Whether the browser reached us over HTTPS, as the reverse proxy reports it. */
+/**
+ * Whether the browser reached us over HTTPS: always when the public address is
+ * https (a proxy that forgets X-Forwarded-Proto must not make the cookie
+ * cleartext), otherwise as the reverse proxy reports it.
+ */
 async function isHttps(): Promise<boolean> {
+  if (env.DOSSIER_PUBLIC_URL?.startsWith("https:")) return true;
   const proto = (await headers()).get("x-forwarded-proto");
   return proto?.split(",")[0]?.trim() === "https";
 }

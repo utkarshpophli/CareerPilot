@@ -3,6 +3,8 @@ import { z } from "zod";
 import { ApplicationStatus, ReplyKind } from "@/generated/prisma/enums";
 import { isoInZone } from "@/lib/dates";
 
+import { headerValue, neutralizeFences } from "../untrusted";
+
 import { system, type Task } from "./prompt-parts";
 
 export const CLASSIFY_REPLY_VERSION = "classify-reply@2";
@@ -50,7 +52,7 @@ export const MAX_EMAIL_CHARACTERS = 8_000;
 
 /** The mail for a prompt, its date in the candidate's time zone, so times in it read in that zone. */
 export const emailForPrompt = ({ from, subject, body, sentAt }: Pick<ClassifyInput, "from" | "subject" | "body" | "sentAt">, timeZone: string) =>
-  `<email>\nFrom: ${from}\nDate: ${isoInZone(sentAt, timeZone)}\nSubject: ${subject}\n\n${body.trim().slice(0, MAX_EMAIL_CHARACTERS)}\n</email>`;
+  `<email>\nFrom: ${headerValue(from)}\nDate: ${isoInZone(sentAt, timeZone)}\nSubject: ${headerValue(subject)}\n\n${neutralizeFences(body.trim().slice(0, MAX_EMAIL_CHARACTERS))}\n</email>`;
 
 /** What each kind of reply suggests for the application's status. */
 export const SUGGESTED_STATUS: Record<ReplyKind, ApplicationStatus | null> = {

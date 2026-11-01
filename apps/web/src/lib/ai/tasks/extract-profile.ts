@@ -5,6 +5,8 @@ import { citationExcerpt, escapeMarks, publicationLink } from "@/lib/citation";
 import { BASICS_FIELDS, sameName } from "@/lib/profile";
 import { importedProfileSchema, type ImportedProfile } from "@/lib/profile-import";
 
+import { neutralizeFences } from "../untrusted";
+
 import { system, type Task } from "./prompt-parts";
 
 export const EXTRACT_PROFILE_VERSION = "extract-profile@4";
@@ -58,7 +60,7 @@ Keep the resume's language; don't translate.`;
 
 /** The resume's text, marked as material to read rather than instructions to follow. */
 function resumeForPrompt(resume: string): string {
-  return `<resume>\n${resume.trim()}\n</resume>`;
+  return `<resume>\n${neutralizeFences(resume.trim())}\n</resume>`;
 }
 
 const UNTRUSTED_RESUME =

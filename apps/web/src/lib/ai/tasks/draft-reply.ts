@@ -6,6 +6,7 @@ import type { ProfileData } from "@/lib/profile";
 import { TONES } from "@/lib/tones";
 
 import { factSources, guardSources, unverifiedFacts } from "../fact-guard";
+import { neutralizeFences } from "../untrusted";
 
 import { emailForPrompt, UNTRUSTED_EMAIL } from "./classify-reply";
 import { applicationFacts, candidateFacts, CREATIVITY, jobForPrompt, NO_EM_DASHES, profileForPrompt, system, truthfulness, type Task } from "./prompt-parts";
@@ -68,7 +69,7 @@ export const draftReply: Task<DraftReplyInput, DraftedReply> = async (provider, 
         content: [
           `The candidate's profile:\n${profileForPrompt(profile)}`,
           extracted && `The job:\n${jobForPrompt(extracted, null)}`,
-          thread.length > 0 && `Earlier in this conversation:\n${thread.map((entry) => `<earlier>\n${entry}\n</earlier>`).join("\n")}`,
+          thread.length > 0 && `Earlier in this conversation:\n${thread.map((entry) => `<earlier>\n${neutralizeFences(entry)}\n</earlier>`).join("\n")}`,
           `The email to answer:\n${emailForPrompt(email, timeZone)}`,
           slots.length > 0 ? `Times to offer:\n${slots.map((slot) => `• ${slot}`).join("\n")}` : "No times to offer: don't propose any.",
           applicationFacts(facts),

@@ -26,19 +26,22 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Open redirect after login | B-09 | DONE |
 | Quadratic regex in mail HTML to text (any sender could freeze the server) | B-03 | DONE |
 | Quadratic regex in startups HTML to text | B-05 | DONE |
-| Dev compose binds Postgres and the app to loopback, no default DB password | A-01 | NEXT |
-| Data import must not repoint AI provider, URL, key target, Gmail or agent settings | B-10, B-15 | NEXT |
-| Prompt delimiters cannot be closed from inside untrusted text | B-07 | NEXT |
-| `DOSSIER_PUBLIC_URL` required when connector or Google is on; Secure cookies on https | A-12, A-13, B-19 | NEXT |
-| Entropy check on the secret; backup files mode 0600; strip control characters in the CLI | A-19, A-18, A-22 | NEXT |
+| Terminal escape codes in text from the server (CLI) | A-22 | DONE |
+| Dev compose binds Postgres and the app to loopback; a test fails if any compose file publishes a non-loopback port | A-01 | DONE (kept the dev-only default DB password, now unreachable from the network) |
+| Data import never changes this install's AI target, mail scope, agent settings, update check or consents | B-10, B-15 | DONE |
+| Prompt delimiters cannot be closed from inside untrusted text; mail headers on one line | B-07 | DONE |
+| Secure session cookie whenever the public address is https | A-13 (part) | DONE; the `__Host-` cookie prefix is not done |
+| `DOSSIER_PUBLIC_URL` required before the connector or Google connect can be turned on | A-12, B-19 | LATER, Sprint 3 (with the OAuth rework, which touches the same code) |
+| Strip control characters from server text in the CLI | A-22 | DONE |
+| Entropy check on the secret; backup files mode 0600 | A-19, A-18 | NEXT |
 
 ### 2. The agent doorway
 
 | Item | Finding | Status |
 |---|---|---|
-| Refuse progress statuses for tokens and the connector (interim of the decision above); refuse moves on applications awaiting review or archived | A-05, A-09 | NEXT |
-| Rate limits and caps on `/api/v1` and the connector: requests per minute per token, steps per run, `data` size and depth, runs and applications per day, event paging | A-06, A-14, B-20 | NEXT |
-| Run the posting guard on every connector posting path; label returned text as untrusted data | A-10, B-01, B-08 | NEXT |
+| Refuse progress statuses for tokens and the connector (interim of the decision above); refuse moves on applications awaiting review or archived; the connector no longer approves agent drafts | A-05, A-09 | DONE |
+| REST: 120 requests a minute per token (burst 100), a shared small allowance for bad tokens, 500 steps per run, 50 runs going at once, step data at most 4,000 characters and 4 levels deep, request bodies refused by announced length and while streaming | A-06, A-14, B-20 | DONE for `/api/v1`; the connector (`/api/mcp`) has no limits yet (NEXT) |
+| Posting guard on every connector posting path (`get_posting`, `save_application`, paste hand-off), labelled as untrusted with a warning when instructions are found | A-10, B-01 | DONE; search snippets and stored Find jobs text are still unguarded (B-08, LATER) |
 | Login throttle: reserve before verify, slow down instead of refusing the right password, cap password length | A-02, A-03 | NEXT |
 | Server-side session epoch ("sign out everywhere"); password required to create an API token | A-04, A-20 | NEXT |
 | Redact secrets in run steps and ledger data | (plan) | NEXT |

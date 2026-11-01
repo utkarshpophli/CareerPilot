@@ -86,11 +86,32 @@ describe("PATCH /api/v1/applications/{id}/status", () => {
   it("moves an application, records it, and gives back the event that can undo it", async () => {
     const token = await write("claude-code");
     const id = await tracked(token);
-    const answer = await json(await call(patchStatus, token, { status: "SENT" }, id));
-    expect(answer.data).toMatchObject({ id, status: "SENT", changed: true });
+    const answer = await json(await call(patchStatus, token, { status: "REJECTED" }, id));
+    expect(answer.data).toMatchObject({ id, status: "REJECTED", changed: true });
     expect(answer.data.eventId).toEqual(expect.any(String));
-    expect((await prisma().application.findUniqueOrThrow({ where: { id } })).status).toBe("SENT");
+    expect((await prisma().application.findUniqueOrThrow({ where: { id } })).status).toBe("REJECTED");
     expect(await prisma().activityEvent.findFirst({ where: { action: "application.status_changed", actorName: "claude-code" } })).not.toBeNull();
+  });
+
+  // Audit A-05: an assistant cannot claim progress that only the owner knows about.
+  it("403 for statuses that claim progress, leaving the application as it was", async () => {
+    const token = await write();
+    const id = await tracked(token);
+    for (const status of ["SENT", "SCREENING", "INTERVIEW", "OFFER", "ACCEPTED"]) {
+      const refused = await call(patchStatus, token, { status }, id);
+      expect(refused.status, status).toBe(403);
+      expect((await json(refused)).error?.code).toBe("forbidden");
+    }
+    expect((await prisma().application.findUniqueOrThrow({ where: { id } })).status).toBe("DRAFT");
+    expect(await prisma().statusEvent.count()).toBe(0);
+  });
+
+  it("409 for an application waiting for the owner's review or archived", async () => {
+    const token = await write();
+    const waiting = await prisma().application.create({ data: { title: "Agent draft", awaitingReview: true } });
+    const archived = await prisma().application.create({ data: { title: "Old", archivedAt: new Date() } });
+    expect((await call(patchStatus, token, { status: "REJECTED" }, waiting.id)).status).toBe(409);
+    expect((await call(patchStatus, token, { status: "REJECTED" }, archived.id)).status).toBe(409);
   });
 
   it("does nothing when the status is already that one", async () => {
@@ -102,7 +123,7 @@ describe("PATCH /api/v1/applications/{id}/status", () => {
 
   it("404 for an unknown application, 400 for an unknown status", async () => {
     const token = await write();
-    expect((await call(patchStatus, token, { status: "SENT" }, "missing")).status).toBe(404);
+    expect((await call(patchStatus, token, { status: "REJECTED" }, "missing")).status).toBe(404);
     const id = await tracked(token);
     expect((await call(patchStatus, token, { status: "FLYING" }, id)).status).toBe(400);
     expect((await call(patchStatus, token, {}, id)).status).toBe(400);
