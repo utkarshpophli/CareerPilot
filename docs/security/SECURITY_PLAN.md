@@ -33,7 +33,7 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Secure session cookie whenever the public address is https | A-13 (part) | DONE; the `__Host-` cookie prefix is not done |
 | `DOSSIER_PUBLIC_URL` required before the connector or Google connect can be turned on | A-12, B-19 | LATER, Sprint 3 (with the OAuth rework, which touches the same code) |
 | Strip control characters from server text in the CLI | A-22 | DONE |
-| Entropy check on the secret; backup files mode 0600 | A-19, A-18 | NEXT |
+| `CAREERPILOT_SECRET` must look random (at least 12 different characters, not a repeated word); backup files are mode 0600 in a 0700 folder (checked in Linux CI; modes do not apply on Windows) | A-19, A-18 | DONE |
 
 ### 2. The agent doorway
 
@@ -44,8 +44,8 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Posting guard on every connector posting path (`get_posting`, `save_application`, paste hand-off), labelled as untrusted with a warning when instructions are found | A-10, B-01 | DONE; search snippets and stored Find jobs text are still unguarded (B-08, LATER) |
 | Login throttle: the global limit slows sign-in (3 s per check) instead of refusing the right password, so a stranger cannot lock the owner out; password checks run one at a time with the block re-tested inside the queue, so a parallel burst cannot all pass it; passwords over 256 characters are refused without hashing | A-02, A-03 | DONE; configurable trusted-proxy hop count for the client IP not done (NEXT) |
 | Session epoch: "Sign out everywhere" in Settings → Security makes every cookie stale at once; kept by Delete everything, never exported or imported | A-04 | DONE |
-| Password required to create an API token | A-20 | NEXT |
-| Redact secrets in run steps and ledger data | (plan) | NEXT |
+| Password required to create an API token, through the same throttled check as signing in (one shared function) | A-20 | DONE |
+| Best-effort redaction of credentials (API tokens, provider keys, bearer tokens, JWTs, private keys, `name=value` secrets) in run titles, steps and every ledger summary and data field | (plan) | DONE |
 | Proposal queue for progress statuses (one-click confirm) | A-05 | LATER, Sprint 3 |
 | OAuth grants stored in the database: single-use codes, rotating refresh tokens, per-client revoke | A-07 | LATER, Sprint 3 |
 | Pairing window for connector client registration; consent name from the redirect host | A-08, A-19 | LATER, Sprint 3 |

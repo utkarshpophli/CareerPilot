@@ -26,9 +26,10 @@ export function backupFileName(reason: BackupReason, now: Date): string {
 /** Writes an export of everything to the backups folder; returns the file's name. */
 export async function writeBackup(reason: BackupReason, now = new Date()): Promise<string> {
   const data = await buildExport(prisma, { now });
-  await mkdir(backupsDir(), { recursive: true });
+  // A backup holds the whole profile, postings and emails: only this user may read it (audit A-18; modes apply on Linux and macOS).
+  await mkdir(backupsDir(), { recursive: true, mode: 0o700 });
   const name = backupFileName(reason, now);
-  await writeFile(path.join(backupsDir(), name), JSON.stringify(data, null, 2));
+  await writeFile(path.join(backupsDir(), name), JSON.stringify(data, null, 2), { mode: 0o600 });
   return name;
 }
 

@@ -3,6 +3,7 @@ import "server-only";
 import type { ActivityEvent, AgentRun, Prisma, PrismaClient } from "@/generated/prisma/client";
 import { ActivityOutcome, RunStatus } from "@/generated/prisma/enums";
 import { ACTIONS, currentActor, recordActivity } from "@/lib/ledger";
+import { redactSecrets } from "@/lib/redact";
 import { toRunView, type RunView } from "@/lib/runs-view";
 import { ServiceError } from "@/lib/service-error";
 
@@ -41,7 +42,7 @@ export type StartRunInput = {
 /** Opens a run for the acting client. With an idempotency key, a retry gets the same run back. */
 export async function startRun(db: PrismaClient, input: StartRunInput, { maxRunning = MAX_RUNNING_RUNS }: { maxRunning?: number } = {}): Promise<AgentRun> {
   const kind = input.kind.trim().toLowerCase().slice(0, KIND_MAX);
-  const title = input.title.trim().slice(0, TITLE_MAX);
+  const title = redactSecrets(input.title.trim()).slice(0, TITLE_MAX);
   if (!kind) throw new RunStateError("bad_request", "A run needs a kind, for example 'scan'.");
   if (!title) throw new RunStateError("bad_request", "A run needs a title.");
   const idempotencyKey = input.idempotencyKey?.trim().slice(0, 200) || null;
@@ -85,7 +86,7 @@ export type RunStepInput = { summary: string; data?: Prisma.InputJsonValue };
 
 /** Adds a step to a RUNNING run: bumps the counter and writes run.step. */
 export async function addRunStep(db: PrismaClient, runId: string, input: RunStepInput, { maxSteps = MAX_STEPS_PER_RUN }: { maxSteps?: number } = {}): Promise<AgentRun> {
-  const summary = input.summary.trim().slice(0, SUMMARY_MAX);
+  const summary = redactSecrets(input.summary.trim()).slice(0, SUMMARY_MAX);
   if (!summary) throw new RunStateError("bad_request", "A step needs a summary.");
 
   return db.$transaction(async (tx) => {
@@ -113,7 +114,7 @@ export type FinishRunInput = { status: RunStatus; summary?: string };
 /** Closes a run. Finishing again with the same status changes nothing; with a different one it is a conflict. */
 export async function finishRun(db: PrismaClient, runId: string, input: FinishRunInput): Promise<AgentRun> {
   if (!FINAL_STATUSES.includes(input.status)) throw new RunStateError("bad_request", "A run finishes as OK, FAILED or CANCELLED.");
-  const summary = input.summary?.trim().slice(0, SUMMARY_MAX) ?? "";
+  const summary = redactSecrets(input.summary?.trim() ?? "").slice(0, SUMMARY_MAX);
 
   return db.$transaction(async (tx) => {
     const now = new Date();

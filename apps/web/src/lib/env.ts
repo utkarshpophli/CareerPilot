@@ -8,6 +8,8 @@ import { isPasswordHash } from "@/lib/auth/password-hash";
 import { adoptLegacyEnv } from "@/lib/env-compat";
 
 const SECRET_MIN_LENGTH = 32;
+/** A random 32-character secret has about 25 different characters; a repeating one far fewer. */
+const SECRET_MIN_DISTINCT = 12;
 const GENERATE_SECRET = "for example the output of `openssl rand -base64 32`";
 const HASH_PASSWORD = "Make one with `yarn hash-password` (in apps/web), or `docker compose run --rm app yarn hash-password`";
 
@@ -42,10 +44,17 @@ const schema = z.object({
     "CAREERPILOT_SECRET",
     `Set it to a random string of at least ${SECRET_MIN_LENGTH} characters, ${GENERATE_SECRET}.`,
   ).pipe(
-    z.string().min(SECRET_MIN_LENGTH, {
-      error: (issue) =>
-        `CAREERPILOT_SECRET is too short (${String(issue.input).length} characters). Use at least ${SECRET_MIN_LENGTH} random characters, ${GENERATE_SECRET}.`,
-    }),
+    z
+      .string()
+      .min(SECRET_MIN_LENGTH, {
+        error: (issue) =>
+          `CAREERPILOT_SECRET is too short (${String(issue.input).length} characters). Use at least ${SECRET_MIN_LENGTH} random characters, ${GENERATE_SECRET}.`,
+      })
+      // It signs sessions and encrypts stored keys. Random text uses many different characters; a repeated
+      // word or pattern does not, whatever its length (audit A-19). The message never shows the value.
+      .refine((secret) => secret.length < SECRET_MIN_LENGTH || new Set(secret).size >= SECRET_MIN_DISTINCT, {
+        error: `CAREERPILOT_SECRET looks guessable (it repeats a few characters). Use random characters, ${GENERATE_SECRET}.`,
+      }),
   ),
   DATABASE_URL: required(
     "DATABASE_URL",

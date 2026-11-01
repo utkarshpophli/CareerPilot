@@ -38,7 +38,8 @@ export function appEnv(): Record<string, string> {
   return {
     DATABASE_URL: e2eDatabaseUrl(),
     CAREERPILOT_PASSWORD: PASSWORD_HASH,
-    CAREERPILOT_SECRET: "e2e-secret-e2e-secret-e2e-secret-e2e",
+    // Random-looking on purpose: a repeating secret is refused at startup (audit A-19).
+    CAREERPILOT_SECRET: "e2eK7qZp-9XvLm3Rt8WyBn5HcJd2SfG4aU",
     CAREERPILOT_DATA_DIR: "/tmp/dossier-e2e",
     CAREERPILOT_AI_PROVIDER: "openai",
     CAREERPILOT_AI_URL: `http://localhost:${FAKE_AI_PORT}/v1`,

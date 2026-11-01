@@ -9,7 +9,7 @@ const PASSWORD_HASH = "argon2id:m=19456,t=2,p=1:CLZW5wQoCjh3Q9CHBp_JWw:Ak2xS7TYl
 
 const valid = {
   CAREERPILOT_PASSWORD: PASSWORD_HASH,
-  CAREERPILOT_SECRET: "a".repeat(32),
+  CAREERPILOT_SECRET: "k3Zq9vPxR2mWc7YtLd5HfJb8NaGs1UeO4",
   DATABASE_URL: "postgresql://postgres:postgres@db:5432/dossier",
 };
 
@@ -55,6 +55,18 @@ describe("parseEnv", () => {
       CAREERPILOT_AI_MODEL: "llama3.1:8b",
       CAREERPILOT_AI_KEY: "sk-test",
     });
+  });
+
+  // Audit A-19: the secret signs sessions and encrypts stored keys, so a long but guessable one is no better than a short one.
+  it("rejects a secret that is long but repeats a few characters", () => {
+    for (const weak of ["a".repeat(40), "ab".repeat(20), "abc123".repeat(8), "password".repeat(6)]) {
+      expect(problems({ ...valid, CAREERPILOT_SECRET: weak }), weak).toEqual([expect.stringMatching(/^CAREERPILOT_SECRET looks guessable/)]);
+    }
+  });
+
+  it("accepts a random secret such as `openssl rand -base64 32` makes", () => {
+    const random = "q8W1yT0b6mE5uVx2nZ9kRc4J7sLhPaDf3gA+Oi=";
+    expect(parseEnv({ ...valid, CAREERPILOT_SECRET: random }).CAREERPILOT_SECRET).toBe(random);
   });
 
   it("reads the AI timeout in seconds", () => {

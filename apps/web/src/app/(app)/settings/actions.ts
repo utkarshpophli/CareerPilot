@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { AiProvider, ApiScope, Creativity, DateFormat, JobStatus, PaperSize, Tone } from "@/generated/prisma/enums";
 import { action, ActionError } from "@/lib/action";
 import { apiTokenRows, createApiToken, revokeApiToken } from "@/lib/api-tokens";
+import { clientIp } from "@/lib/auth/client-ip";
+import { checkOwnerPassword } from "@/lib/auth/owner-password";
 import { endSession } from "@/lib/auth/session";
 import { bumpEpoch, EPOCH_SETTING } from "@/lib/auth/session-epoch";
 import { AiError, createProvider } from "@/lib/ai";
@@ -396,8 +399,14 @@ const MAX_TOKENS = 50;
 
 /** Makes an API token for the pilot command line and the REST API. The token is in the answer once; only its hash is kept. */
 export const createToken = action(
-  z.object({ name: z.string().trim().min(1, "Give the token a name.").max(60), scope: z.enum([ApiScope.READ, ApiScope.WRITE]) }),
-  async ({ name, scope }) => {
+  z.object({
+    name: z.string().trim().min(1, "Give the token a name.").max(60),
+    scope: z.enum([ApiScope.READ, ApiScope.WRITE]),
+    // A token is a permanent way in, so a copied session cookie alone must not be able to make one (audit A-20).
+    password: z.string().max(256),
+  }),
+  async ({ name, scope, password }) => {
+    await checkOwnerPassword(password, clientIp(await headers()));
     if ((await prisma.apiToken.count()) >= MAX_TOKENS) throw new ActionError(`That's ${MAX_TOKENS} tokens already. Revoked ones stay in the list; delete the database rows you no longer need, or reuse a token.`);
     const { token } = await createApiToken(name, scope);
     return { token, tokens: await apiTokenRows() };

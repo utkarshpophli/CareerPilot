@@ -70,6 +70,23 @@ describe("addRunStep", () => {
   });
 });
 
+describe("secrets", () => {
+  it("never reach the run, its steps or the ledger when an assistant pastes them in", async () => {
+    const token = "cp_qH383abcdefghijklmnopqrstuvwxyz0123";
+    const key = "sk-proj-AbCdEfGhIjKlMnOpQrStUvWx1234";
+    const run = await startRun(db, { kind: "scan", title: `Scan with ${token}` });
+    const stepped = await addRunStep(db, run.id, { summary: `Called the API with ${key}`, data: { header: `Bearer ${token}`, found: 3 } });
+    await finishRun(db, run.id, { status: "FAILED", summary: `Failed: api_key=${key}` });
+    const row = await db.agentRun.findUniqueOrThrow({ where: { id: run.id } });
+    const events = await db.activityEvent.findMany({ where: { runId: run.id } });
+    const everything = JSON.stringify([run, stepped, row, events]);
+    expect(everything).not.toContain(token.slice(8, 30));
+    expect(everything).not.toContain(key.slice(8, 30));
+    expect(everything).toContain("[redacted]");
+    expect(events.find((event) => event.action === "run.step")?.data).toEqual({ header: "[redacted]", found: 3 });
+  });
+});
+
 // Audit A-06, A-14: a stolen or runaway token must not be able to fill the database with steps or open runs.
 describe("limits", () => {
   it("refuses more steps than a run may have, and tells the agent to finish it", async () => {

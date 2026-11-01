@@ -5,6 +5,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { Prisma } from "@/generated/prisma/client";
 import { ActivityActor, ActivityOutcome } from "@/generated/prisma/enums";
 import { logServerError } from "@/lib/log";
+import { redactJson, redactSecrets } from "@/lib/redact";
 
 // The Activity Ledger: an append-only record of what the app and its agents
 // did, shown on the Activity page and counted on Insights. Writers call
@@ -74,7 +75,7 @@ export async function recordActivity(db: Db, input: ActivityInput): Promise<void
       actorKind: actor.kind,
       actorName: actor.name ?? "",
       action: input.action,
-      summary: input.summary.slice(0, SUMMARY_MAX),
+      summary: redactSecrets(input.summary).slice(0, SUMMARY_MAX),
       targetType: input.targetType ?? "",
       targetId: input.targetId ?? null,
       applicationId: input.applicationId ?? null,
@@ -82,7 +83,7 @@ export async function recordActivity(db: Db, input: ActivityInput): Promise<void
       model: input.model ?? "",
       outcome: input.outcome ?? ActivityOutcome.OK,
       runId: input.runId ?? null,
-      data: input.data,
+      data: redactJson(input.data),
     },
   });
 }

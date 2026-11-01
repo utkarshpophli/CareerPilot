@@ -25,11 +25,14 @@ export function ApiTokensSection({ initial, address }: { initial: TokenRow[]; ad
   const track = useTrackSave();
   const [tokens, setTokens] = useState(initial);
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [scope, setScope] = useState<"READ" | "WRITE">("READ");
   const [fresh, setFresh] = useState<{ name: string; token: string } | null>(null);
 
   const make = async () => {
-    const result = toastResult(await track(createToken({ name, scope })));
+    const attempt = password;
+    setPassword(""); // never kept on the page, whether or not it was right
+    const result = toastResult(await track(createToken({ name, scope, password: attempt })));
     if (!result.ok) return;
     setFresh({ name: name.trim(), token: result.data.token });
     setTokens(result.data.tokens);
@@ -74,8 +77,23 @@ export function ApiTokensSection({ initial, address }: { initial: TokenRow[]; ad
           />
           <Select label="Can" value={scope} onChange={(event) => setScope(event.target.value === "WRITE" ? "WRITE" : "READ")}>
             <option value="READ">Read only</option>
-            <option value="WRITE">Read and run the posting check</option>
+            <option value="WRITE">Read, track applications, report runs</option>
           </Select>
+          <Input
+            label="Your password"
+            type="password"
+            className="min-w-0 flex-1"
+            autoComplete="current-password"
+            maxLength={256}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void make();
+              }
+            }}
+          />
           <Button variant="primary" onClick={() => void make()}>
             Make token
           </Button>

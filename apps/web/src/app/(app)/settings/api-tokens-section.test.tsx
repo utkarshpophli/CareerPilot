@@ -36,13 +36,16 @@ describe("Settings → API tokens", () => {
     render(<ApiTokensSection initial={[existing]} address="https://careerpilot.example" />);
     await user.type(screen.getByLabelText("Name"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Can"), "WRITE");
+    // Audit A-20: making a token asks for the password again, so a copied session cannot mint a permanent key.
+    await user.type(screen.getByLabelText("Your password"), "correct horse");
     await user.click(screen.getByRole("button", { name: "Make token" }));
 
-    expect(createToken).toHaveBeenCalledWith({ name: "claude-code", scope: "WRITE" });
+    expect(createToken).toHaveBeenCalledWith({ name: "claude-code", scope: "WRITE", password: "correct horse" });
     expect(screen.getByRole("status")).toHaveTextContent("it is not shown again");
     expect(screen.getByText("cp_SECRET-TOKEN-VALUE")).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "API tokens" })).getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByLabelText("Name")).toHaveValue("");
+    expect(screen.getByLabelText("Your password")).toHaveValue(""); // not kept on the page
 
     await user.click(screen.getByRole("button", { name: "Copy" }));
     expect(copyText).toHaveBeenCalledWith("cp_SECRET-TOKEN-VALUE");
@@ -65,7 +68,9 @@ describe("Settings → API tokens", () => {
     const user = userEvent.setup();
     vi.mocked(createToken).mockResolvedValueOnce({ ok: false, error: "Give the token a name." });
     render(<ApiTokensSection initial={[]} address="https://careerpilot.example" />);
+    await user.type(screen.getByLabelText("Your password"), "wrong");
     await user.click(screen.getByRole("button", { name: "Make token" }));
+    expect(screen.getByLabelText("Your password")).toHaveValue(""); // cleared even when refused
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("None yet.")).toBeInTheDocument();
   });
