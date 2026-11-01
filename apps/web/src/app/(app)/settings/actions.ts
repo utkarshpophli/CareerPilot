@@ -276,7 +276,7 @@ export const startZippingPdfs = action(z.object({}), async () => {
 /**
  * "Delete for good" (E10-8, SET-11): removes the profile, every application
  * with its documents, custom themes, settings, background jobs and the
- * backup and download files, then puts back what a new install has. The
+ * backup and download files, the activity history and API tokens, then puts back what a new install has. The
  * session stays; the user lands on the empty dashboard.
  */
 export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }), async () => {
@@ -313,6 +313,9 @@ export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }
     await tx.profileField.deleteMany();
     await tx.theme.deleteMany({ where: { builtIn: false } });
     await tx.setting.deleteMany();
+    // What was done and when (it names applications and companies), and the keys that let a command line or an assistant in.
+    await tx.activityEvent.deleteMany();
+    await tx.apiToken.deleteMany();
   });
   // An empty profile and default settings need no rows; the built-in themes do.
   await seedBuiltIns(prisma);

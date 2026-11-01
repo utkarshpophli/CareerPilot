@@ -71,6 +71,9 @@ describe("deleteEverything (E10-8)", () => {
     // A posting pasted for Claude chat, and the connector, which goes off (#221).
     await prisma().claudePaste.create({ data: { text: "A posting", expiresAt: new Date(Date.now() + 60_000) } });
     await prisma().setting.create({ data: { key: "connectorEnabledAt", value: "2026-10-23T09:00:00.000Z" } });
+    // The activity history names applications and companies, and a token opens the API: both go.
+    await prisma().activityEvent.create({ data: { action: "application.created", summary: "Created application: Engineer at Acme" } });
+    await prisma().apiToken.create({ data: { name: "laptop", tokenHash: "h".repeat(64), prefix: "cp_abc" } });
     await expect(deleteEverything({ confirm: "DELETE" })).rejects.toThrow("NEXT_REDIRECT");
     expect(redirected.to).toBe("/");
     const counts = await Promise.all([
@@ -91,8 +94,10 @@ describe("deleteEverything (E10-8)", () => {
       prisma().setting.count(),
       prisma().job.count(),
       prisma().theme.count({ where: { builtIn: false } }),
+      prisma().activityEvent.count(),
+      prisma().apiToken.count(),
     ]);
-    expect(counts).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(counts).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma().theme.count({ where: { builtIn: true } })).toBe(12);
     expect(await readdir(dataDir.path)).toEqual([]);
   });

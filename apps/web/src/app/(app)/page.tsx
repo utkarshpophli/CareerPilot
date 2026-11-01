@@ -4,12 +4,15 @@ import { Suspense } from "react";
 import { periodFromParam } from "@/lib/dashboard";
 import { waitingByApplication } from "@/lib/google/inbox-data";
 import { loadDashboard } from "@/lib/dashboard-data";
+import { listActivity } from "@/lib/ledger";
+import { prisma } from "@/lib/prisma";
 import { dayPeriod, hourIn } from "@/lib/greeting";
 import { loadProfileName } from "@/lib/profile-data";
 import { loadSettings } from "@/lib/settings-data";
 import { userTimeZone } from "@/lib/time-zone";
 
 import { Dashboard } from "./dashboard";
+import { RecentActivity } from "./recent-activity";
 import { CalendarSkeleton, DashboardCalendar } from "./dashboard-calendar";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -26,9 +29,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const now = new Date();
   const range = periodFromParam(param) ?? settings.dashboardPeriod;
   const replies = await waitingByApplication().catch(() => undefined);
-  const [figures, name] = await Promise.all([
+  const [figures, name, recent] = await Promise.all([
     loadDashboard({ period: range, quietDays: settings.quietDays, timeZone, replies }),
     loadProfileName(),
+    listActivity(prisma, {}, { limit: 5 }),
   ]);
   return (
     <Dashboard
@@ -38,6 +42,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
       range={range}
       quietDays={settings.quietDays}
       empty={figures.total === 0}
+      recent={<RecentActivity events={recent.events} timeZone={timeZone} />}
       calendar={
         <Suspense fallback={<CalendarSkeleton />}>
           <DashboardCalendar date={date} now={now} />

@@ -27,6 +27,7 @@ export function Dashboard({
   quietDays = DEFAULT_QUIET_DAYS,
   empty,
   calendar,
+  recent,
 }: {
   figures: DashboardFigures;
   firstName: string;
@@ -39,6 +40,8 @@ export function Dashboard({
   empty: boolean;
   /** The calendar (E15-6), which the time filter doesn't scope. */
   calendar?: ReactNode;
+  /** Recent activity: the last few things done by you or an assistant. */
+  recent?: ReactNode;
 }) {
   const { sent, heardBack } = figures;
   // The summary follows the time filter, so it says which period it covers.
@@ -73,6 +76,7 @@ export function Dashboard({
               <ActivityChart weeks={figures.weeks} />
               <WhereThingsStand byStatus={figures.byStatus} />
               <WorthALook items={figures.attention} quietDays={quietDays} />
+              {recent}
             </PeriodScoped>
           </Columns>
         </PeriodFilter>

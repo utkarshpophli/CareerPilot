@@ -190,7 +190,7 @@ Updated 2026-11-01. "Done" means on the working branch with passing tests (about
 |---|---|---|
 | 0. Foundation | Done | Layout (`apps/web`, `upstream/`), AGPL licence, notices, CI, ADR 0001. Workspace root deferred to the first shared package. |
 | 1. Skeleton | Partly | Dossier base runs on Node 24 and PostgreSQL with all baseline tests green. Still to do: `owner_id` and `Principal` seams, separate worker process. |
-| 2. Ledger and Activity | Done (first version) | `ActivityEvent` table; writers for application creation, status changes and undo, document versions, job queued and finished, MCP tool calls, scheduled and manual agent scans, posting checks; Activity page with filters and paging. Not yet: live progress streaming, cost per event, data export/import of events. |
+| 2. Ledger and Activity | Done (first version) | `ActivityEvent` table; writers for application creation, status changes and undo, document versions, job queued and finished, MCP tool calls, scheduled and manual agent scans, posting checks; Activity page with filters and paging. The dashboard has a Recent activity card. "Delete everything" now also wipes activity history and API tokens. Not yet: live progress streaming, cost per event, pruning of old events, and including events in data export and backup (tokens are deliberately never exported). |
 | 3. Safety core | Started | Posting guard ported from ai-job-search with a golden-corpus parity test against the Python original, wired into pasted, agent and connector postings. Not yet: SSRF guard unification, identity and dedup service, outbound privacy guard, merged fact gate. |
 | 4. Discovery and scoring | Not started | |
 | 5. Documents | Not started | Templates are already recorded per document; Insights groups by them. |
