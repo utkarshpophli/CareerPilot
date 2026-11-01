@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestClient, resetDatabase } from "@/test/db";
 
 import { clientIp } from "./client-ip";
-import { GLOBAL_KEY, loginWaitMs, recordLoginFailure, recordLoginSuccess } from "./login-throttle";
+import { GLOBAL_KEY, globalPressure, loginWaitMs, recordLoginFailure, recordLoginSuccess } from "./login-throttle";
 
 const db = createTestClient();
 const start = new Date("2026-09-28T09:00:00Z");
@@ -34,9 +34,19 @@ describe("login throttle", () => {
     expect((await db.loginThrottle.findUniqueOrThrow({ where: { key: GLOBAL_KEY } })).failures).toBe(4);
   });
 
-  it("blocks everyone after 30 failures from many IPs (faked X-Forwarded-For)", async () => {
+  // Audit A-02: a stranger must not be able to lock the owner out. 30 failures from many IPs (faked
+  // X-Forwarded-For) put the whole server under pressure, which slows sign-in down; it does not refuse it.
+  it("puts the whole server under pressure after 30 failures from many IPs, without refusing a new IP", async () => {
     for (let i = 0; i < 30; i++) await recordLoginFailure(db, `10.0.0.${i}`, at(i));
-    expect(await loginWaitMs(db, "10.0.0.99", at(29))).toBe(30_000);
+    expect(await loginWaitMs(db, "10.0.0.99", at(29))).toBe(0);
+    expect(await globalPressure(db, at(29))).toBe(true);
+    expect(await globalPressure(db, at(29 + 31))).toBe(false); // the 30 s block has passed
+  });
+
+  it("is not under pressure before the global limit, or when nothing has failed", async () => {
+    expect(await globalPressure(db, at(0))).toBe(false);
+    for (let i = 0; i < 29; i++) await recordLoginFailure(db, `10.0.0.${i}`, at(i));
+    expect(await globalPressure(db, at(29))).toBe(false);
   });
 
   it("counts concurrent failures exactly", async () => {

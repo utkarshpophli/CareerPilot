@@ -31,6 +31,9 @@ export const GLOBAL: ThrottlePolicy = {
   maxBlockMs: 15 * MINUTE,
 };
 
+/** While the global limit is hot, each password check waits this long (one at a time), so guessing stays slow without locking the owner out. */
+export const GLOBAL_SLOWDOWN_MS = 3 * SECOND;
+
 export type ThrottleState = {
   failures: number;
   windowStart: Date;

@@ -11,10 +11,21 @@ import { afterFailure, GLOBAL, PER_IP, waitMs, type ThrottleState } from "./thro
 export const GLOBAL_KEY = "*";
 const PRUNE_AFTER_MS = 24 * 60 * 60 * 1000;
 
-/** Milliseconds the client must wait before trying again; 0 when it may try now. */
+/** Milliseconds this client IP must wait before trying again; 0 when it may try now. */
 export async function loginWaitMs(db: PrismaClient, ip: string, now = new Date()): Promise<number> {
-  const rows = await db.loginThrottle.findMany({ where: { key: { in: [ip, GLOBAL_KEY] } } });
-  return Math.max(0, ...rows.map((row) => waitMs(row, now)));
+  const row = await db.loginThrottle.findUnique({ where: { key: ip } });
+  return waitMs(row, now);
+}
+
+/**
+ * Whether failures from all IPs together have passed the global limit lately.
+ * That limit is a backstop for X-Forwarded-For being faked, so it must slow
+ * sign-in down and never refuse it: if it did, anyone could keep the owner
+ * locked out with a request every few minutes (audit A-02).
+ */
+export async function globalPressure(db: PrismaClient, now = new Date()): Promise<boolean> {
+  const row = await db.loginThrottle.findUnique({ where: { key: GLOBAL_KEY } });
+  return waitMs(row, now) > 0;
 }
 
 /** Counts a failed attempt for the IP and globally, and prunes stale rows. */

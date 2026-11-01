@@ -36,6 +36,7 @@ import { JobSearchSection } from "./job-search-section";
 import { ScoringSection } from "./scoring-section";
 import { AboutSection, type AboutFacts, type UsagePingView } from "./about-section";
 import { ApiTokensSection } from "./api-tokens-section";
+import { SecuritySection } from "./security-section";
 import { ConnectorSection } from "./connector-section";
 import { settingsSectionFromParam } from "./sections";
 import { SettingsScreen } from "./settings-screen";
@@ -107,6 +108,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         />
       ) : section === "tokens" ? (
         <ApiTokensSection initial={await apiTokenRows()} address={env.DOSSIER_PUBLIC_URL ?? (await requestOrigin())} />
+      ) : section === "security" ? (
+        <SecuritySection />
       ) : section === "data" ? (
         <DataSection
           hasApiKey={[settings.apiKeyEnc, settings.jsearchKeyEnc, settings.adzunaKeyEnc].some((key) => key !== null)}

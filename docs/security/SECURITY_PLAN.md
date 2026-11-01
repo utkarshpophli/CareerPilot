@@ -42,8 +42,9 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 | Refuse progress statuses for tokens and the connector (interim of the decision above); refuse moves on applications awaiting review or archived; the connector no longer approves agent drafts | A-05, A-09 | DONE |
 | REST: 120 requests a minute per token (burst 100), a shared small allowance for bad tokens, 500 steps per run, 50 runs going at once, step data at most 4,000 characters and 4 levels deep, request bodies refused by announced length and while streaming | A-06, A-14, B-20 | DONE for `/api/v1`; the connector (`/api/mcp`) has no limits yet (NEXT) |
 | Posting guard on every connector posting path (`get_posting`, `save_application`, paste hand-off), labelled as untrusted with a warning when instructions are found | A-10, B-01 | DONE; search snippets and stored Find jobs text are still unguarded (B-08, LATER) |
-| Login throttle: reserve before verify, slow down instead of refusing the right password, cap password length | A-02, A-03 | NEXT |
-| Server-side session epoch ("sign out everywhere"); password required to create an API token | A-04, A-20 | NEXT |
+| Login throttle: the global limit slows sign-in (3 s per check) instead of refusing the right password, so a stranger cannot lock the owner out; password checks run one at a time with the block re-tested inside the queue, so a parallel burst cannot all pass it; passwords over 256 characters are refused without hashing | A-02, A-03 | DONE; configurable trusted-proxy hop count for the client IP not done (NEXT) |
+| Session epoch: "Sign out everywhere" in Settings → Security makes every cookie stale at once; kept by Delete everything, never exported or imported | A-04 | DONE |
+| Password required to create an API token | A-20 | NEXT |
 | Redact secrets in run steps and ledger data | (plan) | NEXT |
 | Proposal queue for progress statuses (one-click confirm) | A-05 | LATER, Sprint 3 |
 | OAuth grants stored in the database: single-use codes, rotating refresh tokens, per-client revoke | A-07 | LATER, Sprint 3 |

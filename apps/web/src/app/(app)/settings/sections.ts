@@ -8,6 +8,7 @@ export const SETTINGS_SECTIONS = [
   { id: "google", label: "Google" },
   { id: "connector", label: "MCP connector" },
   { id: "tokens", label: "API tokens" },
+  { id: "security", label: "Security" },
   { id: "data", label: "Your data" },
   { id: "about", label: "About" },
 ] as const;

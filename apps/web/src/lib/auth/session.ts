@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { verifyPassword } from "@/lib/auth/password-hash";
+import { currentEpoch } from "@/lib/auth/session-epoch";
 import { env } from "@/lib/env";
 import { deriveKey } from "@/lib/keys";
 
@@ -29,6 +30,8 @@ export type Session = {
   persistent: boolean;
   issuedAt: Date;
   expiresAt: Date;
+  /** The sign-out-everywhere epoch it was made in (session-epoch.ts); tokens from before epochs count as 0. */
+  epoch?: number;
 };
 
 type TokenOptions = {
@@ -58,11 +61,11 @@ const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
 
 /** Creates the encrypted session token. */
 export async function encodeSession(
-  { persistent }: { persistent: boolean },
+  { persistent, epoch }: { persistent: boolean; epoch?: number },
   { key, fingerprint, now = new Date() }: TokenOptions,
 ): Promise<string> {
   const issuedAt = seconds(now);
-  return new EncryptJWT({ persistent, pwd: fingerprint })
+  return new EncryptJWT({ persistent, pwd: fingerprint, ...(epoch ? { ep: epoch } : {}) })
     .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
     .setIssuedAt(issuedAt)
     .setExpirationTime(issuedAt + SESSION_LIFETIME[persistent ? "persistent" : "browser"])
@@ -90,6 +93,7 @@ export async function decodeSession(
       persistent: payload.persistent,
       issuedAt: new Date(payload.iat! * 1000),
       expiresAt: new Date(payload.exp! * 1000),
+      epoch: typeof payload.ep === "number" ? payload.ep : 0,
     };
   } catch {
     return null;
@@ -114,7 +118,7 @@ async function isHttps(): Promise<boolean> {
 
 /** Signs the user in: sets the session cookie. Call from a Server Action or route handler. */
 export async function startSession({ persistent }: { persistent: boolean }): Promise<void> {
-  const token = await encodeSession({ persistent }, sessionTokenOptions());
+  const token = await encodeSession({ persistent, epoch: await currentEpoch() }, sessionTokenOptions());
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -125,10 +129,16 @@ export async function startSession({ persistent }: { persistent: boolean }): Pro
   });
 }
 
-/** The current session, or null when the request isn't signed in. Cached per request. */
+/**
+ * The current session, or null when the request isn't signed in or its cookie
+ * is from before the last "sign out everywhere". Cached per request. The
+ * proxy only checks the cookie itself; this is the check that counts.
+ */
 export const getSession = cache(async (): Promise<Session | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  return decodeSession(token, sessionTokenOptions());
+  const session = await decodeSession(token, sessionTokenOptions());
+  if (!session) return null;
+  return (session.epoch ?? 0) === (await currentEpoch()) ? session : null;
 });
 
 /**

@@ -50,8 +50,9 @@ export function ApiTokensSection({ initial, address }: { initial: TokenRow[]; ad
     <>
       <SettingsSectionIntro title="API tokens">
         Let the <code className="font-mono text-label">pilot</code> command line, scripts and AI assistants that work in a shell, such as Claude Code or Codex, read
-        your applications and activity. The name you give a token is what Activity shows for everything it does. A read token can only look; a write token can
-        also run the posting check.
+        your applications and activity. The name you give a token is what Activity shows for everything it does. A read token can only look. A write token can
+        also track applications, report runs and run the posting check, and can mark an application rejected or declined; it cannot say that one was sent or
+        that an interview or offer happened, because only you know that.
       </SettingsSectionIntro>
 
       <Card className="flex flex-col gap-4">

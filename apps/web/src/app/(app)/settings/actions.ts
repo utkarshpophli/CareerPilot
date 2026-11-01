@@ -7,6 +7,8 @@ import { z } from "zod";
 import { AiProvider, ApiScope, Creativity, DateFormat, JobStatus, PaperSize, Tone } from "@/generated/prisma/enums";
 import { action, ActionError } from "@/lib/action";
 import { apiTokenRows, createApiToken, revokeApiToken } from "@/lib/api-tokens";
+import { endSession } from "@/lib/auth/session";
+import { bumpEpoch, EPOCH_SETTING } from "@/lib/auth/session-epoch";
 import { AiError, createProvider } from "@/lib/ai";
 import { applyApiKeyChange } from "@/lib/ai/api-key";
 import { keyStateOf, loadAiConfig, resolveAiConfig } from "@/lib/ai/config";
@@ -312,7 +314,8 @@ export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }
     await tx.fact.deleteMany();
     await tx.profileField.deleteMany();
     await tx.theme.deleteMany({ where: { builtIn: false } });
-    await tx.setting.deleteMany();
+    // Not the session epoch: the session stays, and it must stay valid (audit A-04).
+    await tx.setting.deleteMany({ where: { key: { not: EPOCH_SETTING } } });
     // What was done and when (it names applications and companies), and the keys that let a command line or an assistant in.
     await tx.activityEvent.deleteMany();
     await tx.agentRun.deleteMany();
@@ -324,6 +327,18 @@ export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }
 
   revalidatePath("/", "layout");
   redirect("/");
+});
+
+/**
+ * "Sign out everywhere" (audit A-04): makes every session cookie ever handed out
+ * stale at once, this device's included, then goes to the sign-in page. For
+ * when a device is lost or a cookie may have been copied. API tokens are not
+ * affected; revoke those on API tokens.
+ */
+export const signOutEverywhere = action(z.object({}), async () => {
+  await bumpEpoch();
+  await endSession();
+  redirect("/login");
 });
 
 /** "Check for updates" (E10-9): the latest release, asked for now, and kept for the sidebar's notice. */

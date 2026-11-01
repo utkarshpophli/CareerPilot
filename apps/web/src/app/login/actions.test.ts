@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loginWaitMs, recordLoginFailure, recordLoginSuccess } from "@/lib/auth/login-throttle";
+import { globalPressure, loginWaitMs, recordLoginFailure, recordLoginSuccess } from "@/lib/auth/login-throttle";
 import { passwordMatches, startSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { loadProfileName } from "@/lib/profile-data";
@@ -23,6 +23,7 @@ vi.mock("@/lib/auth/session", () => ({
   startSession: vi.fn(),
 }));
 vi.mock("@/lib/auth/login-throttle", () => ({
+  globalPressure: vi.fn(),
   loginWaitMs: vi.fn(),
   recordLoginFailure: vi.fn(),
   recordLoginSuccess: vi.fn(),
@@ -35,7 +36,56 @@ describe("signIn", () => {
     vi.clearAllMocks();
     vi.mocked(passwordMatches).mockImplementation(async (candidate) => candidate === "correct horse");
     vi.mocked(loginWaitMs).mockResolvedValue(0);
+    vi.mocked(globalPressure).mockResolvedValue(false);
     vi.mocked(loadProfileName).mockResolvedValue("Jane Doe");
+  });
+
+  // Audit A-02: failures from many IPs slow sign-in down; they never lock the owner out.
+  it("still accepts the right password when failures from many IPs have put the server under pressure, after a pause", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(globalPressure).mockResolvedValue(true);
+      const attempt = signIn({ password: "correct horse", remember: false });
+      await vi.advanceTimersByTimeAsync(2_900);
+      expect(passwordMatches).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(200);
+      await expect(attempt).resolves.toMatchObject({ ok: true });
+      expect(startSession).toHaveBeenCalledWith({ persistent: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Audit A-03: guesses are checked one at a time, and the block is tested again inside the queue.
+  it("checks passwords one at a time, so a burst cannot all pass the block test before the first failure counts", async () => {
+    let running = 0;
+    let most = 0;
+    vi.mocked(passwordMatches).mockImplementation(async () => {
+      running++;
+      most = Math.max(most, running);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      running--;
+      return false;
+    });
+    await Promise.all(Array.from({ length: 6 }, () => signIn({ password: "guess", remember: false })));
+    expect(most).toBe(1);
+    expect(recordLoginFailure).toHaveBeenCalledTimes(6);
+  });
+
+  it("refuses a queued guess without checking it once an earlier one has blocked the IP", async () => {
+    vi.mocked(passwordMatches).mockResolvedValue(false);
+    // Free for the first guess; blocked by the time the second one is at the front of the queue.
+    vi.mocked(loginWaitMs).mockResolvedValueOnce(0).mockResolvedValue(30_000);
+    const [first, second] = await Promise.all([signIn({ password: "one", remember: false }), signIn({ password: "two", remember: false })]);
+    expect(first).toEqual({ ok: false, error: loginMessages.wrong });
+    expect(second).toEqual({ ok: false, error: "Too many attempts. Try again in 30 seconds." });
+    expect(passwordMatches).toHaveBeenCalledTimes(1);
+  });
+
+  it("turns away a password longer than 256 characters without hashing it", async () => {
+    const result = await signIn({ password: "x".repeat(257), remember: false });
+    expect(result.ok).toBe(false);
+    expect(passwordMatches).not.toHaveBeenCalled();
   });
 
   it("asks for a password when none was entered, without counting it as a failure", async () => {

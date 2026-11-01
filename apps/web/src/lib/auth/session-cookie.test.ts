@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "@/lib/env";
 
-import { endSession, getSession, SESSION_COOKIE, SESSION_LIFETIME, startSession, verifySession } from "./session";
+import { encodeSession, endSession, getSession, SESSION_COOKIE, SESSION_LIFETIME, sessionTokenOptions, startSession, verifySession } from "./session";
 
-const jar = vi.hoisted(() => ({ values: new Map<string, string>(), set: vi.fn(), remove: vi.fn(), proto: null as string | null }));
+const jar = vi.hoisted(() => ({ values: new Map<string, string>(), set: vi.fn(), remove: vi.fn(), proto: null as string | null, epoch: 0 }));
+vi.mock("./session-epoch", () => ({ currentEpoch: async () => jar.epoch }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
     get: (name: string) => (jar.values.has(name) ? { name, value: jar.values.get(name)! } : undefined),
@@ -33,6 +34,7 @@ beforeEach(() => {
   jar.set.mockClear();
   jar.remove.mockClear();
   jar.proto = null;
+  jar.epoch = 0;
 });
 
 describe("the session cookie (E3-1)", () => {
@@ -61,6 +63,25 @@ describe("the session cookie (E3-1)", () => {
     } finally {
       delete settings.DOSSIER_PUBLIC_URL;
     }
+  });
+
+  // Audit A-04: a copied cookie must stop working when the owner signs out everywhere.
+  it("stops accepting a session once the epoch has moved on, and accepts a new one made after", async () => {
+    await startSession({ persistent: true });
+    expect(await getSession()).toMatchObject({ persistent: true });
+    jar.epoch = 1; // "sign out everywhere"
+    expect(await getSession()).toBeNull();
+    await expect(verifySession()).rejects.toThrow("redirect /login");
+    await startSession({ persistent: true });
+    expect(await getSession()).toMatchObject({ persistent: true });
+  });
+
+  it("still accepts a session made before epochs existed while the epoch is 0", async () => {
+    const stale = await encodeSession({ persistent: false }, sessionTokenOptions()); // no epoch claim, as before
+    jar.values.set(SESSION_COOKIE, stale);
+    expect(await getSession()).toMatchObject({ persistent: false });
+    jar.epoch = 1;
+    expect(await getSession()).toBeNull();
   });
 
   it("reads no session from a missing or forged cookie", async () => {

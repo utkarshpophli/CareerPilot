@@ -20,12 +20,18 @@ const now = new Date("2026-09-27T12:00:00Z");
 const later = (seconds: number) => new Date(now.getTime() + seconds * 1000);
 
 describe("session tokens", () => {
+  it("carries the epoch it was made in", async () => {
+    const token = await encodeSession({ persistent: true, epoch: 3 }, { key, fingerprint, now });
+    expect(await decodeSession(token, { key, fingerprint, now })).toMatchObject({ epoch: 3 });
+  });
+
   it("round-trips a browser session that lasts 24 hours", async () => {
     const token = await encodeSession({ persistent: false }, { key, fingerprint, now });
     expect(await decodeSession(token, { key, fingerprint, now })).toEqual({
       persistent: false,
       issuedAt: now,
       expiresAt: later(24 * 60 * 60),
+      epoch: 0, // a token made without an epoch counts as the first one
     });
     expect(await decodeSession(token, { key, fingerprint, now: later(SESSION_LIFETIME.browser - 1) })).not.toBeNull();
     expect(await decodeSession(token, { key, fingerprint, now: later(SESSION_LIFETIME.browser) })).toBeNull();

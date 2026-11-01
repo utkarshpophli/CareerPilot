@@ -71,6 +71,8 @@ export const INSTALL_SETTINGS: readonly string[] = [
   // An import must never open the MCP connector's addresses on this server (#221), or let another app sign in (#281).
   "connectorEnabledAt",
   "connectorRedirects",
+  // Which "sign out everywhere" this install is on (audit A-04): an import must not sign anyone out or back in.
+  "sessionEpoch",
   // Where this server sends text, what mail it reads and what runs unattended are this install's choices: a file
   // from someone else must not point the saved key at their server, read all mail, auto-draft, drop the
   // never-invent rule or switch on the update check (audit B-10). Consent given on one install is not given on another.
