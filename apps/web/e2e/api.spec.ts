@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { expect, request, test } from "@playwright/test";
 
-import { APP_PORT, resetData, sql } from "./support";
+import { APP_PORT, PASSWORD, resetData, sql } from "./support";
 
 // The REST API through the real server and proxy: it takes a bearer token,
 // not a session, and answers in JSON either way.
@@ -38,6 +38,8 @@ test("answers a JSON 401 without a token, and works with one", async () => {
 test("makes a token in Settings, shows it once, and revoking it stops it working", async ({ page, playwright }) => {
   await page.goto("/settings?section=tokens");
   await page.getByLabel("Name").fill("e2e from settings");
+  // Making a token asks for the password again (audit A-20).
+  await page.getByLabel("Your password").fill(PASSWORD);
   await page.getByRole("button", { name: "Make token" }).click();
   const shown = page.getByRole("status").locator("code");
   await expect(shown).toHaveText(/^cp_[A-Za-z0-9_-]{43}$/);

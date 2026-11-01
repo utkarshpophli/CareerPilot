@@ -52,8 +52,11 @@ const SCREENS = [
   "/settings?section=agent",
   "/settings?section=documents",
   "/settings?section=google",
+  "/settings?section=security",
   "/settings?section=data",
   "/settings?section=about",
+  // Added with the Runs page (Sprint 1) and the Security section (Sprint 2).
+  "/runs",
   "/applications/nope",
   "/nowhere",
 ];
