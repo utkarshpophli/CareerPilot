@@ -38,12 +38,17 @@ describe("toRunView", () => {
 });
 
 describe("runsSignature", () => {
+  // A fixed clock, shortly after the run's last step. With the real clock the run counted as stalled
+  // whenever the test ran long after its fixture date, and the comparison below could never differ.
+  const justAfter = new Date(run().lastActivityAt.getTime() + 1000);
+  const view = (overrides: Partial<AgentRun> = {}, now = justAfter) => toRunView(run(overrides), now);
+
   it("changes with a step, a finish, or going stalled, and not otherwise", () => {
-    const base = [toRunView(run())];
-    const same = [toRunView(run())];
+    const base = [view()];
+    const same = [view()];
     expect(runsSignature(same)).toBe(runsSignature(base));
-    expect(runsSignature([toRunView(run({ stepCount: 3 }))])).not.toBe(runsSignature(base));
-    expect(runsSignature([toRunView(run({ status: "OK" }))])).not.toBe(runsSignature(base));
-    expect(runsSignature([toRunView(run(), new Date(run().lastActivityAt.getTime() + STALE_AFTER_MS + 1))])).not.toBe(runsSignature(base));
+    expect(runsSignature([view({ stepCount: 3 })])).not.toBe(runsSignature(base));
+    expect(runsSignature([view({ status: "OK" })])).not.toBe(runsSignature(base));
+    expect(runsSignature([view({}, new Date(run().lastActivityAt.getTime() + STALE_AFTER_MS + 1))])).not.toBe(runsSignature(base));
   });
 });
