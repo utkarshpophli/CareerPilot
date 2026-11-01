@@ -105,7 +105,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
               <p role="note" className="rounded-card bg-warning-surface px-4 py-3 text-meta text-warning">
                 {local ? "This is a local address. " : "This address isn't HTTPS. "}
                 Claude on the web, Desktop and mobile, and apps in the cloud such as n8n Cloud, reach CareerPilot from their own servers, so they need a public HTTPS
-                address (set <code className="font-mono text-label">DOSSIER_PUBLIC_URL</code> if CareerPilot is reached at another one). Claude&apos;s command-line
+                address (set <code className="font-mono text-label">CAREERPILOT_PUBLIC_URL</code> if CareerPilot is reached at another one). Claude&apos;s command-line
                 app on the computer CareerPilot runs on can use this one.
               </p>
             )}
@@ -172,7 +172,7 @@ export function ConnectorSection({ initial, address }: { initial: { on: boolean;
               <Button variant="secondary" onClick={() => void track(disconnectApps({})).then(toastResult)}>
                 Disconnect all apps
               </Button>
-              <p className="mt-2 text-meta text-muted">Signs Claude and every other app out. Changing your password or DOSSIER_SECRET does too.</p>
+              <p className="mt-2 text-meta text-muted">Signs Claude and every other app out. Changing your password or CAREERPILOT_SECRET does too.</p>
             </div>
           </Card>
         </>

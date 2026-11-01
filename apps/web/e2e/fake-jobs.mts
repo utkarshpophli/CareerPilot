@@ -1,6 +1,6 @@
 // A stand-in for the job sources (E14-9), started by playwright.config.ts.
 // The app sends each source's requests to http://localhost:<port>/<source>
-// (DOSSIER_JOBS_TEST_BASE_URL), and this answers in that source's own shape,
+// (CAREERPILOT_JOBS_TEST_BASE_URL), and this answers in that source's own shape,
 // so the adapters' real request and response handling runs end to end.
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -93,7 +93,7 @@ createServer((request, response) => {
   if (url.pathname === "/searches") return send(response, 200, { searches });
   if (url.pathname === "/startup-requests") return send(response, 200, { requests: siteRequests });
   if (url.pathname.startsWith("/startups/")) return startups(url.pathname, request, response);
-  // Jev (DOSSIER_TYPESAFE_TEST_BASE_URL, #274): each question answered from
+  // Jev (CAREERPILOT_TYPESAFE_TEST_BASE_URL, #274): each question answered from
   // its id and line, so a spec knows the score: every Score at its top level
   // but past work one below, a line with "years", "skills" or "experience"
   // required, and shown when it's about product design or Figma.
@@ -122,7 +122,7 @@ createServer((request, response) => {
     });
     return;
   }
-  // The update check (DOSSIER_UPDATES_TEST_BASE_URL): no release is out, so
+  // The update check (CAREERPILOT_UPDATES_TEST_BASE_URL): no release is out, so
   // what a test stores as the latest release stays as it is.
   if (url.pathname === "/github/repos/utkarshpophli/CareerPilot/releases/latest") return send(response, 404, { message: "Not Found" });
 

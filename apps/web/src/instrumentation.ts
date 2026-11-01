@@ -2,6 +2,10 @@
 // request. It doesn't run during `next build`, so the build needs no secrets.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Settings still named DOSSIER_* keep working: copy them to CAREERPILOT_* before anything reads them.
+    const { adoptLegacyEnv } = await import("@/lib/env-compat");
+    adoptLegacyEnv();
+
     const { checkEnvOnStartup } = await import("@/lib/env");
     checkEnvOnStartup();
 
@@ -30,7 +34,7 @@ export async function register() {
     const { startStartupsSchedule } = await import("@/lib/startups/schedule");
     startStartupsSchedule();
 
-    // DOSSIER_JOBS_SOURCE=arbeitsagentur: the log says what that choice means (#223).
+    // CAREERPILOT_JOBS_SOURCE=arbeitsagentur: the log says what that choice means (#223).
     const { arbeitsagenturStartupNotice, loadJobSearchConfig } = await import("@/lib/job-search/config");
     try {
       const notice = arbeitsagenturStartupNotice(await loadJobSearchConfig());

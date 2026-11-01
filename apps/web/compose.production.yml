@@ -1,8 +1,11 @@
-# Dossier with Docker Compose (see the installation guide, https://github.com/AienTech/dossier/wiki). Save this
-# file as compose.yml in a folder of its own, put POSTGRES_PASSWORD,
-# DOSSIER_PASSWORD (a hash of your password, from `docker run --rm -it
-# ghcr.io/aientech/dossier hash-password`) and DOSSIER_SECRET in a .env file
-# next to it, then:
+# CareerPilot with Docker Compose. There is no published image yet, so build
+# your own from this repository (never run an image you did not build or trust):
+#
+#   docker build --file apps/web/Dockerfile --target production --tag careerpilot apps/web
+#
+# Put CAREERPILOT_IMAGE=careerpilot, POSTGRES_PASSWORD, CAREERPILOT_PASSWORD (a
+# hash of your password, from `docker run --rm -it careerpilot hash-password`)
+# and CAREERPILOT_SECRET in a .env file next to this file, then:
 #
 #   docker compose up -d
 #
@@ -26,42 +29,43 @@ services:
       retries: 10
 
   app:
-    image: ${DOSSIER_IMAGE:-ghcr.io/aientech/dossier:latest}
+    # No default on purpose: a default would pull someone else's image (audit C-01).
+    image: ${CAREERPILOT_IMAGE:?Set CAREERPILOT_IMAGE to an image you built from this repository (see the top of this file)}
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://dossier:${POSTGRES_PASSWORD}@db:5432/dossier
-      DOSSIER_PASSWORD: ${DOSSIER_PASSWORD:?Set DOSSIER_PASSWORD in .env to a hash from hash-password}
-      DOSSIER_SECRET: ${DOSSIER_SECRET:?Set DOSSIER_SECRET in .env}
-      DOSSIER_BACKUP_RETENTION_DAYS: ${DOSSIER_BACKUP_RETENTION_DAYS:-}
+      CAREERPILOT_PASSWORD: ${CAREERPILOT_PASSWORD:?Set CAREERPILOT_PASSWORD in .env to a hash from hash-password}
+      CAREERPILOT_SECRET: ${CAREERPILOT_SECRET:?Set CAREERPILOT_SECRET in .env}
+      CAREERPILOT_BACKUP_RETENTION_DAYS: ${CAREERPILOT_BACKUP_RETENTION_DAYS:-}
       # Your time zone, e.g. Europe/Berlin: nightly backups run at 03:00 in it.
       TZ: ${TZ:-UTC}
-      DOSSIER_AI_PROVIDER: ${DOSSIER_AI_PROVIDER:-}
-      DOSSIER_AI_URL: ${DOSSIER_AI_URL:-}
-      DOSSIER_AI_MODEL: ${DOSSIER_AI_MODEL:-}
-      DOSSIER_AI_KEY: ${DOSSIER_AI_KEY:-}
-      DOSSIER_AI_TIMEOUT_SECONDS: ${DOSSIER_AI_TIMEOUT_SECONDS:-}
+      CAREERPILOT_AI_PROVIDER: ${CAREERPILOT_AI_PROVIDER:-}
+      CAREERPILOT_AI_URL: ${CAREERPILOT_AI_URL:-}
+      CAREERPILOT_AI_MODEL: ${CAREERPILOT_AI_MODEL:-}
+      CAREERPILOT_AI_KEY: ${CAREERPILOT_AI_KEY:-}
+      CAREERPILOT_AI_TIMEOUT_SECONDS: ${CAREERPILOT_AI_TIMEOUT_SECONDS:-}
       # Defaults for Settings → Job search.
-      DOSSIER_JOBS_SOURCE: ${DOSSIER_JOBS_SOURCE:-}
-      DOSSIER_JSEARCH_KEY: ${DOSSIER_JSEARCH_KEY:-}
-      DOSSIER_JSEARCH_HOST: ${DOSSIER_JSEARCH_HOST:-}
-      DOSSIER_ADZUNA_APP_ID: ${DOSSIER_ADZUNA_APP_ID:-}
-      DOSSIER_ADZUNA_KEY: ${DOSSIER_ADZUNA_KEY:-}
-      DOSSIER_FREEHIRE_URL: ${DOSSIER_FREEHIRE_URL:-}
-      DOSSIER_JOBS_ARBEITSAGENTUR: ${DOSSIER_JOBS_ARBEITSAGENTUR:-}
+      CAREERPILOT_JOBS_SOURCE: ${CAREERPILOT_JOBS_SOURCE:-}
+      CAREERPILOT_JSEARCH_KEY: ${CAREERPILOT_JSEARCH_KEY:-}
+      CAREERPILOT_JSEARCH_HOST: ${CAREERPILOT_JSEARCH_HOST:-}
+      CAREERPILOT_ADZUNA_APP_ID: ${CAREERPILOT_ADZUNA_APP_ID:-}
+      CAREERPILOT_ADZUNA_KEY: ${CAREERPILOT_ADZUNA_KEY:-}
+      CAREERPILOT_FREEHIRE_URL: ${CAREERPILOT_FREEHIRE_URL:-}
+      CAREERPILOT_JOBS_ARBEITSAGENTUR: ${CAREERPILOT_JOBS_ARBEITSAGENTUR:-}
       # Defaults for Settings → Scoring: ai or jev (Jev by TypeSafe, with its key).
-      DOSSIER_SCORER: ${DOSSIER_SCORER:-}
-      DOSSIER_TYPESAFE_KEY: ${DOSSIER_TYPESAFE_KEY:-}
+      CAREERPILOT_SCORER: ${CAREERPILOT_SCORER:-}
+      CAREERPILOT_TYPESAFE_KEY: ${CAREERPILOT_TYPESAFE_KEY:-}
       # Gmail and Calendar: a Google OAuth client (or enter it in Settings → Google).
-      DOSSIER_GOOGLE_CLIENT_ID: ${DOSSIER_GOOGLE_CLIENT_ID:-}
-      DOSSIER_GOOGLE_CLIENT_SECRET: ${DOSSIER_GOOGLE_CLIENT_SECRET:-}
+      CAREERPILOT_GOOGLE_CLIENT_ID: ${CAREERPILOT_GOOGLE_CLIENT_ID:-}
+      CAREERPILOT_GOOGLE_CLIENT_SECRET: ${CAREERPILOT_GOOGLE_CLIENT_SECRET:-}
       # The address Dossier is reached at, for Google's redirect.
-      DOSSIER_PUBLIC_URL: ${DOSSIER_PUBLIC_URL:-}
+      CAREERPILOT_PUBLIC_URL: ${CAREERPILOT_PUBLIC_URL:-}
     # Only on the server itself: put a reverse proxy with HTTPS in front.
     ports:
-      - "127.0.0.1:${DOSSIER_PORT:-3000}:3000"
+      - "127.0.0.1:${CAREERPILOT_PORT:-3000}:3000"
     volumes:
       - data:/data
     # Room for Chromium, which prints the PDFs.

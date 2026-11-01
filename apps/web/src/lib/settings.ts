@@ -102,11 +102,11 @@ export const AGENT_RUNS_KEPT = 10;
 
 export const settingsSchema = z.object({
   // AI provider (SET-1). Null means "not set in the app": fall back to the
-  // DOSSIER_AI_* environment variables, then to the built-in defaults.
+  // CAREERPILOT_AI_* environment variables, then to the built-in defaults.
   provider: z.enum(AiProvider).nullable().catch(null),
   baseUrl: z.string().nullable().catch(null),
   model: z.string().nullable().catch(null),
-  /** Encrypted with a key derived from DOSSIER_SECRET (E6-2); never sent to the client. */
+  /** Encrypted with a key derived from CAREERPILOT_SECRET (E6-2); never sent to the client. */
   apiKeyEnc: z.string().nullable().catch(null),
   creativity: z.enum(Creativity).catch(Creativity.BALANCED),
   /** "Never invent experience" (SET-4). */
@@ -145,7 +145,7 @@ export const settingsSchema = z.object({
   educationOrder: z.enum(["date", "manual"]).catch("date"),
   /** Why the last nightly backup failed; null once one works again (E10-7). */
   backupProblem: z.string().nullable().catch(null),
-  // Job search (E14-4). Null means "not set in the app": DOSSIER_JOBS_SOURCE
+  // Job search (E14-4). Null means "not set in the app": CAREERPILOT_JOBS_SOURCE
   // decides. "OFF" is a choice. Each source keeps its own key, encrypted
   // like the AI key, so switching back and forth loses nothing.
   jobSource: z.enum([...JOB_SOURCES, "OFF"]).nullable().catch(null),
@@ -157,7 +157,7 @@ export const settingsSchema = z.object({
   /** When "I understand" was ticked under the Bundesagentur für Arbeit's note (#223); its searches wait for it. */
   arbeitsagenturAcceptedAt: z.iso.datetime().nullable().catch(null),
   // Scoring (#274): what Score in Find jobs and the job agent score postings
-  // with. Null means "not set in the app": DOSSIER_SCORER decides, else the
+  // with. Null means "not set in the app": CAREERPILOT_SCORER decides, else the
   // AI model. Jev's key is encrypted like the others, under its own key.
   scorer: z.enum(SCORERS).nullable().catch(null),
   typesafeKeyEnc: z.string().nullable().catch(null),
@@ -193,7 +193,7 @@ export const settingsSchema = z.object({
   updateDismissed: z.string().nullable().catch(null),
   // Gmail and Calendar (E15). Off until the Google account is connected.
   // The OAuth client, entered in Settings → Google. Null means "not set in the
-  // app": DOSSIER_GOOGLE_CLIENT_ID and DOSSIER_GOOGLE_CLIENT_SECRET decide.
+  // app": CAREERPILOT_GOOGLE_CLIENT_ID and CAREERPILOT_GOOGLE_CLIENT_SECRET decide.
   googleClientId: z.string().nullable().catch(null),
   /** Encrypted like the API keys (GOOGLE_CLIENT_SECRET); never sent to the client. */
   googleClientSecretEnc: z.string().nullable().catch(null),

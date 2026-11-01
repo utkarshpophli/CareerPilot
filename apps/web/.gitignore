@@ -27,7 +27,7 @@
 # The website, built by site/build.sh
 /_site/
 
-# DOSSIER_DATA_DIR in development (backups, temporary downloads)
+# CAREERPILOT_DATA_DIR in development (backups, temporary downloads)
 /data/
 
 # debug
@@ -49,7 +49,7 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# DOSSIER_DATA_DIR in development
+# CAREERPILOT_DATA_DIR in development
 /data
 
 # end-to-end test runs

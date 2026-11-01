@@ -6,7 +6,7 @@ set -eu
 
 cd /app/tools
 if ! node node_modules/prisma/build/index.js migrate deploy; then
-  echo "Dossier didn't start: applying the database migrations failed (see the error above). See Troubleshooting in the wiki: https://github.com/AienTech/dossier/wiki/Troubleshooting" >&2
+  echo "CareerPilot didn't start: applying the database migrations failed (see the error above). Check that the database is reachable and that DATABASE_URL is right." >&2
   exit 1
 fi
 if ! node seed.mjs; then

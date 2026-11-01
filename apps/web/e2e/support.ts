@@ -13,7 +13,7 @@ export const FAKE_AI_PORT = 3999;
 export const FAKE_JOBS_PORT = 3998;
 export const FAKE_GOOGLE_PORT = 3997;
 export const PASSWORD = "e2e-password";
-/** DOSSIER_PASSWORD for the run: `printf 'e2e-password' | yarn hash-password`. */
+/** CAREERPILOT_PASSWORD for the run: `printf 'e2e-password' | yarn hash-password`. */
 const PASSWORD_HASH = "argon2id:m=19456,t=2,p=1:wk-0a22NLDwpNVDMxLY9rw:x4bAXEh9EtlaTIqLiHwF_omyDOpcPtwPrV0_SJx_y2c";
 export const STORAGE_STATE = "e2e/.auth/state.json";
 
@@ -37,24 +37,24 @@ export function e2eDatabaseUrl(): string {
 export function appEnv(): Record<string, string> {
   return {
     DATABASE_URL: e2eDatabaseUrl(),
-    DOSSIER_PASSWORD: PASSWORD_HASH,
-    DOSSIER_SECRET: "e2e-secret-e2e-secret-e2e-secret-e2e",
-    DOSSIER_DATA_DIR: "/tmp/dossier-e2e",
-    DOSSIER_AI_PROVIDER: "openai",
-    DOSSIER_AI_URL: `http://localhost:${FAKE_AI_PORT}/v1`,
-    DOSSIER_AI_MODEL: "fake-model",
-    DOSSIER_AI_KEY: "e2e-fake-key",
+    CAREERPILOT_PASSWORD: PASSWORD_HASH,
+    CAREERPILOT_SECRET: "e2e-secret-e2e-secret-e2e-secret-e2e",
+    CAREERPILOT_DATA_DIR: "/tmp/dossier-e2e",
+    CAREERPILOT_AI_PROVIDER: "openai",
+    CAREERPILOT_AI_URL: `http://localhost:${FAKE_AI_PORT}/v1`,
+    CAREERPILOT_AI_MODEL: "fake-model",
+    CAREERPILOT_AI_KEY: "e2e-fake-key",
     // Find jobs searches the fake job sources (E14-9).
-    DOSSIER_JOBS_SOURCE: "jsearch",
-    DOSSIER_JSEARCH_KEY: "e2e-jsearch-key",
-    DOSSIER_JOBS_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}`,
+    CAREERPILOT_JOBS_SOURCE: "jsearch",
+    CAREERPILOT_JSEARCH_KEY: "e2e-jsearch-key",
+    CAREERPILOT_JOBS_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}`,
     // Google's sign-in, Gmail and Calendar are the fake Google's (E15). It's
     // only used once a spec enters an OAuth client in Settings → Google.
-    DOSSIER_GOOGLE_TEST_BASE_URL: `http://localhost:${FAKE_GOOGLE_PORT}`,
+    CAREERPILOT_GOOGLE_TEST_BASE_URL: `http://localhost:${FAKE_GOOGLE_PORT}`,
     // The daily update check is off by default; if a spec turns it on, it asks this fake, never GitHub.
-    DOSSIER_UPDATES_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}/github`,
+    CAREERPILOT_UPDATES_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}/github`,
     // Jev is the fake job sources' too, once a spec chooses it in Settings → Scoring (#274).
-    DOSSIER_TYPESAFE_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}/typesafe`,
+    CAREERPILOT_TYPESAFE_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}/typesafe`,
     PORT: String(APP_PORT),
   };
 }

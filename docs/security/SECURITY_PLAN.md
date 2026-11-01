@@ -54,21 +54,21 @@ Status: DONE, NEXT, LATER (with the sprint it moves to).
 
 | Item | Finding | Status |
 |---|---|---|
-| Replace `ghcr.io/aientech/dossier` and `AienTech/dossier` everywhere | C-01 | NEXT |
-| Rename `DOSSIER_*` to `CAREERPILOT_*` with fallback | C-25 | NEXT |
-| Delete the usage ping; update check opt-in | C-05, C-15 | NEXT |
+| Replace `ghcr.io/aientech/dossier` and `AienTech/dossier` everywhere: no default image in `compose.production.yml` (you build your own until one is published), docs and messages point at this project, upstream site, issue templates and wiki links removed | C-01, C-16 | DONE |
+| Rename `DOSSIER_*` to `CAREERPILOT_*`; the old names are copied over at startup with a one-line reminder, and the new name wins | C-25 | DONE |
+| Delete the usage ping; update check off until turned on, queries only this project's releases | C-05, C-15 | DONE |
 | Visible "Source code (AGPL-3.0-only)" link tied to the build, in sidebar, About and login | C-02 | NEXT |
 | `THIRD_PARTY_NOTICES.md` complete (fonts with OFL texts, MIT-ported code, dependencies); licence texts shipped in the image | C-03, C-20 | NEXT |
 | Copyright and modification notice; rewrite SECURITY.md, PRIVACY.md, README for CareerPilot | C-04, C-06 | NEXT |
-| Remove personal data and agent config from `upstream/`; fix `.gitignore` | C-13, C-23, C-12, C-14 | NEXT |
+| Remove personal data and agent config from `upstream/`; fix `.gitignore`; untrack generated graphs | C-13, C-23, C-12, C-14 | DONE |
 
 ### 4. Supply chain and CI
 
 | Item | Finding | Status |
 |---|---|---|
 | Bump or dedupe vulnerable transitives, re-run audit | C-07 | NEXT |
-| Root CI: e2e, production Docker build, `yarn npm audit`, licence check, Windows job, CLI tests | C-08 | NEXT |
-| Dependabot (npm, actions, docker), CODEOWNERS, root SECURITY.md | C-09 | NEXT |
+| Root CI: Windows job, `yarn npm audit` (production tree must have no high advisory), production Docker build, CLI tests | C-08 | DONE except e2e and a licence check (NEXT) |
+| Dependabot (npm, actions, docker), CODEOWNERS, root SECURITY.md | C-09 | DONE (branch protection and secret scanning are GitHub settings the owner must switch on) |
 | Dockerfile `/tools` install from the lockfile; Yarn install-script allow-list and release-age gate | C-10, C-18 | NEXT |
 
 ### 5. Untrusted-text deep work (moves to later sprints, designed together)

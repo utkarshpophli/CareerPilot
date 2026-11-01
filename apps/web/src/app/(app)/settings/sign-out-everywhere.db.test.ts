@@ -29,7 +29,7 @@ vi.mock("next/navigation", () => ({
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
   },
 }));
-vi.mock("@/lib/env", () => ({ env: { DOSSIER_DATA_DIR: "", DOSSIER_SECRET: "s".repeat(32) } }));
+vi.mock("@/lib/env", () => ({ env: { CAREERPILOT_DATA_DIR: "", CAREERPILOT_SECRET: "s".repeat(32) } }));
 vi.mock("@/lib/backups", () => ({ deleteAllBackups: async () => {} }));
 vi.mock("@/lib/downloads", () => ({ deleteAllDownloads: async () => {}, downloadsDir: () => "" }));
 

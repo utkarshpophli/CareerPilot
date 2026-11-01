@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`redirect ${to}`);
   },
 }));
-vi.mock("@/lib/env", () => ({ env: { DOSSIER_SECRET: "s".repeat(32), DOSSIER_PASSWORD: "correct horse" } }));
+vi.mock("@/lib/env", () => ({ env: { CAREERPILOT_SECRET: "s".repeat(32), CAREERPILOT_PASSWORD: "correct horse" } }));
 // React's per-request cache would keep the first answer across tests.
 vi.mock("react", async (importOriginal) => ({ ...(await importOriginal<typeof import("react")>()), cache: <T,>(fn: T) => fn }));
 
@@ -52,16 +52,16 @@ describe("the session cookie (E3-1)", () => {
 
   // Audit A-13: a proxy that forgets X-Forwarded-Proto must not turn an HTTPS site's cookie into a cleartext one.
   it("is secure whenever the public address is https, even if the proxy says nothing", async () => {
-    const settings = env as { DOSSIER_PUBLIC_URL?: string };
-    settings.DOSSIER_PUBLIC_URL = "https://careerpilot.example.com";
+    const settings = env as { CAREERPILOT_PUBLIC_URL?: string };
+    settings.CAREERPILOT_PUBLIC_URL = "https://careerpilot.example.com";
     try {
       await startSession({ persistent: false });
       expect(jar.set).toHaveBeenCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: true }));
-      settings.DOSSIER_PUBLIC_URL = "http://192.168.1.20:3000";
+      settings.CAREERPILOT_PUBLIC_URL = "http://192.168.1.20:3000";
       await startSession({ persistent: false });
       expect(jar.set).toHaveBeenLastCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: false }));
     } finally {
-      delete settings.DOSSIER_PUBLIC_URL;
+      delete settings.CAREERPILOT_PUBLIC_URL;
     }
   });
 

@@ -5,16 +5,17 @@ import path from "node:path";
 import { z } from "zod";
 
 import { isPasswordHash } from "@/lib/auth/password-hash";
+import { adoptLegacyEnv } from "@/lib/env-compat";
 
 const SECRET_MIN_LENGTH = 32;
 const GENERATE_SECRET = "for example the output of `openssl rand -base64 32`";
-const HASH_PASSWORD = "Make one with `docker run --rm -it ghcr.io/aientech/dossier hash-password`";
+const HASH_PASSWORD = "Make one with `yarn hash-password` (in apps/web), or `docker compose run --rm app yarn hash-password`";
 
 export const AI_PROVIDERS = ["local", "openai", "anthropic", "mistral", "lmstudio"] as const;
 export const JOB_SOURCE_NAMES = ["jsearch", "adzuna", "arbeitsagentur", "freehire", "off"] as const;
 export const SCORER_NAMES = ["ai", "jev"] as const;
 
-// An empty value (`DOSSIER_AI_KEY=` in .env) counts as unset.
+// An empty value (`CAREERPILOT_AI_KEY=` in .env) counts as unset.
 const unsetIfEmpty = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
@@ -29,21 +30,21 @@ const optional = <T extends z.ZodType>(schema: T) =>
 
 const schema = z.object({
   // Never echo the value: it may be the password itself, set by mistake.
-  DOSSIER_PASSWORD: required(
-    "DOSSIER_PASSWORD",
+  CAREERPILOT_PASSWORD: required(
+    "CAREERPILOT_PASSWORD",
     `Set it to a hash of the password you want to sign in with. ${HASH_PASSWORD}.`,
   ).pipe(
     z.string().trim().refine(isPasswordHash, {
-      error: `DOSSIER_PASSWORD must be a hash of your password, not the password itself. ${HASH_PASSWORD} and set DOSSIER_PASSWORD to what it prints.`,
+      error: `CAREERPILOT_PASSWORD must be a hash of your password, not the password itself. ${HASH_PASSWORD} and set CAREERPILOT_PASSWORD to what it prints.`,
     }),
   ),
-  DOSSIER_SECRET: required(
-    "DOSSIER_SECRET",
+  CAREERPILOT_SECRET: required(
+    "CAREERPILOT_SECRET",
     `Set it to a random string of at least ${SECRET_MIN_LENGTH} characters, ${GENERATE_SECRET}.`,
   ).pipe(
     z.string().min(SECRET_MIN_LENGTH, {
       error: (issue) =>
-        `DOSSIER_SECRET is too short (${String(issue.input).length} characters). Use at least ${SECRET_MIN_LENGTH} random characters, ${GENERATE_SECRET}.`,
+        `CAREERPILOT_SECRET is too short (${String(issue.input).length} characters). Use at least ${SECRET_MIN_LENGTH} random characters, ${GENERATE_SECRET}.`,
     }),
   ),
   DATABASE_URL: required(
@@ -56,126 +57,126 @@ const schema = z.object({
         "DATABASE_URL must be a PostgreSQL connection string starting with postgresql://.",
     }),
   ),
-  DOSSIER_DATA_DIR: z
+  CAREERPILOT_DATA_DIR: z
     .preprocess(unsetIfEmpty, z.string().default("/data"))
     .transform((dir) => path.resolve(dir)),
-  DOSSIER_BACKUP_RETENTION_DAYS: z
+  CAREERPILOT_BACKUP_RETENTION_DAYS: z
     .preprocess(unsetIfEmpty, z.string().trim().default("14"))
     .pipe(
       z.string().regex(/^\d+$/, {
         error: (issue) =>
-          `DOSSIER_BACKUP_RETENTION_DAYS must be a whole number of days (got "${String(issue.input)}").`,
+          `CAREERPILOT_BACKUP_RETENTION_DAYS must be a whole number of days (got "${String(issue.input)}").`,
       }),
     )
     .transform(Number)
     .pipe(
       z.number().min(1, {
-        error: "DOSSIER_BACKUP_RETENTION_DAYS must be at least 1.",
+        error: "CAREERPILOT_BACKUP_RETENTION_DAYS must be at least 1.",
       }),
     ),
-  DOSSIER_AI_PROVIDER: optional(
+  CAREERPILOT_AI_PROVIDER: optional(
     z.enum(AI_PROVIDERS, {
       error: (issue) =>
-        `DOSSIER_AI_PROVIDER must be one of ${AI_PROVIDERS.join(", ")} (got "${String(issue.input)}").`,
+        `CAREERPILOT_AI_PROVIDER must be one of ${AI_PROVIDERS.join(", ")} (got "${String(issue.input)}").`,
     }),
   ),
-  DOSSIER_AI_URL: optional(
+  CAREERPILOT_AI_URL: optional(
     z.url({
       protocol: /^https?$/,
-      error: "DOSSIER_AI_URL must be an http:// or https:// URL.",
+      error: "CAREERPILOT_AI_URL must be an http:// or https:// URL.",
     }),
   ),
-  DOSSIER_AI_MODEL: optional(z.string()),
+  CAREERPILOT_AI_MODEL: optional(z.string()),
   // Never echo the value: it's an API key.
-  DOSSIER_AI_KEY: optional(z.string()),
-  DOSSIER_AI_TIMEOUT_SECONDS: optional(
+  CAREERPILOT_AI_KEY: optional(z.string()),
+  CAREERPILOT_AI_TIMEOUT_SECONDS: optional(
     z
       .string()
       .trim()
       .regex(/^\d+$/, {
         error: (issue) =>
-          `DOSSIER_AI_TIMEOUT_SECONDS must be a whole number of seconds (got "${String(issue.input)}").`,
+          `CAREERPILOT_AI_TIMEOUT_SECONDS must be a whole number of seconds (got "${String(issue.input)}").`,
       })
       .transform(Number)
-      .pipe(z.number().min(5, { error: "DOSSIER_AI_TIMEOUT_SECONDS must be at least 5." })),
+      .pipe(z.number().min(5, { error: "CAREERPILOT_AI_TIMEOUT_SECONDS must be at least 5." })),
   ),
   // Defaults for Settings → Job search (E14-4), until a choice is saved there.
-  DOSSIER_JOBS_SOURCE: optional(
+  CAREERPILOT_JOBS_SOURCE: optional(
     z.enum(JOB_SOURCE_NAMES, {
-      error: (issue) => `DOSSIER_JOBS_SOURCE must be one of ${JOB_SOURCE_NAMES.join(", ")} (got "${String(issue.input)}").`,
+      error: (issue) => `CAREERPILOT_JOBS_SOURCE must be one of ${JOB_SOURCE_NAMES.join(", ")} (got "${String(issue.input)}").`,
     }),
   ),
   // Never echo the values: they're API keys.
-  DOSSIER_JSEARCH_KEY: optional(z.string()),
-  DOSSIER_JSEARCH_HOST: optional(
+  CAREERPILOT_JSEARCH_KEY: optional(z.string()),
+  CAREERPILOT_JSEARCH_HOST: optional(
     z.enum(["openwebninja", "rapidapi"], {
-      error: (issue) => `DOSSIER_JSEARCH_HOST must be openwebninja or rapidapi (got "${String(issue.input)}").`,
+      error: (issue) => `CAREERPILOT_JSEARCH_HOST must be openwebninja or rapidapi (got "${String(issue.input)}").`,
     }),
   ),
-  DOSSIER_ADZUNA_APP_ID: optional(z.string()),
-  DOSSIER_ADZUNA_KEY: optional(z.string()),
+  CAREERPILOT_ADZUNA_APP_ID: optional(z.string()),
+  CAREERPILOT_ADZUNA_KEY: optional(z.string()),
   // FreeHire origin; unset uses https://freehire.me. Point at a self-hosted
   // FreeHire, or leave unset for the public catalogue.
-  DOSSIER_FREEHIRE_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_FREEHIRE_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
+  CAREERPILOT_FREEHIRE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_FREEHIRE_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
   ),
   // Off takes the Bundesagentur für Arbeit out everywhere (#223): it isn't an
   // official API, so a server can choose not to offer it. Unset means on.
-  DOSSIER_JOBS_ARBEITSAGENTUR: optional(
+  CAREERPILOT_JOBS_ARBEITSAGENTUR: optional(
     z
       .string()
       .trim()
       .toLowerCase()
-      .pipe(z.enum(["on", "off"], { error: (issue) => `DOSSIER_JOBS_ARBEITSAGENTUR must be on or off (got "${String(issue.input)}").` })),
+      .pipe(z.enum(["on", "off"], { error: (issue) => `CAREERPILOT_JOBS_ARBEITSAGENTUR must be on or off (got "${String(issue.input)}").` })),
   ),
   // Defaults for Settings → Scoring (#274), until a choice is saved there:
   // ai scores postings with the AI provider, jev with TypeSafe's Jev.
-  DOSSIER_SCORER: optional(
+  CAREERPILOT_SCORER: optional(
     z
       .string()
       .trim()
       .toLowerCase()
-      .pipe(z.enum(SCORER_NAMES, { error: (issue) => `DOSSIER_SCORER must be one of ${SCORER_NAMES.join(", ")} (got "${String(issue.input)}").` })),
+      .pipe(z.enum(SCORER_NAMES, { error: (issue) => `CAREERPILOT_SCORER must be one of ${SCORER_NAMES.join(", ")} (got "${String(issue.input)}").` })),
   ),
   // Never echo the value: it's an API key.
-  DOSSIER_TYPESAFE_KEY: optional(z.string().trim()),
+  CAREERPILOT_TYPESAFE_KEY: optional(z.string().trim()),
   // Google sign-in for Gmail and Calendar (E15-1): an OAuth client of type
   // "Web application". Settings → Google can save one instead, which wins.
   // Never echo the secret.
-  DOSSIER_GOOGLE_CLIENT_ID: optional(z.string().trim()),
-  DOSSIER_GOOGLE_CLIENT_SECRET: optional(z.string().trim()),
+  CAREERPILOT_GOOGLE_CLIENT_ID: optional(z.string().trim()),
+  CAREERPILOT_GOOGLE_CLIENT_SECRET: optional(z.string().trim()),
   // The address CareerPilot is reached at, e.g. https://dossier.example.com, for
   // Google's redirect. Defaults to the address of the request that connects.
-  DOSSIER_PUBLIC_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_PUBLIC_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
+  CAREERPILOT_PUBLIC_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_PUBLIC_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
   ),
   // For the end-to-end tests only: sends every job source's requests to
   // <url>/<source> instead, where a fake source answers (e2e/fake-jobs.mts).
-  DOSSIER_JOBS_TEST_BASE_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_JOBS_TEST_BASE_URL must be an http:// or https:// URL." }),
+  CAREERPILOT_JOBS_TEST_BASE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_JOBS_TEST_BASE_URL must be an http:// or https:// URL." }),
   ),
   // For the end-to-end tests only: sends Google's sign-in, Gmail and Calendar
   // requests to <url>/<host> instead, where a fake Google answers
   // (e2e/fake-google.mts).
-  DOSSIER_GOOGLE_TEST_BASE_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_GOOGLE_TEST_BASE_URL must be an http:// or https:// URL." }),
+  CAREERPILOT_GOOGLE_TEST_BASE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_GOOGLE_TEST_BASE_URL must be an http:// or https:// URL." }),
   ),
   // For the end-to-end tests only: asks <url> for the latest release instead
   // of GitHub's API (e2e/fake-jobs.mts answers).
-  DOSSIER_UPDATES_TEST_BASE_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_UPDATES_TEST_BASE_URL must be an http:// or https:// URL." }),
+  CAREERPILOT_UPDATES_TEST_BASE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_UPDATES_TEST_BASE_URL must be an http:// or https:// URL." }),
   ),
   // For the end-to-end tests only: sends Jev's requests to <url> instead of
   // TypeSafe's API (e2e/fake-jobs.mts answers).
-  DOSSIER_TYPESAFE_TEST_BASE_URL: optional(
-    z.url({ protocol: /^https?$/, error: "DOSSIER_TYPESAFE_TEST_BASE_URL must be an http:// or https:// URL." }),
+  CAREERPILOT_TYPESAFE_TEST_BASE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "CAREERPILOT_TYPESAFE_TEST_BASE_URL must be an http:// or https:// URL." }),
   ),
 }).check((context) => {
-  if (context.value.DOSSIER_JOBS_SOURCE === "arbeitsagentur" && context.value.DOSSIER_JOBS_ARBEITSAGENTUR === "off") {
+  if (context.value.CAREERPILOT_JOBS_SOURCE === "arbeitsagentur" && context.value.CAREERPILOT_JOBS_ARBEITSAGENTUR === "off") {
     context.issues.push({
       code: "custom",
       input: context.value,
-      message: "DOSSIER_JOBS_SOURCE is arbeitsagentur, but DOSSIER_JOBS_ARBEITSAGENTUR is off. Choose another source, or remove one of the two.",
+      message: "CAREERPILOT_JOBS_SOURCE is arbeitsagentur, but CAREERPILOT_JOBS_ARBEITSAGENTUR is off. Choose another source, or remove one of the two.",
     });
   }
 });
@@ -202,7 +203,10 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
 let cached: Env | undefined;
 
 function load(): Env {
-  cached ??= parseEnv(process.env);
+  if (!cached) {
+    adoptLegacyEnv(); // settings still named DOSSIER_* keep working (see env-compat.ts)
+    cached = parseEnv(process.env);
+  }
   return cached;
 }
 

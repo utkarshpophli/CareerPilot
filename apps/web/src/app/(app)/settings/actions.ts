@@ -80,7 +80,7 @@ export const saveApiKey = action(
     const current = await loadSettings();
     await saveSettings({
       apiKeyEnc: applyApiKeyChange(current.apiKeyEnc, change),
-      // Until now the provider came from DOSSIER_AI_*; the key makes it a saved choice.
+      // Until now the provider came from CAREERPILOT_AI_*; the key makes it a saved choice.
       ...(current.provider ? {} : { provider }),
     });
     return { keyState: await currentKeyState() };

@@ -17,7 +17,7 @@ vi.mock("@/lib/prisma", async () => {
 });
 const dataDir = vi.hoisted(() => ({ path: "" }));
 vi.mock("@/lib/env", () => ({
-  env: { get DOSSIER_DATA_DIR() { return dataDir.path; }, DOSSIER_BACKUP_RETENTION_DAYS: 14, DOSSIER_SECRET: "s".repeat(32) },
+  env: { get CAREERPILOT_DATA_DIR() { return dataDir.path; }, CAREERPILOT_BACKUP_RETENTION_DAYS: 14, CAREERPILOT_SECRET: "s".repeat(32) },
 }));
 vi.mock("@/lib/log", () => ({ logServerError: vi.fn() }));
 
