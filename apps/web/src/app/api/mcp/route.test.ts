@@ -70,6 +70,28 @@ describe("the Claude connector at /api/mcp (#221)", () => {
     expect((await GET(new Request("https://dossier.example/api/mcp"))).status).toBe(404);
   });
 
+  // Audit A-06, B-20: limits on how much one client may ask, and on how large a request may be.
+  it("answers 429 with Retry-After once a client has made too many job searches, without affecting another client", async () => {
+    const busy = await accessToken();
+    const other = await accessToken();
+    const search = (token: string) => call({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "search_jobs", arguments: { what: "designer" } } }, token);
+    let refused: Response | undefined;
+    for (let attempt = 0; attempt < 40 && !refused; attempt++) {
+      const response = await search(busy);
+      if (response.status === 429) refused = response;
+    }
+    expect(refused, "expected a 429 within 40 searches").toBeDefined();
+    expect(Number(refused!.headers.get("retry-after"))).toBeGreaterThanOrEqual(1);
+    expect(((await refused!.json()) as { error: { message: string } }).error.message).toMatch(/Too many requests/);
+    expect((await search(other)).status).not.toBe(429);
+  });
+
+  it("refuses a request body over a megabyte", async () => {
+    const token = await accessToken();
+    const response = await call({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_profile", arguments: { padding: "x".repeat(1_100_000) } } }, token);
+    expect(response.status).toBe(413);
+  });
+
   it("asks Claude to sign in, and says where to find out how", async () => {
     const response = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     expect(response.status).toBe(401);

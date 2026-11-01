@@ -6,6 +6,7 @@ import { allows, verifyApiToken, type TokenPrincipal } from "./api-tokens";
 import { runAsActor } from "./ledger";
 import { logServerError } from "./log";
 import { createLimiter, type Limiter } from "./rate-limit";
+import { BodyTooLarge, readLimitedText } from "./read-limited";
 
 // The REST API, version 1: bearer-token auth, a scope check, the caller named
 // in the Activity Ledger, and one JSON envelope for answers and errors:
@@ -59,33 +60,15 @@ export async function api(request: Request, scope: ApiScope, handler: (principal
   }
 }
 
-const tooLarge = () => new ApiError(413, "too_large", "The request body is too large.");
-
-/** The body as text, refused as soon as it is known to be over `maxBytes`: by its announced length, or while it is being read. */
-async function readLimited(request: Request, maxBytes: number): Promise<string> {
-  const announced = Number(request.headers.get("content-length"));
-  if (Number.isFinite(announced) && announced > maxBytes) throw tooLarge();
-  if (!request.body) return "";
-  const reader = request.body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let text = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      throw tooLarge();
-    }
-    text += decoder.decode(value, { stream: true });
-  }
-  return text + decoder.decode();
-}
-
 /** A JSON object from the request body; anything else is a 400, and a body over `maxBytes` a 413. */
 export async function jsonBody(request: Request, maxBytes = 200_000): Promise<Record<string, unknown>> {
-  const text = await readLimited(request, maxBytes);
+  let text: string;
+  try {
+    text = await readLimitedText(request, maxBytes);
+  } catch (error) {
+    if (error instanceof BodyTooLarge) throw new ApiError(413, "too_large", "The request body is too large.");
+    throw error;
+  }
   try {
     const value: unknown = JSON.parse(text);
     if (typeof value === "object" && value !== null && !Array.isArray(value)) return value as Record<string, unknown>;
