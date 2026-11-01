@@ -21,6 +21,10 @@ yarn prisma migrate deploy
 yarn dev                          # http://localhost:3000
 ```
 
+**Port 5432 already in use?** If you already run a PostgreSQL (or another container does), `docker compose up -d db` fails to bind. Pick a free port and use it in both places: `POSTGRES_PORT=5433 docker compose up -d db` (in PowerShell: `$env:POSTGRES_PORT=5433; docker compose up -d db`), then put `:5433` in `DATABASE_URL` in `.env`. The password hash can be pasted into `.env` as it is, without quotes.
+
+Then open http://localhost:3000 and sign in with the password you hashed. The empty dashboard lists the three first steps: fill in your profile, find or paste a posting, connect an assistant.
+
 On Windows use `corepack yarn ...` if `yarn` is not on your PATH. Settings are environment variables named `CAREERPILOT_*`; the old `DOSSIER_*` names still work and print a one-line reminder to rename them.
 
 ## Connect an assistant

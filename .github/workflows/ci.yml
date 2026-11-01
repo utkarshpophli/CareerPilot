@@ -114,6 +114,46 @@ jobs:
         continue-on-error: true
         run: yarn npm audit --all --recursive --severity high
 
+  # The whole product in a real browser: a production build, its own database, a fake AI server and fake job sources.
+  e2e:
+    name: End-to-end (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/web
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: careerpilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d careerpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The suite adds "_e2e" to the database name and refuses any other, so it cannot touch real data.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/careerpilot
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn prisma generate
+      - run: yarn build
+      - run: yarn playwright install --with-deps chromium
+      - run: yarn test:e2e
+
   # The image people actually run must build (audit C-08).
   docker:
     name: Production image builds

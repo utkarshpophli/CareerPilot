@@ -141,6 +141,19 @@ describe("the dashboard (E9-7)", () => {
     expect(screen.queryByRole("region", { name: "Your funnel" })).not.toBeInTheDocument();
   });
 
+  // No sample data by decision, so the empty dashboard has to teach the first steps itself.
+  it("teaches a new user the three first steps in order, including connecting an assistant", () => {
+    render(<Dashboard {...props} empty figures={{ ...figures, sent: 0 }} />);
+    const steps = screen.getAllByRole("listitem");
+    expect(steps.map((step) => step.textContent)).toEqual([
+      expect.stringContaining("Fill in your profile"),
+      expect.stringContaining("Find or paste a posting"),
+      expect.stringContaining("Connect an assistant"),
+    ]);
+    expect(screen.getByRole("link", { name: "Find or paste a posting" })).toHaveAttribute("href", "/new?fresh=1");
+    expect(screen.getByRole("link", { name: "Connect an assistant" })).toHaveAttribute("href", "/settings?section=tokens");
+  });
+
   it("shows the calendar after the cards, outside the time filter (E15-6)", () => {
     const calendar = <section aria-label="Calendar" />;
     const { rerender } = render(<Dashboard {...props} calendar={calendar} />);

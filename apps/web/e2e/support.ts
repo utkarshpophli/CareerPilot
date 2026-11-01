@@ -1,8 +1,14 @@
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 
 import type { Page } from "@playwright/test";
 import { Pool } from "pg";
+
+// Playwright runs this file as CommonJS, so no import.meta: resolve from the app folder it is run in.
+const require = createRequire(path.join(process.cwd(), "package.json"));
 
 // What the end-to-end tests (E11-2) run against: a production build on its
 // own port, with its own database and a fake AI server, so a run never
@@ -40,7 +46,7 @@ export function appEnv(): Record<string, string> {
     CAREERPILOT_PASSWORD: PASSWORD_HASH,
     // Random-looking on purpose: a repeating secret is refused at startup (audit A-19).
     CAREERPILOT_SECRET: "e2eK7qZp-9XvLm3Rt8WyBn5HcJd2SfG4aU",
-    CAREERPILOT_DATA_DIR: "/tmp/dossier-e2e",
+    CAREERPILOT_DATA_DIR: path.join(tmpdir(), "careerpilot-e2e"),
     CAREERPILOT_AI_PROVIDER: "openai",
     CAREERPILOT_AI_URL: `http://localhost:${FAKE_AI_PORT}/v1`,
     CAREERPILOT_AI_MODEL: "fake-model",
@@ -74,7 +80,8 @@ export async function resetData(): Promise<void> {
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'",
   );
   await sql(`TRUNCATE TABLE ${tables.map(({ tablename }) => `"${tablename}"`).join(", ")} RESTART IDENTITY CASCADE`);
-  execFileSync("yarn", ["prisma", "db", "seed", "--", "--demo"], {
+  // Prisma's own entry point through this Node, so it works where `yarn` is not on the PATH (Windows).
+  execFileSync(process.execPath, [require.resolve("prisma/build/index.js"), "db", "seed", "--", "--demo"], {
     env: { ...process.env, DATABASE_URL: e2eDatabaseUrl() },
     stdio: "pipe",
   });

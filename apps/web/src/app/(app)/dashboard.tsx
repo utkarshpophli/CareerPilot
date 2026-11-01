@@ -206,17 +206,28 @@ function Welcome() {
     <Panel>
       <h2 className="font-serif text-section">Welcome to CareerPilot</h2>
       <p className="text-sm text-muted">
-        Start with your profile: your roles, skills and education are what every tailored resume and cover letter is built from.
-        Then paste a job posting, and your funnel and next steps will show up here.
+        Three steps, in this order. Your funnel, platforms, resume versions and everything your assistants do will show up here as you go.
       </p>
-      <div className="flex flex-wrap items-center gap-4 pt-1">
-        <Link href="/profile" className={buttonClassName("secondary")}>
-          Fill in your profile
-        </Link>
-        <Link href="/new?fresh=1" className={buttonClassName("primary", "md", "hover:text-on-primary")}>
-          + New application
-        </Link>
-      </div>
+      <ol className="flex flex-col gap-3 pt-1 text-sm">
+        <li className="flex flex-col gap-0.5">
+          <Link href="/profile" className="font-medium underline underline-offset-2">
+            Fill in your profile
+          </Link>
+          <span className="text-muted">Your roles, skills and education are what every tailored resume and cover letter is built from.</span>
+        </li>
+        <li className="flex flex-col gap-0.5">
+          <Link href="/new?fresh=1" className="font-medium underline underline-offset-2">
+            Find or paste a posting
+          </Link>
+          <span className="text-muted">Paste a job posting or its link, and get a tailored resume and letter to review.</span>
+        </li>
+        <li className="flex flex-col gap-0.5">
+          <Link href="/settings?section=tokens" className="font-medium underline underline-offset-2">
+            Connect an assistant
+          </Link>
+          <span className="text-muted">Let Claude Code or OpenCode work for you, and watch every step here. It never sends anything without your click.</span>
+        </li>
+      </ol>
     </Panel>
   );
 }
