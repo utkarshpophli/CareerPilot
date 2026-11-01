@@ -2,7 +2,7 @@
 
 # Debian rather than Alpine: PDFs are printed by Playwright's own Chromium,
 # which isn't built for musl (decided in E5-5, #46).
-FROM node:24-trixie-slim AS base
+FROM node:26-trixie-slim AS base
 WORKDIR /app
 # Swap the image's bundled Yarn 1 for the version pinned in package.json (packageManager).
 RUN corepack enable
