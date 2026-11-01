@@ -19,6 +19,7 @@ const event = (overrides: Partial<ActivityEvent>): ActivityEvent => ({
   outcome: "OK",
   summary: "Created application: Engineer",
   data: null,
+  runId: null,
   ...overrides,
 });
 

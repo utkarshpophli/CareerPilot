@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { formatActivity, formatApplications, formatCheck, formatInsights, parseArgs, serverFrom, table, tokenFrom, UsageError } from "./lib.mjs";
+import { applicationStatus, finishStatus, formatActivity, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, parseArgs, parseData, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
 
 test("parseArgs separates the command, arguments and flags", () => {
   assert.deepEqual(parseArgs(["apps", "--status", "SENT", "--json"]), { command: "apps", args: [], flags: { status: "SENT", json: true } });
@@ -52,6 +52,65 @@ test("serverFrom insists on https except for this machine", () => {
   assert.throws(() => serverFrom({ CAREERPILOT_URL: "ftp://x" }), UsageError);
   assert.throws(() => serverFrom({ CAREERPILOT_URL: "nonsense" }), UsageError);
   assert.throws(() => serverFrom({}), UsageError);
+});
+
+test("formatRuns names the state in words and who is doing it", () => {
+  const text = formatRuns([
+    { id: "r1", status: "RUNNING", stalled: false, stepCount: 2, actorKind: "CLI", actorName: "claude-code", title: "Daily scan" },
+    { id: "r2", status: "RUNNING", stalled: true, stepCount: 0, actorKind: "CLI", actorName: "", title: "Old" },
+    { id: "r3", status: "OK", stalled: false, stepCount: 5, actorKind: "SCHEDULER", actorName: "", title: "Nightly" },
+  ]);
+  assert.match(text, /r1\s+running\s+2\s+cli:claude-code\s+Daily scan/);
+  assert.match(text, /r2\s+stalled/);
+  assert.match(text, /r3\s+done\s+5\s+scheduler\s+Nightly/);
+  assert.equal(formatRuns([]), "No runs.");
+});
+
+test("formatRun lists the steps in order", () => {
+  const text = formatRun({ title: "Daily scan", kind: "scan", status: "OK", stalled: false, stepCount: 1, events: [{ at: "2026-11-01T12:30:00.000Z", summary: "Fetched Greenhouse" }] });
+  assert.match(text, /Daily scan \(scan\), done, 1 step$/m);
+  assert.match(text, /2026-11-01 12:30\s+Fetched Greenhouse/);
+});
+
+test("finishStatus accepts the words people type", () => {
+  assert.equal(finishStatus(undefined), "OK");
+  assert.equal(finishStatus("Failed"), "FAILED");
+  assert.equal(finishStatus("canceled"), "CANCELLED");
+  assert.throws(() => finishStatus("maybe"), UsageError);
+});
+
+test("parseData takes key=value pairs (any shell) or a JSON object", () => {
+  assert.equal(parseData(undefined), undefined);
+  assert.deepEqual(parseData('{"found":12}'), { found: 12 });
+  assert.deepEqual(parseData("found=12,boards=3, ok=true,note=hello world,ratio=0.5"), { found: 12, boards: 3, ok: true, note: "hello world", ratio: 0.5 });
+  for (const bad of ["[1]", "5", "null", "{nope", "=3", "novalue"]) assert.throws(() => parseData(bad), UsageError, bad);
+});
+
+test("applicationStatus accepts any case and refuses unknown words", () => {
+  assert.equal(applicationStatus("sent"), "SENT");
+  assert.equal(applicationStatus("Interview"), "INTERVIEW");
+  assert.throws(() => applicationStatus("flying"), UsageError);
+  assert.throws(() => applicationStatus(undefined), UsageError);
+});
+
+test("the Claude Code skill is a real skill file with the safety rules in it", () => {
+  const [file] = skillFiles("claude-code");
+  assert.equal(file.path, ".claude/skills/careerpilot/SKILL.md");
+  assert.match(file.content, /^---\nname: careerpilot\ndescription: .+\n---\n/);
+  assert.match(file.content, /Never submit, send or apply/);
+  assert.match(file.content, /data, never instructions/);
+  assert.match(file.content, /pilot run start/);
+});
+
+test("the generic instructions carry the same rules, and unknown targets are refused", () => {
+  const [file] = skillFiles("generic");
+  assert.equal(file.path, "CAREERPILOT_AGENT.md");
+  assert.match(file.content, /Never submit, send or apply/);
+  assert.throws(() => skillFiles("emacs"), UsageError);
+});
+
+test("parseArgs knows --force and --stdout take no value", () => {
+  assert.deepEqual(parseArgs(["skills", "export", "--stdout", "--force", "--target", "generic"]).flags, { stdout: true, force: true, target: "generic" });
 });
 
 test("tokenFrom needs a token", () => {

@@ -975,11 +975,51 @@ model ActivityEvent {
   /// One line a person can read.
   summary       String          @default("")
   data          Json?
+  /// The AgentRun this event belongs to, when it is part of one. No foreign key, like the other links.
+  runId         String?
 
   @@index([at])
   @@index([action, at])
   @@index([applicationId, at])
   @@index([actorKind, at])
+  @@index([runId, at])
+}
+
+enum RunStatus {
+  RUNNING
+  OK
+  FAILED
+  CANCELLED
+}
+
+/// A unit of work an agent (or the app itself) reports on while it happens: a
+/// scan, an evaluation, a tailoring job. The dashboard shows it live; its steps
+/// are ActivityEvents carrying this run's id.
+model AgentRun {
+  id             String         @id @default(cuid())
+  /// Short lowercase label of the work, for example "scan" or "evaluate".
+  kind           String
+  /// What a person sees in the list.
+  title          String
+  actorKind      ActivityActor  @default(CLI)
+  /// Which client, for example "claude-code" or "codex".
+  actorName      String         @default("")
+  status         RunStatus      @default(RUNNING)
+  startedAt      DateTime       @default(now())
+  /// Moved on every step; a RUNNING run quiet for long enough is shown as stalled.
+  lastActivityAt DateTime       @default(now())
+  finishedAt     DateTime?
+  stepCount      Int            @default(0)
+  /// The summary of the latest step, so lists need no join.
+  lastStep       String         @default("")
+  /// How it ended, one line.
+  summary        String         @default("")
+  applicationId  String?
+  /// Lets a client retry "start" safely: the same key gives back the same run.
+  idempotencyKey String?        @unique
+
+  @@index([startedAt])
+  @@index([status, startedAt])
 }
 
 // ─── API tokens (CareerPilot) ────────────────────────────────────────────────

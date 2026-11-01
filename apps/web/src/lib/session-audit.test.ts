@@ -28,10 +28,11 @@ const OPEN_ROUTES = new Set([
 // browser: every handler goes through api() (src/lib/api-v1.ts), which checks
 // the bearer token and its scope. Checked in "checks the token in every REST
 // API route" below.
-const API_ROUTES = globSync("src/app/api/v1/**/route.ts");
+const glob = (pattern: string) => globSync(pattern).map((file) => file.replaceAll("\\", "/")); // Windows returns backslashes
+const API_ROUTES = glob("src/app/api/v1/**/route.ts");
 for (const file of API_ROUTES) OPEN_ROUTES.add(file);
 
-const sources = globSync("src/**/*.{ts,tsx}").filter((file) => !/\.test\.tsx?$/.test(file) && !file.startsWith("src/generated/"));
+const sources = glob("src/**/*.{ts,tsx}").filter((file) => !/\.test\.tsx?$/.test(file) && !file.startsWith("src/generated/"));
 const read = (file: string) => readFileSync(file, "utf8");
 const isActionFile = (source: string) => /^\s*["']use server["'];?/.test(source);
 const exportsOf = (source: string) => [...source.matchAll(/^export\s+(?:async\s+)?(?:const|function|let|var|default)\s*(\w*)\s*(?:=\s*(\w+))?/gm)];
@@ -41,7 +42,7 @@ describe("session checks (E11-5)", () => {
 
   it("finds the Server Action files and route handlers", () => {
     expect(actionFiles.length).toBeGreaterThan(10);
-    expect(globSync("src/app/**/route.ts").length).toBeGreaterThan(5);
+    expect(glob("src/app/**/route.ts").length).toBeGreaterThan(5);
   });
 
   it("defines every Server Action with action()", () => {
@@ -64,7 +65,7 @@ describe("session checks (E11-5)", () => {
   it("checks the session on every page but the sign-in page", () => {
     // The (app) layout checks for everything inside it; print pages take the renderer's token too.
     expect(read("src/app/(app)/layout.tsx")).toContain("await verifySession()");
-    const unchecked = globSync("src/app/**/page.tsx").filter(
+    const unchecked = glob("src/app/**/page.tsx").filter(
       (file) =>
         !file.startsWith("src/app/(app)/") &&
         !file.startsWith("src/app/login/") &&
@@ -103,7 +104,7 @@ describe("session checks (E11-5)", () => {
   });
 
   it("defines every route handler with route()", () => {
-    const unchecked = globSync("src/app/**/route.ts")
+    const unchecked = glob("src/app/**/route.ts")
       .filter((file) => !OPEN_ROUTES.has(file))
       .flatMap((file) =>
         exportsOf(read(file))

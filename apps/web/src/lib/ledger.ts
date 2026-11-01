@@ -21,6 +21,9 @@ export const ACTIONS = {
   mcpToolCalled: "mcp.tool_called",
   agentScanFinished: "agent.scan_finished",
   postingChecked: "posting.checked",
+  runStarted: "run.started",
+  runStep: "run.step",
+  runFinished: "run.finished",
 } as const;
 export type ActivityAction = (typeof ACTIONS)[keyof typeof ACTIONS];
 
@@ -50,6 +53,8 @@ export type ActivityInput = {
   platform?: string;
   model?: string;
   outcome?: ActivityOutcome;
+  /** The AgentRun this event is a step of (see runs.ts). */
+  runId?: string | null;
   /** Small structured details (counts, causes, durations). */
   data?: Prisma.InputJsonValue;
   /** Overrides the actor from context, e.g. for work that runs on its own. */
@@ -76,6 +81,7 @@ export async function recordActivity(db: Db, input: ActivityInput): Promise<void
       platform: input.platform ?? "",
       model: input.model ?? "",
       outcome: input.outcome ?? ActivityOutcome.OK,
+      runId: input.runId ?? null,
       data: input.data,
     },
   });

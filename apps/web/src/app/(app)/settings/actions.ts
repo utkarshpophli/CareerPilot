@@ -315,6 +315,7 @@ export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }
     await tx.setting.deleteMany();
     // What was done and when (it names applications and companies), and the keys that let a command line or an assistant in.
     await tx.activityEvent.deleteMany();
+    await tx.agentRun.deleteMany();
     await tx.apiToken.deleteMany();
   });
   // An empty profile and default settings need no rows; the built-in themes do.

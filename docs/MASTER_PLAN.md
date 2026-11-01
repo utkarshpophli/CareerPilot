@@ -180,7 +180,7 @@ Starting points already identified in the research:
 4. Which section 9 ideas, if any, to pull into the first release?
 5. Name: keep "CareerPilot"?
 
-Until these are answered the plan assumes the recommended answers: Path B, single-user with seams, TypeScript/Next/PostgreSQL, name CareerPilot.
+Status (2026-11-01): decision 1 is confirmed by the user: **Path B, keep the dossier fork, AGPL-3.0-only** (they briefly chose clean-room earlier the same day, then confirmed the fork after seeing the branch already built on it). Decisions 2, 3 and 5 stay on the recommended answers (single-user with seams, TypeScript/Next/PostgreSQL, name CareerPilot). Decision 4 (which new ideas to pull in) is open; section 13 pulls in the ones that serve "see what agents are doing".
 
 ## 12. Build status
 
@@ -190,14 +190,35 @@ Updated 2026-11-01. "Done" means on the working branch with passing tests (about
 |---|---|---|
 | 0. Foundation | Done | Layout (`apps/web`, `upstream/`), AGPL licence, notices, CI, ADR 0001. Workspace root deferred to the first shared package. |
 | 1. Skeleton | Partly | Dossier base runs on Node 24 and PostgreSQL with all baseline tests green. Still to do: `owner_id` and `Principal` seams, separate worker process. |
-| 2. Ledger and Activity | Done (first version) | `ActivityEvent` table; writers for application creation, status changes and undo, document versions, job queued and finished, MCP tool calls, scheduled and manual agent scans, posting checks; Activity page with filters and paging. The dashboard has a Recent activity card. "Delete everything" now also wipes activity history and API tokens. Not yet: live progress streaming, cost per event, pruning of old events, and including events in data export and backup (tokens are deliberately never exported). |
+| 2. Ledger and Activity | Done (first version) | `ActivityEvent` table; writers for application creation, status changes and undo, document versions, job queued and finished, MCP tool calls, scheduled and manual agent scans, posting checks; Activity page with filters and paging. The dashboard has a Recent activity card. "Delete everything" now also wipes activity history and API tokens. Runs (`AgentRun`, ADR 0002) with live progress over server-sent events, a Runs page and a "Running now" card are done. Not yet: cost per event, pruning of old events, and including events and runs in data export and backup (tokens are deliberately never exported). |
 | 3. Safety core | Started | Posting guard ported from ai-job-search with a golden-corpus parity test against the Python original, wired into pasted, agent and connector postings. Not yet: SSRF guard unification, identity and dedup service, outbound privacy guard, merged fact gate. |
 | 4. Discovery and scoring | Not started | |
 | 5. Documents | Not started | Templates are already recorded per document; Insights groups by them. |
-| 6. Agent surfaces | Mostly | MCP connector attributed in the ledger; REST `/api/v1` (status, applications, activity, insights, posting check) with hashed, revocable, read/write tokens; dependency-free `pilot` CLI (`apps/cli`). Tokens are made and revoked in Settings. Not yet: rate limiting, write endpoints, exported skills. |
+| 6. Agent surfaces | Mostly | MCP connector attributed in the ledger; REST `/api/v1` (status, applications, activity, insights, posting check) with hashed, revocable, read/write tokens; dependency-free `pilot` CLI (`apps/cli`). Tokens are made and revoked in Settings. Also done in Sprint 1: write endpoints (track an application, move its status, report runs) and `pilot skills export`. Not yet: rate limiting, finer token scopes. |
 | 7. Lifecycle | Not started | Gmail and Calendar come with the dossier base. |
 | 8. Insights | Done (first version) | Applications by platform and resume template, resume revisions, weekly activity, reply rates. |
 | 9. Importers | Not started | |
 | 10. Hardening | Not started | |
 
 Privacy changes already made: the usage ping no longer points at the original dossier server and stays off unless an operator sets `CAREERPILOT_USAGE_PING_HOST`. The update check still asks GitHub about releases of this repository once a day on production servers; making it opt-in is on the Phase 10 list.
+
+## 13. Next increment: "agents can act, humans can watch" (Sprint 1)
+
+Why this first: today the REST API and `pilot` CLI are read-only (status, applications, activity, insights, posting check), and the ledger records single events with no notion of a job in progress. So an agent can look but not act, and the dashboard cannot show "a scan is running, step 3 of 8". This is exactly the gap the product exists to close. Sprint 1 closes it end to end, in vertical slices that each leave tests green.
+
+Baseline (measured 2026-11-01 on Windows 11, Node 24.13): typecheck clean, lint clean, 1,431 unit tests, 472 database tests, 8 CLI tests all pass. Six unit tests failed only because of Windows path handling in the tests themselves; fixed. Browser (Playwright) suite not yet re-run here.
+
+| Slice | What | Tests first | Done when |
+|---|---|---|---|
+| 1. Runs | `AgentRun` table (kind, title, actor, status RUNNING/OK/FAILED/CANCELLED, started/finished, optional application) and `runId` on `ActivityEvent`; `src/lib/runs.ts` with start, add step, finish; every step is also a ledger event written in the same transaction | service tests (db) | A run with three steps and a finish exists and its events are ordered |
+| 2. REST write | `POST /api/v1/runs`, `POST /api/v1/runs/{id}/events`, `POST /api/v1/runs/{id}/finish`, `GET /api/v1/runs[/{id}]`; write scope; `Idempotency-Key` on POSTs; zod contracts; rate limit per token | route tests, session-audit rule | An agent token can open, update and close a run; read-only tokens are refused |
+| 3. REST actions | `POST /api/v1/postings` (goes through the posting guard), `POST /api/v1/applications`, `PATCH /api/v1/applications/{id}/status` (reuses the status machine and undo). No send or submit endpoint, by design | route tests, guard fixtures | Add a posting and move an application from an agent; ledger shows the agent's name |
+| 4. Live dashboard | Runs page (list, detail timeline), "Running now" card on the dashboard, server-sent events at `/api/activity/stream` (poll fallback) | dom tests, one e2e | Start a run from `curl`, watch steps appear without refreshing |
+| 5. CLI and skills | `pilot run start/step/finish`, `pilot post add`, `pilot apps create/status`, `pilot skills export --target claude-code,codex,generic` that writes instructions telling an agent to wrap its work in runs and never to submit anything | CLI tests | `pilot skills export` output works in a fresh Claude Code project |
+| 6. Docs | Update `docs/AGENTS.md`, README quick start (Windows and Docker), ADR 0002 for the Runs model | n/a | A new user can connect an agent in five minutes |
+
+**Sprint 1 result (2026-11-01): all six slices done.** Differences from the table: slice 3 has no separate `POST /api/v1/postings`; `POST /api/v1/applications` takes the posting text (through the guard) and the link, and is deduplicated by link, which is the "duplicate-application guard" idea from section 9 in its first form. Slice 5's `--data` also takes `key=value` pairs, because PowerShell strips the quotes from JSON on the command line. Verified for real, not only by tests: dev server on Windows with PostgreSQL, a write token, the CLI creating and finishing runs and tracking an application, and a signed-in browser showing the Runs page, the "Running now" card and a run's timeline updating live, with a clean console. Open for the security review: write tokens can set statuses that mean "sent" without a person confirming (ADR 0002).
+
+After Sprint 1 (Sprint 2): `owner_id` and `Principal` seams (the large schema change, done on its own), separate worker process and queue, then Phase 3 remainder (SSRF unification, identity and dedup service, outbound privacy guard, merged fact gate) and Phase 4 discovery. The security review of the architecture runs after Sprint 1, before Phase 4, because the agent tokens and write endpoints are the new attack surface.
+
+Dev environment notes (Windows): use `corepack yarn ...` in `apps/web` (no global yarn). Database tests need PostgreSQL; the repo's author machine runs one container on port 55432 (`docker run -d --name careerpilot-dev-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dossier -p 55432:5432 postgres:17`) and sets `DATABASE_URL=postgresql://postgres:postgres@localhost:55432/dossier`; tests use the `_test` database beside it.
