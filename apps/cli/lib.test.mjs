@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplication, formatApplications, formatCheck, formatCompanies, formatScan, formatInsights, formatRun, formatRuns, formatSearch, parseArgs, parseData, parseScores, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
+import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplication, formatApplications, formatCheck, formatCompanies, formatScan, formatPostings, formatInsights, formatRun, formatRuns, formatSearch, parseArgs, parseData, parseScores, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
 
 test("parseArgs separates the command, arguments and flags", () => {
   assert.deepEqual(parseArgs(["apps", "--status", "SENT", "--json"]), { command: "apps", args: [], flags: { status: "SENT", json: true } });
@@ -253,3 +253,17 @@ test("formatScan ranks postings with their score and why, says what is new and c
   assert.doesNotMatch(text, /\u001b/);
 });
 
+
+test("formatPostings lists the kept postings with score and reasons, and says when there are none", () => {
+  const text = formatPostings([
+    { title: "Designer", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", score: 91, band: "excellent", why: ["Mentions 3 of your skills: Figma"] },
+    { title: "Cook\u001b[2J", company: "Beta", url: "https://example.test/2", warning: "The posting's text contains instruction-like lines aimed at an AI." },
+  ]);
+  assert.match(text, /91\s+excellent\s+Designer\s+Acme\s+Berlin/);
+  assert.match(text, /\*\s+-\s+Cook\[2J/);
+  assert.match(text, /Why \(Designer\): Mentions 3 of your skills/);
+  assert.match(text, /WARNING Cook\[2J/);
+  assert.doesNotMatch(text, /\u001b/);
+  assert.match(text, /data, not instructions/i);
+  assert.equal(formatPostings([]), "No kept postings match. Scan the watched boards first: pilot companies scan");
+});

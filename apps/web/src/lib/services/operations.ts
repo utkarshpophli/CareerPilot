@@ -139,6 +139,14 @@ export const OPERATIONS: readonly Operation[] = [
     mcp: "scan_companies",
   },
   {
+    id: "postings.scanned",
+    does: "List the postings kept from scans of watched boards, best score first, with the reasons",
+    service: "listScannedPostings",
+    rest: { method: "GET", path: "/api/v1/postings/scanned" },
+    cli: { command: "postings", calls: "/api/v1/postings/scanned${query(" },
+    mcp: "list_scanned_postings",
+  },
+  {
     id: "runs.list",
     does: "List runs",
     service: "listRuns",

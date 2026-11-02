@@ -145,6 +145,7 @@ describe("the Claude connector at /api/mcp (#221)", () => {
       "get_posting",
       "get_profile",
       "list_applications",
+      "list_scanned_postings",
       "more_jobs",
       "propose_status",
       "save_application",

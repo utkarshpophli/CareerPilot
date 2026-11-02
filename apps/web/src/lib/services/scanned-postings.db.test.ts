@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { BoardPosting } from "@/lib/job-search/boards";
 import { createTestClient, resetDatabase } from "@/test/db";
 
-import { ingestBoardScan } from "./scanned-postings";
+import { ingestBoardScan, listScannedPostings } from "./scanned-postings";
 
 const db = createTestClient();
 beforeEach(() => resetDatabase(db));
@@ -141,5 +141,44 @@ describe("ingestBoardScan", () => {
     await ingestBoardScan(db, acme, [posting("1", { salary: { min: 90000, max: 120000, currency: "EUR" } }), posting("2")], t0);
     expect(await db.scannedPosting.findFirstOrThrow({ where: { externalId: "acme:1" } })).toMatchObject({ salaryMin: 90000, salaryMax: 120000, salaryCurrency: "EUR" });
     expect(await db.scannedPosting.findFirstOrThrow({ where: { externalId: "acme:2" } })).toMatchObject({ salaryMin: null, salaryMax: null, salaryCurrency: "" });
+  });
+});
+
+describe("listScannedPostings", () => {
+  async function kept() {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1", { title: "A" }), posting("2", { title: "B" }), posting("3", { title: "C" }), posting("4", { title: "D" }), posting("5", { title: "E" })], t0);
+    const by = (title: string) => db.scannedPosting.findFirstOrThrow({ where: { title } });
+    await db.scannedPosting.update({ where: { id: (await by("A")).id }, data: { score: 40, scoreBand: "poor", scoreReasons: ["a"] } });
+    await db.scannedPosting.update({ where: { id: (await by("B")).id }, data: { score: 90, scoreBand: "excellent", scoreReasons: ["Figma"] } });
+    await db.scannedPosting.update({ where: { id: (await by("C")).id }, data: { score: 70, scoreBand: "good", state: "SAVED" } });
+    await db.scannedPosting.update({ where: { id: (await by("D")).id }, data: { state: "DISMISSED", score: 99, scoreBand: "excellent" } });
+    await db.scannedPosting.update({ where: { id: (await by("E")).id }, data: { closedAt: later(1), score: 95, scoreBand: "excellent" } });
+    return by;
+  }
+
+  it("lists open postings best score first, leaving out the owner's dismissals, closed ones and copies", async () => {
+    await kept();
+    const list = await listScannedPostings(db, {});
+    expect(list.map((p) => p.title)).toEqual(["B", "C", "A"]);
+    expect(list[0]).toMatchObject({ score: 90, band: "excellent", scoreReasons: ["Figma"], company: "Acme", isNew: true });
+    expect(list[1]!.isNew).toBe(false); // saved, so no longer new
+  });
+
+  it("filters by state and minimum score, and can show closed or dismissed ones when asked", async () => {
+    await kept();
+    expect((await listScannedPostings(db, { state: "SAVED" })).map((p) => p.title)).toEqual(["C"]);
+    expect((await listScannedPostings(db, { minScore: 75 })).map((p) => p.title)).toEqual(["B"]);
+    expect((await listScannedPostings(db, { state: "DISMISSED" })).map((p) => p.title)).toEqual(["D"]);
+    expect((await listScannedPostings(db, { includeClosed: true })).map((p) => p.title)).toEqual(["E", "B", "C", "A"]);
+  });
+
+  it("keeps a copy of an opening already kept out of the list, and caps the number returned", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1"), posting("2", { url: "https://elsewhere.example/2" })], t0);
+    expect(await listScannedPostings(db, {})).toHaveLength(1);
+    expect(await listScannedPostings(db, { includeDuplicates: true })).toHaveLength(2);
+    expect(await listScannedPostings(db, { includeDuplicates: true, limit: 1 })).toHaveLength(1);
+    expect(await listScannedPostings(db, { limit: 100_000 })).toHaveLength(1);
   });
 });

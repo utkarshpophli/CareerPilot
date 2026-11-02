@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient, ScannedPosting } from "@/generated/prisma/client";
+import type { BoardSource, ScannedState } from "@/generated/prisma/enums";
 import { guard, hasAlarm } from "@/lib/guards/posting-guard";
 import type { BoardPosting } from "@/lib/job-search/boards";
 import { MAX_DESCRIPTION } from "@/lib/job-search/boards/html-text";
@@ -149,4 +150,79 @@ export async function scoreOpenPostings(db: PrismaClient, companyId: string, pre
     scored++;
   }
   return scored;
+}
+
+/** A stored posting as a list shows it: what the board said (cleaned), and where it stands. */
+export type ScanPosting = {
+  id: string;
+  source: BoardSource;
+  externalId: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean | null;
+  url: string;
+  description: string;
+  postedAt: Date | null;
+  salary: { min: number; max: number; currency: string } | null;
+  /** Not yet looked at: first seen in the scan that shows it, or still waiting in the review queue. */
+  isNew: boolean;
+  score: number | null;
+  band: string;
+  scoreReasons: string[];
+  scoreRedFlags: string[];
+  guardAlarm: boolean;
+};
+
+const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
+
+export function toScanPosting(row: ScannedPosting, isNew: boolean): ScanPosting {
+  return {
+    id: row.id,
+    source: row.source,
+    externalId: row.externalId,
+    title: row.title,
+    company: row.companyName,
+    location: row.location,
+    remote: row.remote,
+    url: row.url,
+    description: row.description,
+    postedAt: row.postedAt,
+    salary: row.salaryMin !== null && row.salaryMax !== null ? { min: row.salaryMin, max: row.salaryMax, currency: row.salaryCurrency } : null,
+    isNew,
+    score: row.score,
+    band: row.scoreBand,
+    scoreReasons: strings(row.scoreReasons),
+    scoreRedFlags: strings(row.scoreRedFlags),
+    guardAlarm: row.guardAlarm,
+  };
+}
+
+export type ListScannedOptions = {
+  state?: ScannedState;
+  minScore?: number;
+  includeClosed?: boolean;
+  includeDuplicates?: boolean;
+  limit?: number;
+};
+
+const LIST_DEFAULT = 50;
+const LIST_MAX = 200;
+
+/**
+ * Kept postings, best score first (unscored last, then newest). Without a state: the open ones the owner has not
+ * dismissed, leaving out copies of an opening already kept. This is what the Review queue shows.
+ */
+export async function listScannedPostings(db: PrismaClient, { state, minScore, includeClosed = false, includeDuplicates = false, limit = LIST_DEFAULT }: ListScannedOptions = {}): Promise<ScanPosting[]> {
+  const rows = await db.scannedPosting.findMany({
+    where: {
+      state: state ?? { not: "DISMISSED" },
+      ...(includeClosed ? {} : { closedAt: null }),
+      ...(includeDuplicates ? {} : { duplicateOfId: null }),
+      ...(minScore !== undefined ? { score: { gte: minScore } } : {}),
+    },
+    orderBy: [{ score: { sort: "desc", nulls: "last" } }, { postedAt: { sort: "desc", nulls: "last" } }, { id: "asc" }],
+    take: Math.min(LIST_MAX, Math.max(1, limit)),
+  });
+  return rows.map((row) => toScanPosting(row, row.state === "NEW"));
 }

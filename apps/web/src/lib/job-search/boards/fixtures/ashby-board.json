@@ -6,8 +6,23 @@
       "jobUrl": "https://jobs.ashbyhq.com/acme/d0a4e1c2-0000-4000-8000-0000000000a1",
       "publishedAt": "2026-10-25T10:00:00.000+00:00",
       "location": "England",
-      "address": { "postalAddress": { "addressLocality": "London", "addressCountry": "United Kingdom" } },
-      "secondaryLocations": [{ "location": "New York", "address": { "postalAddress": { "addressLocality": "New York", "addressCountry": "United States" } } }],
+      "address": {
+        "postalAddress": {
+          "addressLocality": "London",
+          "addressCountry": "United Kingdom"
+        }
+      },
+      "secondaryLocations": [
+        {
+          "location": "New York",
+          "address": {
+            "postalAddress": {
+              "addressLocality": "New York",
+              "addressCountry": "United States"
+            }
+          }
+        }
+      ],
       "workplaceType": "Hybrid",
       "isRemote": true,
       "descriptionPlain": "Own the platform.",
@@ -15,8 +30,19 @@
         "compensationTiers": [
           {
             "components": [
-              { "compensationType": "Salary", "interval": "1 YEAR", "minValue": 150000, "maxValue": 190000, "currencyCode": "usd" },
-              { "compensationType": "EquityPercentage", "summary": "0.1% - 0.3%", "minValue": 0.1, "maxValue": 0.3 }
+              {
+                "compensationType": "Salary",
+                "interval": "1 YEAR",
+                "minValue": 150000,
+                "maxValue": 190000,
+                "currencyCode": "usd"
+              },
+              {
+                "compensationType": "EquityPercentage",
+                "summary": "0.1% - 0.3%",
+                "minValue": 0.1,
+                "maxValue": 0.3
+              }
             ]
           }
         ]
@@ -29,15 +55,53 @@
       "location": "Remote",
       "isRemote": true,
       "descriptionPlain": "Hourly.",
-      "compensation": { "compensationTiers": [{ "components": [{ "compensationType": "Salary", "interval": "1 HOUR", "minValue": 50, "maxValue": 70, "currencyCode": "EUR" }] }] }
+      "compensation": {
+        "compensationTiers": [
+          {
+            "components": [
+              {
+                "compensationType": "Salary",
+                "interval": "1 HOUR",
+                "minValue": 50,
+                "maxValue": 70,
+                "currencyCode": "EUR"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "d0a4e1c2-0000-4000-8000-0000000000a3",
       "title": "Unreadable pay",
       "jobUrl": "https://jobs.ashbyhq.com/acme/d0a4e1c2-0000-4000-8000-0000000000a3",
       "location": "Berlin",
-      "compensation": { "compensationTiers": [{ "components": [{ "compensationType": "Salary", "minValue": 1000, "maxValue": 2000, "currencyCode": "EUR" }] }] }
+      "compensation": {
+        "compensationTiers": [
+          {
+            "components": [
+              {
+                "compensationType": "Salary",
+                "minValue": 1000,
+                "maxValue": 2000,
+                "currencyCode": "EUR"
+              }
+            ]
+          }
+        ]
+      }
     },
-    { "id": "d0a4e1c2-0000-4000-8000-0000000000a4", "title": "No link" }
+    {
+      "id": "d0a4e1c2-0000-4000-8000-0000000000a4",
+      "title": "No link"
+    },
+    {
+      "id": "d0a4e1c2-0000-4000-8000-0000000000a5",
+      "title": "Not publicly listed",
+      "jobUrl": "https://jobs.ashbyhq.com/acme/d0a4e1c2-0000-4000-8000-0000000000a5",
+      "location": "Berlin",
+      "isListed": false,
+      "descriptionPlain": "Hidden."
+    }
   ]
 }

@@ -8,7 +8,7 @@ import { logServerError } from "@/lib/log";
 import { ServiceError } from "@/lib/service-error";
 
 import { reportAsRun } from "./runs";
-import { ingestBoardScan, scoreOpenPostings } from "./scanned-postings";
+import { ingestBoardScan, scoreOpenPostings, toScanPosting, type ScanPosting } from "./scanned-postings";
 
 // Tracked companies as a service (ADR 0003): employers whose own job board is
 // watched. Adding one only records a name; a scan reads each enabled board in
@@ -94,28 +94,6 @@ export type ScanOptions = {
   preferences?: Preferences;
 };
 
-/** A stored posting as a scan shows it: what the board said (cleaned), and where it stands. */
-export type ScanPosting = {
-  id: string;
-  source: BoardSource;
-  externalId: string;
-  title: string;
-  company: string;
-  location: string;
-  remote: boolean | null;
-  url: string;
-  description: string;
-  postedAt: Date | null;
-  salary: { min: number; max: number; currency: string } | null;
-  /** First seen in this very scan. */
-  isNew: boolean;
-  score: number | null;
-  band: string;
-  scoreReasons: string[];
-  scoreRedFlags: string[];
-  guardAlarm: boolean;
-};
-
 export type ScanResult = {
   scanned: number;
   companies: { id: string; name: string; found: number; added?: number; closed?: number; error?: string; skipped?: true }[];
@@ -140,7 +118,6 @@ const matches = (posting: { title: string; description: string; remote: boolean 
   return !place || posting.remote === true || posting.location.toLowerCase().includes(place);
 };
 
-const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
@@ -224,27 +201,7 @@ export const scanCompanies = (db: PrismaClient, options: ScanOptions = {}, { ada
         companies,
         matched: shown.length,
         hidden: { dismissed: dismissed.length, duplicates: copies.length },
-        postings: shown.slice(0, limit).map(
-          (row): ScanPosting => ({
-            id: row.id,
-            source: row.source,
-            externalId: row.externalId,
-            title: row.title,
-            company: row.companyName,
-            location: row.location,
-            remote: row.remote,
-            url: row.url,
-            description: row.description,
-            postedAt: row.postedAt,
-            salary: row.salaryMin !== null && row.salaryMax !== null ? { min: row.salaryMin, max: row.salaryMax, currency: row.salaryCurrency } : null,
-            isNew: row.firstSeenAt.getTime() >= startedAt,
-            score: row.score,
-            band: row.scoreBand,
-            scoreReasons: strings(row.scoreReasons),
-            scoreRedFlags: strings(row.scoreRedFlags),
-            guardAlarm: row.guardAlarm,
-          }),
-        ),
+        postings: shown.slice(0, limit).map((row) => toScanPosting(row, row.firstSeenAt.getTime() >= startedAt)),
       };
     },
     (result) => {

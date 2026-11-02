@@ -18,6 +18,7 @@ import { describeApplication, listApplications, moveApplication, proposeStatus, 
 import { checkPostingText, saveFitScores } from "@/lib/services/postings";
 import { addCompany, boardPostingSummary, scanCompanies } from "@/lib/services/companies";
 import { preferencesFromProfile } from "@/lib/services/preferences";
+import { listScannedPostings } from "@/lib/services/scanned-postings";
 import { moreJobs, postingSummary, runJobSearch } from "@/lib/services/searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
 import { prisma } from "@/lib/prisma";
@@ -529,6 +530,25 @@ export function createDossierServer(origin: string): McpServer {
         if (error instanceof ServiceError) return failure(error.message);
         throw error;
       }
+    },
+  );
+
+  server.registerTool(
+    "list_scanned_postings",
+    {
+      title: "List the postings found on watched companies' job boards",
+      description:
+        "The postings that scan_companies has kept, best score first, each with its fit score and the reasons for it (worked out by CareerPilot from the profile, not by you; do not change it). Without a state: the open ones the user has not dismissed, leaving out copies of an opening already kept. Snippets and links only; read a posting's whole text from its link. A posting whose text tries to instruct an AI carries a warning.",
+      inputSchema: z.object({
+        state: z.enum(["NEW", "SAVED", "DISMISSED"]).optional(),
+        min_score: z.number().int().min(0).max(100).optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ state, min_score, limit }) => {
+      const postings = await listScannedPostings(prisma, { state, minScore: min_score, limit: limit ?? 30 });
+      return text({ notice: UNTRUSTED_NOTICE, postings: postings.map(boardPostingSummary) });
     },
   );
 

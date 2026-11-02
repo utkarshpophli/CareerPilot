@@ -16,6 +16,7 @@ import {
   formatCheck,
   formatCompanies,
   formatInsights,
+  formatPostings,
   formatProposals,
   formatRun,
   formatRuns,
@@ -44,6 +45,7 @@ Commands:
   apps status <id> <STATUS>           DRAFT, REJECTED or DECLINED (SENT and later are the user's to set in the dashboard)
   apps propose <id> <STATUS>          ask the user to confirm SENT, SCREENING, INTERVIEW, OFFER or ACCEPTED (--reason "..."); changes nothing
   proposals                           what is waiting for the user to confirm
+  postings                            the kept postings, best score first (--min-score N, --state NEW|SAVED|DISMISSED, --limit N)
   companies                           the watched employer job boards and how each last scan went
   companies add <board>               watch a board (--source GREENHOUSE|LEVER|ASHBY, or paste its careers link; --name "Acme")
   companies scan [keywords]           read the watched boards (--place P, --limit N); postings come back as snippets with links
@@ -71,7 +73,7 @@ Environment:
 
 Exit codes: 0 done, 1 error, 2 wrong usage, 3 "check" found something that looks like an instruction aimed at an AI.`;
 
-const COMMANDS = new Set(["status", "apps", "proposals", "companies", "search", "scores", "activity", "insights", "check", "runs", "run", "skills"]);
+const COMMANDS = new Set(["status", "apps", "proposals", "companies", "postings", "search", "scores", "activity", "insights", "check", "runs", "run", "skills"]);
 
 async function request(server, token, path, { method = "GET", body, headers = {} } = {}) {
   let response;
@@ -200,6 +202,13 @@ async function main(argv, env) {
     } else {
       throw new UsageError("Usage: pilot companies [add <board> | scan [keywords]]  (removing a company is done in Settings)");
     }
+  } else if (command === "postings") {
+    const minScore = flags["min-score"] === undefined ? undefined : Number(flags["min-score"]);
+    if (minScore !== undefined && (!Number.isInteger(minScore) || minScore < 0 || minScore > 100)) throw new UsageError("--min-score is a number from 0 to 100.");
+    const state = flags.state === undefined ? undefined : String(flags.state).toUpperCase();
+    if (state !== undefined && !["NEW", "SAVED", "DISMISSED"].includes(state)) throw new UsageError("--state is NEW, SAVED or DISMISSED.");
+    const data = await call(`/api/v1/postings/scanned${query({ state, minScore, limit: flags.limit })}`);
+    show(data, formatPostings(data));
   } else if (command === "search") {
     if (args[0] === "show" || args[0] === "more") {
       need(args, 2, `search ${args[0]} <id>`);

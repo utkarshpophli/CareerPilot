@@ -241,3 +241,13 @@ test("companies add without a board, or an unknown source, is a usage error and 
   assert.equal(seen.length, 0);
   assert.equal((await pilot(["companies", "remove", "c1"])).code, 2);
 });
+
+test("postings reads the kept postings with the filters given", async () => {
+  const result = await pilot(["postings", "--min-score", "70", "--state", "saved", "--limit", "5"], { answer: { data: [{ title: "Designer", company: "Acme", url: "https://example.test/1", score: 91, band: "excellent" }] } });
+  assert.equal(result.code, 0);
+  assert.equal(seen[0].method, "GET");
+  assert.equal(seen[0].url, "/api/v1/postings/scanned?state=SAVED&minScore=70&limit=5");
+  assert.match(result.out, /91\s+excellent\s+Designer/);
+  assert.equal((await pilot(["postings", "--min-score", "high"])).code, 2);
+  assert.equal((await pilot(["postings", "--state", "nope"])).code, 2);
+});

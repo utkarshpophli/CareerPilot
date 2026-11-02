@@ -125,6 +125,7 @@ describe("Lever", () => {
 describe("Ashby", () => {
   it("maps postings: every location, the work model, and pay only from a real salary component", () => {
     const postings = parseAshby(fixture("ashby-board.json"), { slug: "acme" }, "Acme");
+    // A posting the board marks as not publicly listed (isListed: false) is not taken.
     expect(postings.map((p) => p.title)).toEqual(["Staff Engineer", "Contractor", "Unreadable pay"]);
     expect(postings[0]).toMatchObject({
       source: "ASHBY",
@@ -173,5 +174,39 @@ describe("Ashby", () => {
     expect(ashby.refFrom("https://jobs.ashbyhq.com/acme/d0a4e1c2")).toEqual({ slug: "acme" });
     expect(ashby.refFrom("https://api.ashbyhq.com/posting-api/job-board/acme?includeCompensation=true")).toEqual({ slug: "acme" });
     expect(ashby.refFrom("https://example.com/jobs.ashbyhq.com/acme")).toBeNull();
+  });
+});
+
+// Real recordings (taken by CI from the live services, trimmed to a few postings; see scripts/record-board-fixtures.mjs).
+// They check the parsers against what the services actually send, which the hand-built fixtures above cannot.
+const real = (name: string) => JSON.parse(readFileSync(join(__dirname, "fixtures", "real", name), "utf8")) as unknown;
+
+describe("against real recordings", () => {
+  it("Lever: every posting has a title, an https link, an id under its board, and plain text", () => {
+    const json = real("lever-postings.json");
+    const postings = parseLever(json, { slug: "palantir" }, "Palantir");
+    expect(postings.length).toBe((json as unknown[]).length);
+    for (const posting of postings) {
+      expect(posting.title).not.toBe("");
+      expect(posting.url).toMatch(/^https:\/\/jobs\.lever\.co\//);
+      expect(posting.externalId).toMatch(/^palantir:[0-9a-f-]{36}$/);
+      expect(posting.description).not.toMatch(/<\/?[a-z][^>]*>/i);
+      expect(posting.description.length).toBeGreaterThan(0);
+      expect(posting.postedAt === null || !Number.isNaN(Date.parse(posting.postedAt))).toBe(true);
+    }
+  });
+
+  it("Ashby: every posting has a title, an https link, an id under its board, and a location", () => {
+    const json = real("ashby-board.json");
+    const postings = parseAshby(json, { slug: "openai" }, "OpenAI");
+    expect(postings.length).toBe((json as { jobs: unknown[] }).jobs.length);
+    for (const posting of postings) {
+      expect(posting.title).not.toBe("");
+      expect(posting.url).toMatch(/^https:\/\/jobs\.ashbyhq\.com\//);
+      expect(posting.externalId).toMatch(/^openai:[0-9a-f-]{36}$/);
+      expect(posting.location).not.toBe("");
+      expect(posting.postedAt === null || !Number.isNaN(Date.parse(posting.postedAt))).toBe(true);
+      if (posting.salary) expect(posting.salary.min).toBeLessThanOrEqual(posting.salary.max);
+    }
   });
 });

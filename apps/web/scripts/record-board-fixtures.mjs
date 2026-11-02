@@ -2,7 +2,7 @@
 //
 //   node scripts/record-board-fixtures.mjs            (needs internet; run by .github/workflows/record-board-fixtures.yml)
 //
-// Prints each response between BEGIN/END lines, cut down to a few postings and with very long strings shortened
+// Prints each response (on one line) between BEGIN/END lines, cut down to a few postings and with very long strings shortened
 // (a marker says where), so it can be read from a CI log and saved under src/lib/job-search/boards/fixtures/real/.
 // The structure, field names and types are untouched: that is what a fixture is for. Boards are public job
 // boards of public employers; nothing here is private.
@@ -33,7 +33,8 @@ for (const [name, { url, pick }] of Object.entries(BOARDS)) {
     const json = JSON.parse(text);
     console.log(`RECORDED ${name}: HTTP ${response.status}, ${text.length} bytes`);
     console.log(`BEGIN ${name}`);
-    console.log(JSON.stringify(shorten(pick(json)), null, 2));
+    // One line each: a CI log is read from the end, and a long pretty-printed block can fall off the start of what is returned.
+    console.log(JSON.stringify(shorten(pick(json))));
     console.log(`END ${name}`);
   } catch (error) {
     failed++;

@@ -137,7 +137,7 @@ export function parseAshby(json: unknown, ref: BoardRef, company: string): Board
   const jobs = (json as { jobs?: unknown } | null)?.jobs;
   if (!Array.isArray(jobs)) return [];
   return (jobs as (Record<string, unknown> & Address)[])
-    .filter((job) => job && typeof job.jobUrl === "string" && job.jobUrl && typeof job.id === "string" && job.id.trim())
+    .filter((job) => job && job.isListed !== false && typeof job.jobUrl === "string" && job.jobUrl && typeof job.id === "string" && job.id.trim())
     .map((job) => ({
       source: "ASHBY" as const,
       externalId: `${ref.slug}:${(job.id as string).trim()}`,
