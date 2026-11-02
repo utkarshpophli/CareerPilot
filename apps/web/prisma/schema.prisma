@@ -409,6 +409,11 @@ model Application {
   deadline            DateTime?         @db.Date
   /// Saved, not fetched (NEW-1).
   postingUrl          String            @default("")
+  /// Whether the posting was still open when last checked (lib/job-liveness.ts): true, false, or null when never checked or it could not be told.
+  postingOpen         Boolean?
+  postingCheckedAt    DateTime?
+  /// One plain sentence saying how that was found out, or why it could not be.
+  postingCheckNote    String            @default("")
   postingText         String            @default("")
   /// What the AI read from the posting (extractedSchema).
   extracted           Json?

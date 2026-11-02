@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ import type { JobView } from "@/lib/jobs/runner";
 import {
   addMatchSkill,
   addNote,
+  checkPostingOpen,
   deleteNote,
   leaveOutUnit,
   listVersions,
@@ -38,6 +39,7 @@ vi.mock("./actions", () => ({
   setApplicationTheme: vi.fn(async () => ({ ok: true, data: null })),
   setFollowThemeLayout: vi.fn(async () => ({ ok: true, data: null })),
   setShowPhoto: vi.fn(async () => ({ ok: true, data: null })),
+  checkPostingOpen: vi.fn(async () => ({ ok: true, data: { state: "closed", note: "Greenhouse no longer lists it on the employer's board." } })),
   saveUnit: vi.fn(async ({ text }: { text: string }) => ({ ok: true, data: { text } })),
   startRegenerating: vi.fn(async () => ({ ok: true, data: "job-1" })),
   restoreUnit: vi.fn(async () => ({ ok: true, data: null })),
@@ -100,7 +102,7 @@ const props: ApplicationViewProps = {
     archived: false,
     nextInterviewAt: null,
   },
-  posting: { text: "Ledgerly is hiring.\n\n  - Figma", url: "", pasted: "27 Sep" },
+  posting: { text: "Ledgerly is hiring.\n\n  - Figma", url: "", pasted: "27 Sep", open: null, checked: null, checkNote: "" },
   match: null,
   requirements: [],
   facts: [{ id: "f1", text: "I know their product as a customer." }],
@@ -712,6 +714,23 @@ describe("the Job posting tab (E8-7)", () => {
     expect(link).toHaveAttribute("href", "https://jobs.ledgerly.com/senior-designer");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("checks whether the posting is still open on request, and says what it found", async () => {
+    const user = userEvent.setup();
+    open({ posting: { ...props.posting, url: "https://job-boards.greenhouse.io/ledgerly/jobs/1" } });
+    expect(screen.getByText("Not checked yet.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Check if it's still open" }));
+    expect(checkPostingOpen).toHaveBeenCalledWith({ id: "app-1" });
+    expect(await screen.findByText("Closed · Greenhouse no longer lists it on the employer's board.")).toBeInTheDocument();
+  });
+
+  it("shows the last check, and offers none without a link", () => {
+    open({ posting: { ...props.posting, url: "https://jobs.example/1", open: true, checked: "2 Nov", checkNote: "Greenhouse still lists it." } });
+    expect(screen.getByText("Open · Greenhouse still lists it. Checked 2 Nov.")).toBeInTheDocument();
+    cleanup();
+    open();
+    expect(screen.queryByRole("button", { name: "Check if it's still open" })).not.toBeInTheDocument();
   });
 
   it("shows only the posting when it wasn't matched", () => {

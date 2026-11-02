@@ -19,6 +19,7 @@ import { refineJob, refineJobKey } from "@/lib/jobs/refine";
 import { regenerateUnitJob, unitJobKey } from "@/lib/jobs/regenerate-unit";
 import { findUnfinishedJobs, startJob } from "@/lib/jobs/runner";
 import { emailJobKey, writeEmailJob } from "@/lib/jobs/write-email";
+import { checkApplicationPosting } from "@/lib/services/liveness";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateSkill } from "@/lib/profile-entries";
 import { cleanUnitText, isPublicationUnit, unitName } from "@/lib/unit-text";
@@ -38,6 +39,16 @@ export const setFollowThemeLayout = action(
     return null;
   },
 );
+
+/**
+ * The Job posting tab's "Check if it's still open" (M4d.2): asks the employer's board, or remembers what a scan saw, and keeps
+ * the answer on the application. Only the owner's click; an assistant has no door to it.
+ */
+export const checkPostingOpen = action(z.object({ id: z.string().min(1) }), async ({ id }) => {
+  const { state, note } = await checkApplicationPosting(prisma, id);
+  refresh(id);
+  return { state, note };
+});
 
 /** The Resume tab's Photo switch (#224): show the profile photo on this resume or not, whatever the profile says. */
 export const setShowPhoto = action(z.object({ id: z.string().min(1), show: z.boolean() }), async ({ id, show }) => {

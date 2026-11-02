@@ -103,6 +103,9 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         // New applications only keep web links, but an imported file could carry any URL (E11-5).
         url: /^https?:\/\//i.test(application.postingUrl) ? application.postingUrl : "",
         pasted: formatShortDate(application.createdAt),
+        open: application.postingOpen,
+        checked: application.postingCheckedAt ? formatShortDate(application.postingCheckedAt) : null,
+        checkNote: application.postingCheckNote,
       }}
       match={match}
       requirements={extracted?.requirements ?? []}

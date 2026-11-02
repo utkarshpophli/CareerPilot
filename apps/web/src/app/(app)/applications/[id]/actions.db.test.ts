@@ -5,6 +5,7 @@ import { createTestClient, resetDatabase } from "@/test/db";
 import {
   addMatchSkill,
   addNote,
+  checkPostingOpen,
   deleteNote,
   leaveOutUnit,
   listVersions,
@@ -138,6 +139,19 @@ describe("setShowPhoto (#224)", () => {
 
   it("says so when the application is gone", async () => {
     expect(await setShowPhoto({ id: "gone", show: true })).toEqual({ ok: false, error: "That application no longer exists." });
+  });
+});
+
+describe("checkPostingOpen (M4d.2)", () => {
+  it("says what was found and keeps it on the application", async () => {
+    // No link was saved in the fixture application, so there is nothing to ask the network.
+    const result = await checkPostingOpen({ id: "app-1" });
+    expect(result).toMatchObject({ ok: true, data: { state: "unknown" } });
+    expect((await prisma().application.findUniqueOrThrow({ where: { id: "app-1" } })).postingCheckedAt).toBeInstanceOf(Date);
+  });
+
+  it("says so when the application is gone", async () => {
+    expect(await checkPostingOpen({ id: "gone" })).toEqual({ ok: false, error: "That application no longer exists." });
   });
 });
 
