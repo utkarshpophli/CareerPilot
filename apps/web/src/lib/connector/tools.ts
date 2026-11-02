@@ -24,6 +24,7 @@ import { ServiceError } from "@/lib/service-error";
 import { loadSearch, runSearch, showMoreFor } from "@/lib/posting-searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
 import { prisma } from "@/lib/prisma";
+import { proposeStatus } from "@/lib/proposals";
 import { loadProfile } from "@/lib/profile-data";
 import { statusInfo } from "@/lib/status";
 import { applyStatusChange } from "@/lib/status-changes";
@@ -506,6 +507,30 @@ export function createDossierServer(origin: string): McpServer {
       const result = await applyStatusChange(prisma, id, status);
       if (result.outcome === "not-found") return failure("That application no longer exists.");
       return text({ id, status: statusInfo(status).label, changed: result.outcome !== "unchanged" });
+    },
+  );
+
+  server.registerTool(
+    "propose_status",
+    {
+      title: "Propose a status for the user to confirm",
+      description:
+        "Suggests that an application reached SENT, SCREENING, INTERVIEW, OFFER or ACCEPTED. You cannot record those yourself, because they say that something happened; this puts the suggestion in front of the user, who confirms or dismisses it with one click on their dashboard. Nothing changes until they do, and nothing is sent. Give a short reason in your own words (what the user told you, or what you saw). For DRAFT, REJECTED or DECLINED use set_application_status instead.",
+      inputSchema: z.object({
+        id: z.string().min(1).max(100),
+        status: z.enum(ApplicationStatus),
+        reason: z.string().max(1000).optional(),
+      }),
+      annotations: { readOnlyHint: false, idempotentHint: true },
+    },
+    async ({ id, status, reason }) => {
+      try {
+        const proposal = await proposeStatus(prisma, { applicationId: id, status, reason: reason ?? "" });
+        return text({ id, status: statusInfo(status).label, waiting_for: "the user to confirm it on the dashboard", proposal: proposal.id });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
+      }
     },
   );
 

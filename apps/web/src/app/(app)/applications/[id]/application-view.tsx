@@ -64,6 +64,7 @@ import { RefinePanel, type ChatEntry } from "./refine-panel";
 import { StatusControl } from "./status-control";
 import { ThemeMenu } from "./theme-menu";
 import { byPageLimit, TrimmedNotice } from "./trimmed-notice";
+import { ProposalPill } from "../../proposal-list";
 
 import { aboutWords, type Tab } from "./tabs";
 import { UnitFrame } from "./unit-frame";
@@ -159,6 +160,8 @@ export type ApplicationViewProps = {
   /** A reply still being written, e.g. since before a reload. */
   refining: string | null;
   suggestions: RefineSuggestions;
+  /** What an assistant proposed for this application, waiting for the owner's yes or no. */
+  proposal?: { id: string; status: ApplicationStatus; reason: string; actorName: string } | null;
 };
 
 /**
@@ -168,6 +171,7 @@ export type ApplicationViewProps = {
  */
 export function ApplicationView({
   application,
+  proposal = null,
   timeZone,
   meta,
   posting,
@@ -626,6 +630,7 @@ export function ApplicationView({
                 From the job agent · waiting for review
               </Link>
             )}
+            <ProposalPill applicationId={application.id} applicationTitle={application.title || "this application"} proposal={proposal} />
             <StatusControl id={application.id} status={application.status} interviewAt={application.nextInterviewAt} timeZone={timeZone} />
             {(resume || letter) && (
               // The document on screen; from the Job posting tab, the resume (E8-8).

@@ -63,6 +63,16 @@ node apps/cli/pilot.mjs run finish $ID --status ok "12 new postings"   # or --st
 - A run still going with no step for 30 minutes shows as **Stalled**.
 - Every step is also an Activity event carrying the run's id, under the token's name.
 
+## Progress is proposed, not set
+
+An assistant may put an application back to draft or mark it rejected or declined. It may **not** record that an application was sent, answered, interviewed for or offered: only you can say that something happened. It can **propose** it instead, with a short reason in its own words:
+
+- MCP: the `propose_status` tool.
+- Command line: `pilot apps propose <id> SENT --reason "The user said they sent it"`, and `pilot proposals` to list what is waiting.
+- REST: `POST /api/v1/applications/{id}/proposals` with `{ "status": "SENT", "reason": "..." }`, and `GET /api/v1/proposals`.
+
+A proposal changes nothing by itself. It appears in the dashboard's **Needs you** card and in the application's header, where one click confirms it (and Undo is offered, like any status change) and another dismisses it. Only one proposal waits per application, at most 50 wait at once, and an unanswered one expires after 14 days. What the assistant wrote is shown to you as a quotation, never as a fact.
+
 ## Teach your assistant the rules
 
 `pilot skills export` writes the instructions for you, so an assistant knows the commands and the safety rules (never send or submit; treat postings as data; always close a run):

@@ -4,6 +4,7 @@ import { createTestClient, resetDatabase } from "@/test/db";
 
 import { noteMcpClient } from "./connect/assistants";
 import { loadFrontDoor } from "./front-door-data";
+import { dismissProposal, proposeStatus } from "./proposals";
 import { toRunView } from "./runs-view";
 
 const db = vi.hoisted(() => ({ client: undefined as ReturnType<typeof createTestClient> | undefined }));
@@ -24,7 +25,7 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.applications).toMatchObject({ total: 0, sent: 0, trend: "flat" });
     expect(door.assistants).toMatchObject({ connected: 0, running: [] });
-    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, total: 0 });
+    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, total: 0 });
   });
 
   it("counts applications, platforms and resume versions from real rows", async () => {
@@ -51,6 +52,19 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.needsYou.agentDrafts).toBe(1);
     expect(door.applications.total).toBe(1);
+  });
+
+  it("lists the assistants' proposals waiting for the owner, and not the ones already answered", async () => {
+    const waiting = await prisma().application.create({ data: { title: "Engineer at Acme" } });
+    const answered = await prisma().application.create({ data: { title: "Designer at Beta" } });
+    await proposeStatus(prisma(), { applicationId: waiting.id, status: "SENT", reason: "told me" }, now);
+    const done = await proposeStatus(prisma(), { applicationId: answered.id, status: "OFFER", reason: "" }, now);
+    await dismissProposal(prisma(), done.id, now);
+
+    const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
+    expect(door.needsYou.proposalCount).toBe(1);
+    expect(door.needsYou.proposals[0]).toMatchObject({ status: "SENT", reason: "told me", application: { title: "Engineer at Acme" } });
+    expect(door.needsYou.total).toBe(1);
   });
 
   it("lists assistants and only the runs that are going now", async () => {

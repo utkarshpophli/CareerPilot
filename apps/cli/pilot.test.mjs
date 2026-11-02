@@ -84,6 +84,22 @@ test("apps add and apps status", async () => {
   assert.deepEqual(seen[0].body, { status: "SENT" });
 });
 
+test("apps propose asks the user to confirm a progress status, and says it is waiting", async () => {
+  const result = await pilot(["apps", "propose", "app1", "sent", "--reason", "The user told me they sent it"], { answer: { data: { id: "p1", status: "SENT", state: "PENDING" } } });
+  assert.equal(result.out, "Proposed SENT for app1. It waits for the user to confirm it on the dashboard; nothing changed yet.");
+  assert.equal(seen[0].method, "POST");
+  assert.equal(seen[0].url, "/api/v1/applications/app1/proposals");
+  assert.deepEqual(seen[0].body, { status: "SENT", reason: "The user told me they sent it" });
+});
+
+test("proposals lists what waits for the user", async () => {
+  const empty = await pilot(["proposals"], { answer: { data: [] } });
+  assert.equal(empty.out, "Nothing is waiting for the user.");
+  assert.equal(seen[0].url, "/api/v1/proposals");
+  const some = await pilot(["proposals"], { answer: { data: [{ id: "p1", status: "SENT", reason: "told me", actorName: "claude-code", application: { title: "Engineer at Acme" } }] } });
+  assert.match(some.out, /SENT\s+Engineer at Acme\s+claude-code\s+told me/);
+});
+
 test("errors from the server are shown plainly with exit code 1", async () => {
   const result = await pilot(["run", "step", "nope", "x"], { answer: { error: { code: "not_found", message: "No such run." } }, httpStatus: 404 });
   assert.equal(result.code, 1);
@@ -91,7 +107,7 @@ test("errors from the server are shown plainly with exit code 1", async () => {
 });
 
 test("wrong usage exits with 2 before touching the network", async () => {
-  for (const args of [["run"], ["run", "start", "scan"], ["run", "finish", "r", "--status", "maybe"], ["run", "step", "r", "x", "--data", "[1]"], ["apps", "status", "only-id"], ["apps", "status", "app1", "flying"], ["nonsense"]]) {
+  for (const args of [["run"], ["run", "start", "scan"], ["run", "finish", "r", "--status", "maybe"], ["run", "step", "r", "x", "--data", "[1]"], ["apps", "status", "only-id"], ["apps", "status", "app1", "flying"], ["apps", "propose", "app1"], ["apps", "propose", "app1", "flying"], ["apps", "propose", "app1", "rejected"], ["nonsense"]]) {
     const result = await pilot(args);
     assert.equal(result.code, 2, args.join(" "));
     assert.equal(seen.length, 0, args.join(" "));

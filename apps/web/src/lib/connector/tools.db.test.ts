@@ -116,6 +116,27 @@ describe("the Claude connector's tools (#221)", () => {
     expect(await tool("get_application", { id: "gone" })).toMatchObject({ isError: true, text: "That application no longer exists." });
   });
 
+  // The way to progress: Claude proposes, the user confirms with one click. A proposal never moves anything.
+  it("lets Claude propose a progress status, which waits for the user and changes nothing", async () => {
+    const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });
+    await prisma().application.update({ where: { id: ledgerly.id }, data: { status: "DRAFT", sentAt: null, furthestStage: null } });
+    const proposed = await tool("propose_status", { id: ledgerly.id, status: "SENT", reason: "The user told me they sent it on Friday" });
+    expect(proposed).toMatchObject({ isError: false, json: { status: "Sent", waiting_for: "the user to confirm it on the dashboard" } });
+    expect(await prisma().application.findUniqueOrThrow({ where: { id: ledgerly.id } })).toMatchObject({ status: "DRAFT", sentAt: null });
+    expect(await prisma().statusProposal.findFirstOrThrow({ where: { applicationId: ledgerly.id } })).toMatchObject({ state: "PENDING", status: "SENT", reason: "The user told me they sent it on Friday" });
+    // The ledger names the connected app, not the owner.
+    expect(await prisma().activityEvent.findFirstOrThrow({ where: { action: "proposal.created" } })).toMatchObject({ actorKind: "MCP" });
+  });
+
+  it("refuses to propose what Claude may set directly, an unknown application, and a draft waiting for review", async () => {
+    const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });
+    expect(await tool("propose_status", { id: ledgerly.id, status: "REJECTED" })).toMatchObject({ isError: true, text: expect.stringContaining("set it directly") });
+    expect(await tool("propose_status", { id: "gone", status: "SENT" })).toMatchObject({ isError: true });
+    await prisma().application.update({ where: { id: ledgerly.id }, data: { awaitingReview: true } });
+    expect(await tool("propose_status", { id: ledgerly.id, status: "SENT" })).toMatchObject({ isError: true, text: expect.stringContaining("waiting for the user's review") });
+    expect(await prisma().statusProposal.count()).toBe(0);
+  });
+
   // Audit A-05, A-09: Claude may retract or close a lead, but not claim progress, and cannot approve an agent draft.
   it("lets Claude mark an application rejected, but refuses moves that claim progress", async () => {
     const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ConnectedAssistant } from "./connect/assistants";
 import { computeFrontDoor } from "./front-door";
 import { computeInsights, type InsightApplication } from "./insights";
+import type { PendingProposal } from "./proposals";
 
 const now = new Date("2026-11-04T10:00:00Z"); // a Wednesday; this week starts Monday 2 Nov
 
@@ -34,7 +35,7 @@ const assistant = (overrides: Partial<ConnectedAssistant>): ConnectedAssistant =
   ...overrides,
 });
 
-const base = { assistants: [] as ConnectedAssistant[], running: [], agentDrafts: 0, attention: 0 };
+const base = { assistants: [] as ConnectedAssistant[], running: [], agentDrafts: 0, attention: 0, proposals: [] as PendingProposal[] };
 const door = (apps: InsightApplication[], extra: Partial<Parameters<typeof computeFrontDoor>[0]> = {}) => computeFrontDoor({ insights: computeInsights(apps, now), ...base, ...extra });
 
 describe("with nothing at all", () => {
@@ -45,7 +46,7 @@ describe("with nothing at all", () => {
     expect(empty.where).toEqual({ rows: [], more: 0 });
     expect(empty.resume).toMatchObject({ resumes: 0, versions: 0, revisions: 0, perApplication: 0, templates: [], bestTemplate: null });
     expect(empty.assistants).toMatchObject({ connected: 0, shown: [], more: 0, running: [], callsToday: 0, runs: 0 });
-    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, total: 0 });
+    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, total: 0 });
   });
 });
 
@@ -162,6 +163,19 @@ describe("assistants", () => {
 
 describe("needs you", () => {
   it("adds agent drafts waiting for review to the things worth a look", () => {
-    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, total: 5 });
+    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, proposals: [], proposalCount: 0, total: 5 });
+  });
+
+  const proposal = (n: number): PendingProposal => ({
+    id: `p${n}`, applicationId: `a${n}`, status: "SENT", reason: "", actorName: "claude-code", state: "PENDING",
+    createdAt: "2026-11-02T10:00:00.000Z", expiresAt: "2026-11-16T10:00:00.000Z",
+    application: { id: `a${n}`, title: `App ${n}`, company: "", role: "", status: "DRAFT" },
+  });
+
+  it("counts the assistants' proposals, and shows the five newest", () => {
+    const needs = door([], { agentDrafts: 1, attention: 2, proposals: [1, 2, 3, 4, 5, 6, 7].map(proposal) }).needsYou;
+    expect(needs.proposals.map((entry) => entry.id)).toEqual(["p1", "p2", "p3", "p4", "p5"]);
+    expect(needs.proposalCount).toBe(7);
+    expect(needs.total).toBe(10);
   });
 });

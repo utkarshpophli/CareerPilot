@@ -1,5 +1,6 @@
 import type { ConnectedAssistant } from "./connect/assistants";
 import type { InsightRow, Insights } from "./insights";
+import type { PendingProposal } from "./proposals";
 import type { RunView } from "./runs-view";
 
 // What the dashboard's front-door cards show: how many applications, where
@@ -12,6 +13,7 @@ const WEEKS_SHOWN = 8;
 const PLATFORMS_SHOWN = 5;
 const TEMPLATES_SHOWN = 3;
 const ASSISTANTS_SHOWN = 3;
+const PROPOSALS_SHOWN = 5;
 
 export type Trend = "up" | "down" | "flat";
 
@@ -47,7 +49,15 @@ export type FrontDoor = {
     callsToday: number;
     runs: number;
   };
-  needsYou: { agentDrafts: number; attention: number; total: number };
+  needsYou: {
+    agentDrafts: number;
+    attention: number;
+    /** The assistants' proposals waiting for a yes or no, newest first, the first few. */
+    proposals: PendingProposal[];
+    /** How many proposals wait in all. */
+    proposalCount: number;
+    total: number;
+  };
 };
 
 export type RunningNow = Pick<RunView, "id" | "title" | "actorName" | "lastStep" | "stalled">;
@@ -61,6 +71,8 @@ export type FrontDoorInput = {
   agentDrafts: number;
   /** The things "Worth a look" lists. */
   attention: number;
+  /** The assistants' proposals waiting for the owner, newest first. */
+  proposals: PendingProposal[];
 };
 
 const trendOf = (thisWeek: number, lastWeek: number): Trend => (thisWeek > lastWeek ? "up" : thisWeek < lastWeek ? "down" : "flat");
@@ -72,7 +84,7 @@ function bestTemplate(rows: InsightRow[]): InsightRow | null {
   return answered[0] ?? null;
 }
 
-export function computeFrontDoor({ insights, assistants, running, agentDrafts, attention }: FrontDoorInput): FrontDoor {
+export function computeFrontDoor({ insights, assistants, running, agentDrafts, attention, proposals }: FrontDoorInput): FrontDoor {
   const weeks = insights.weekly.slice(-WEEKS_SHOWN).map((week) => ({ weekStart: week.weekStart, started: week.created, sent: week.sent }));
   const thisWeek = weeks.at(-1) ?? { started: 0, sent: 0 };
   const lastWeek = weeks.at(-2) ?? { started: 0, sent: 0 };
@@ -106,6 +118,6 @@ export function computeFrontDoor({ insights, assistants, running, agentDrafts, a
       callsToday: assistants.reduce((sum, assistant) => sum + assistant.callsToday, 0),
       runs: assistants.reduce((sum, assistant) => sum + assistant.runs, 0),
     },
-    needsYou: { agentDrafts, attention, total: agentDrafts + attention },
+    needsYou: { agentDrafts, attention, proposals: proposals.slice(0, PROPOSALS_SHOWN), proposalCount: proposals.length, total: agentDrafts + attention + proposals.length },
   };
 }

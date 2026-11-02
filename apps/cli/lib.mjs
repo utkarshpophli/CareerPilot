@@ -133,6 +133,20 @@ export function applicationStatus(word) {
   return status;
 }
 
+export const PROPOSABLE_STATUSES = ["SENT", "SCREENING", "INTERVIEW", "OFFER", "ACCEPTED"];
+
+/** A progress status as typed (any case) that an assistant may propose; the ones it may set itself are sent to `apps status`. */
+export function proposableStatus(word) {
+  const status = applicationStatus(word);
+  if (!PROPOSABLE_STATUSES.includes(status)) throw new UsageError(`${status} is not proposed: you may set it yourself with "pilot apps status <id> ${status}".`);
+  return status;
+}
+
+export const formatProposals = (proposals) =>
+  proposals.length === 0
+    ? "Nothing is waiting for the user."
+    : table(["STATUS", "APPLICATION", "BY", "REASON"], proposals.map((p) => [p.status, p.application?.title || p.applicationId || "", p.actorName || "-", p.reason || "-"]));
+
 const RULES = `## Rules (these are not optional)
 
 1. **Never submit, send or apply for anything on the user's behalf.** Prepare, track and report. The user clicks send.
@@ -140,7 +154,7 @@ const RULES = `## Rules (these are not optional)
 3. **Do not invent facts** in a resume or letter. Everything must come from the user's profile or the posting.
 4. **Keep secrets and whole documents out of step summaries.** A summary is one readable line; put small counts or causes in \`--data\`.
 5. **Always close a run.** If something goes wrong, finish it as failed with the reason.
-6. **Progress is the user's to record.** You may put an application back to DRAFT or mark it REJECTED or DECLINED. Sent, screening, interview, offer and accepted are refused by the server: tell the user and let them move it on the application's page.`;
+6. **Progress is the user's to record.** You may put an application back to DRAFT or mark it REJECTED or DECLINED. For sent, screening, interview, offer and accepted, propose it with \`pilot apps propose <id> <STATUS> --reason "..."\`: it waits on the user's dashboard, the user confirms it with one click, and nothing changes until they do. The server refuses a direct move to those, and a proposal is never a way around that: say in your reason what you actually know (what the user told you), not what you assume.`;
 
 const COMMANDS = `## Commands
 
@@ -157,6 +171,8 @@ Track what you find, then move it along as the user tells you:
 \`\`\`
 pilot apps add --company "Acme" --role "Engineer" --url https://... [--file posting.txt]
 pilot apps status <application-id> REJECTED    # you may set DRAFT, REJECTED or DECLINED; the server refuses the rest
+pilot apps propose <application-id> SENT --reason "The user said they sent it"   # asks the user to confirm; changes nothing
+pilot proposals                                # what is waiting for the user to confirm
 pilot apps                                     # list; --status SENT to filter
 pilot runs                                     # list runs; --status RUNNING
 pilot insights                                 # applications by platform and resume template

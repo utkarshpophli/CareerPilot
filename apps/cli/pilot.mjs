@@ -13,11 +13,13 @@ import {
   formatApplications,
   formatCheck,
   formatInsights,
+  formatProposals,
   formatRun,
   formatRuns,
   parseArgs,
   parseData,
   plain,
+  proposableStatus,
   serverFrom,
   skillFiles,
   tokenFrom,
@@ -33,6 +35,8 @@ Commands:
   apps [--status SENT]                list applications
   apps add --company C --role R       track an application as a draft (--url, --location, --file posting.txt)
   apps status <id> <STATUS>           DRAFT, REJECTED or DECLINED (SENT and later are the user's to set in the dashboard)
+  apps propose <id> <STATUS>          ask the user to confirm SENT, SCREENING, INTERVIEW, OFFER or ACCEPTED (--reason "..."); changes nothing
+  proposals                           what is waiting for the user to confirm
   activity [--actor MCP]              recent activity (--limit N, --action application.)
   insights                            applications by platform and resume template
   check <file|->                      clean a job posting and flag hidden instructions (needs a write token)
@@ -53,7 +57,7 @@ Environment:
 
 Exit codes: 0 done, 1 error, 2 wrong usage, 3 "check" found something that looks like an instruction aimed at an AI.`;
 
-const COMMANDS = new Set(["status", "apps", "activity", "insights", "check", "runs", "run", "skills"]);
+const COMMANDS = new Set(["status", "apps", "proposals", "activity", "insights", "check", "runs", "run", "skills"]);
 
 async function request(server, token, path, { method = "GET", body, headers = {} } = {}) {
   let response;
@@ -150,10 +154,18 @@ async function main(argv, env) {
       need(args, 3, "apps status <id> <STATUS>");
       const data = await call(`/api/v1/applications/${encodeURIComponent(args[1])}/status`, { method: "PATCH", body: { status: applicationStatus(args[2]) } });
       show(data, data.changed ? `${data.id} is now ${data.status}` : `${data.id} was already ${data.status}`);
+    } else if (args[0] === "propose") {
+      need(args, 3, 'apps propose <id> <STATUS> [--reason "..."]');
+      const status = proposableStatus(args[2]);
+      await call(`/api/v1/applications/${encodeURIComponent(args[1])}/proposals`, { method: "POST", body: { status, reason: flags.reason || undefined } });
+      show({ id: args[1], status, state: "PENDING" }, `Proposed ${status} for ${args[1]}. It waits for the user to confirm it on the dashboard; nothing changed yet.`);
     } else {
       const data = await call(`/api/v1/applications${query({ status: flags.status?.toUpperCase(), limit: flags.limit })}`);
       show(data, formatApplications(data));
     }
+  } else if (command === "proposals") {
+    const data = await call("/api/v1/proposals");
+    show(data, formatProposals(data));
   } else if (command === "activity") {
     const data = await call(`/api/v1/activity${query({ actor: flags.actor?.toUpperCase(), action: flags.action, limit: flags.limit })}`);
     show(data, formatActivity(data.events));

@@ -1,14 +1,19 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { computeFrontDoor } from "@/lib/front-door";
 import { computeInsights, type InsightApplication } from "@/lib/insights";
 
 import { FrontDoorCards } from "./front-door";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/", useSearchParams: () => new URLSearchParams() }));
+vi.mock("./proposals/actions", () => ({ confirmProposalAction: vi.fn(), dismissProposalAction: vi.fn() }));
+vi.mock("@/components/change-status", () => ({ toastWithUndo: vi.fn() }));
+vi.mock("@/components/toast", () => ({ toast: vi.fn(), toastResult: (result: unknown) => result }));
+
 const now = new Date("2026-11-04T10:00:00Z");
 
-const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0 });
+const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0, proposals: [] });
 
 function app(overrides: Partial<InsightApplication> & { id: string }): InsightApplication {
   return {
@@ -32,6 +37,13 @@ const fullDoor = () =>
     running: [{ id: "r1", title: "Scan Berlin", actorName: "claude-code", lastStep: "Fetched 3 boards", stalled: false }],
     agentDrafts: 2,
     attention: 3,
+    proposals: [
+      {
+        id: "p1", applicationId: "a1", status: "SENT", reason: "The user told me", actorName: "claude-code", state: "PENDING",
+        createdAt: "2026-11-02T10:00:00.000Z", expiresAt: "2026-11-16T10:00:00.000Z",
+        application: { id: "a1", title: "Engineer at Acme", company: "Acme", role: "Engineer", status: "DRAFT" },
+      },
+    ],
   });
 
 describe("FrontDoorCards when there is nothing yet", () => {
@@ -74,6 +86,9 @@ describe("FrontDoorCards with a few applications", () => {
     expect(within(within(assistants).getByRole("list", { name: "Running now" })).getByRole("link", { name: "Scan Berlin" })).toHaveAttribute("href", "/runs/r1");
 
     const needs = screen.getByRole("region", { name: "Needs you" });
+    // What an assistant proposed is right there, with its answer buttons.
+    expect(within(needs).getByRole("list", { name: "Proposals from your assistants" })).toHaveTextContent("claude-code proposes Sent");
+    expect(within(needs).getByRole("button", { name: "Mark as Sent for Engineer at Acme" })).toBeInTheDocument();
     expect(within(needs).getByRole("link", { name: /2 drafts from your assistants/ })).toHaveAttribute("href", "/agent");
     expect(within(needs).getByRole("link", { name: "3 things" })).toHaveAttribute("href", "#attention-heading");
   });

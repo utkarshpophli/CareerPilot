@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { applicationStatus, finishStatus, formatActivity, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, parseArgs, parseData, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
+import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, parseArgs, parseData, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
 
 test("parseArgs separates the command, arguments and flags", () => {
   assert.deepEqual(parseArgs(["apps", "--status", "SENT", "--json"]), { command: "apps", args: [], flags: { status: "SENT", json: true } });
@@ -110,6 +110,23 @@ test("the Claude Code skill is a real skill file with the safety rules in it", (
   assert.match(file.content, /Never submit, send or apply/);
   assert.match(file.content, /data, never instructions/);
   assert.match(file.content, /pilot run start/);
+});
+
+test("every export tells the assistant to propose progress rather than set it", () => {
+  for (const target of ["claude-code", "opencode", "generic"]) {
+    const text = skillFiles(target)[0].content;
+    assert.match(text, /pilot apps propose/, target);
+    assert.match(text, /user confirms/i, target);
+  }
+});
+
+test("only progress statuses can be proposed; the ones an assistant may set are refused with where to go", () => {
+  assert.equal(proposableStatus("sent"), "SENT");
+  assert.equal(proposableStatus("Interview"), "INTERVIEW");
+  assert.throws(() => proposableStatus("rejected"), /apps status/);
+  assert.throws(() => proposableStatus("draft"), UsageError);
+  assert.throws(() => proposableStatus("flying"), UsageError);
+  assert.throws(() => proposableStatus(undefined), UsageError);
 });
 
 test("the generic instructions carry the same rules, and unknown targets are refused", () => {

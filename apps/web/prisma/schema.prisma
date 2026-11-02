@@ -450,6 +450,7 @@ model Application {
   emails              EmailMessage[]
   events              StatusEvent[]
   documents           Document[]
+  proposals           StatusProposal[]
   messages            ChatMessage[]
   notes               Note[]
   /// What the user tells the AI for this application; "Anything I should know?" (NEW-6) becomes the first.
@@ -1055,4 +1056,42 @@ model McpClient {
   name        String
   firstSeenAt DateTime @default(now())
   lastSeenAt  DateTime @default(now())
+}
+
+// ─── Status proposals (CareerPilot) ──────────────────────────────────────────
+
+enum ProposalState {
+  PENDING
+  CONFIRMED
+  DISMISSED
+  /// Replaced by a newer proposal for the same application.
+  SUPERSEDED
+}
+
+/// An assistant's suggestion that an application has reached a progress status
+/// (sent, screening, interview, offer, accepted). Assistants cannot set those:
+/// only the owner records that something happened, so a proposal waits for one
+/// click to confirm or dismiss it. Confirming goes through the status machine,
+/// so the move can be undone like any other.
+model StatusProposal {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  /// The progress status proposed.
+  status        ApplicationStatus
+  /// The assistant's own words, one short line. Shown as what it said, never as a fact.
+  reason        String            @default("")
+  actorKind     ActivityActor     @default(CLI)
+  /// Which assistant, for example "claude-code".
+  actorName     String            @default("")
+  state         ProposalState     @default(PENDING)
+  createdAt     DateTime          @default(now())
+  /// After this it can no longer be confirmed.
+  expiresAt     DateTime
+  resolvedAt    DateTime?
+  /// The status change a confirmation made, so it can be undone.
+  statusEventId String?
+
+  @@index([state, createdAt])
+  @@index([applicationId, state])
 }

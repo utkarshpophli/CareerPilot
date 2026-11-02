@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import type { FrontDoor, Trend } from "@/lib/front-door";
 import type { InsightRow } from "@/lib/insights";
 
+import { ProposalList } from "./proposal-list";
+
 // The five cards at the top of the dashboard: how many applications, where
 // they go, the resume's versions and templates, what the assistants are doing,
 // and what needs you. Each links to the page with the detail.
@@ -160,24 +162,30 @@ export function FrontDoorCards({ door, timeZone }: { door: FrontDoor; timeZone?:
         {needsYou.total === 0 ? (
           <p className="text-sm text-muted">Nothing is waiting for you.</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 text-sm">
-            {needsYou.agentDrafts > 0 && (
-              <li>
-                <Link href="/agent" className="underline underline-offset-2">
-                  {plural(needsYou.agentDrafts, "draft", "drafts")} from your assistant{needsYou.agentDrafts === 1 ? "" : "s"}
-                </Link>{" "}
-                waiting for your review
-              </li>
+          <>
+            <ProposalList proposals={needsYou.proposals} />
+            {needsYou.proposalCount > needsYou.proposals.length && <p className="text-meta text-muted">{needsYou.proposalCount - needsYou.proposals.length} more waiting.</p>}
+            {(needsYou.agentDrafts > 0 || needsYou.attention > 0) && (
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {needsYou.agentDrafts > 0 && (
+                  <li>
+                    <Link href="/agent" className="underline underline-offset-2">
+                      {plural(needsYou.agentDrafts, "draft", "drafts")} from your assistant{needsYou.agentDrafts === 1 ? "" : "s"}
+                    </Link>{" "}
+                    waiting for your review
+                  </li>
+                )}
+                {needsYou.attention > 0 && (
+                  <li>
+                    <a href="#attention-heading" className="underline underline-offset-2">
+                      {plural(needsYou.attention, "thing", "things")}
+                    </a>{" "}
+                    worth a look: interviews, offers, follow-ups
+                  </li>
+                )}
+              </ul>
             )}
-            {needsYou.attention > 0 && (
-              <li>
-                <a href="#attention-heading" className="underline underline-offset-2">
-                  {plural(needsYou.attention, "thing", "things")}
-                </a>{" "}
-                worth a look: interviews, offers, follow-ups
-              </li>
-            )}
-          </ul>
+          </>
         )}
       </Card>
     </div>
