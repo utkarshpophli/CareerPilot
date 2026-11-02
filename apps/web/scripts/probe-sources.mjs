@@ -77,7 +77,35 @@ function emit(name, value) {
   console.log(`END ${name}`);
 }
 
+const TERMS = {
+  jobindex: ["https://www.jobindex.dk/betingelser", "https://www.jobindex.dk/handelsbetingelser"],
+  jobdanmark: ["https://jobdanmark.dk/privatlivspolitik", "https://jobdanmark.dk/vilkaar", "https://jobdanmark.dk/betingelser", "https://jobdanmark.dk/brugerbetingelser"],
+  jobnet: ["https://jobnet.dk/vilkaar", "https://jobnet.dk/betingelser", "https://jobnet.dk/cookies", "https://jobnet.dk/om-jobnet", "https://jobnet.dk/persondata"],
+};
+const KEYWORDS = /automat|robot|scrap|crawl|indsaml|systematisk|kopier|data ?mining|maskinel|API\b|genanvend|videreanvend|tekst- og data|ophavsret/i;
+
+/** The readable text of a page, without scripts, styles and tags. */
+const textOf = (html) => html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+
 const group = process.argv[2] ?? "danish";
+if (group === "danish-terms") {
+  for (const [name, urls] of Object.entries(TERMS)) {
+    const pages = [];
+    for (const url of urls) {
+      try {
+        const response = await get(url);
+        const html = await response.text();
+        const text = textOf(html);
+        const windows = [...text.matchAll(new RegExp(KEYWORDS, "gi"))].slice(0, 10).map((match) => text.slice(Math.max(0, match.index - 220), match.index + 260));
+        pages.push({ url, status: response.status, contentType: response.headers.get("content-type"), chars: text.length, start: text.slice(0, 300), windows });
+      } catch (error) {
+        pages.push({ url, error: String(error.message ?? error) });
+      }
+    }
+    emit(`terms-${name}`, { site: name, pages });
+  }
+  process.exit(0);
+}
 for (const site of GROUPS[group] ?? []) {
   const result = { site: site.name, origin: site.origin };
   try {
@@ -86,7 +114,8 @@ for (const site of GROUPS[group] ?? []) {
     result.robots = { status: robots.status, contentType: robots.headers.get("content-type"), text: clip(text, 6000) };
     const rules = robots.ok && /user-agent/i.test(text) ? rulesFor(text) : [];
     result.samplePath = site.sample.path;
-    result.sampleAllowedByRobots = allowed(rules, site.sample.path.split("?")[0]);
+    // robots.txt rules match the path together with its query string (Jobindex, for one, disallows page=, sort= and jobage=).
+    result.sampleAllowedByRobots = allowed(rules, site.sample.path);
   } catch (error) {
     result.robots = { error: String(error.message ?? error) };
     result.sampleAllowedByRobots = false;

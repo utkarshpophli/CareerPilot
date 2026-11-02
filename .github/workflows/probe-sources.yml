@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   probe:
-    name: Probe the Danish portals
+    name: Read the Danish portals' terms pages
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,4 +24,4 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - run: node scripts/probe-sources.mjs danish
+      - run: node scripts/probe-sources.mjs danish-terms
