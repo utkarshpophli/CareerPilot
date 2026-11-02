@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { z } from "zod";
+
 import { ActivityActor, ApiScope } from "@/generated/prisma/enums";
 
 import { allows, verifyApiToken, type TokenPrincipal } from "./api-tokens";
@@ -83,4 +85,13 @@ export function intParam(value: string | null, fallback: number, min: number, ma
   const number = value === null || value === "" ? fallback : Number(value);
   if (!Number.isInteger(number)) throw new ApiError(400, "bad_request", "A number was expected.");
   return Math.min(max, Math.max(min, number));
+}
+
+/** A request body checked against a schema; the first problem becomes a 400 that names the field. */
+export function parseBody<T extends z.ZodType>(schema: T, body: unknown): z.output<T> {
+  const parsed = schema.safeParse(body);
+  if (parsed.success) return parsed.data;
+  const issue = parsed.error.issues[0]!;
+  const field = issue.path.join(".");
+  throw new ApiError(400, "bad_request", field ? `${field}: ${issue.message}` : issue.message);
 }

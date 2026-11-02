@@ -40,13 +40,40 @@ export CAREERPILOT_TOKEN=cp_...
 node apps/cli/pilot.mjs status
 ```
 
-Reading: `status`, `apps [--status SENT]`, `activity [--actor MCP] [--limit N]`, `insights`, `runs [--status RUNNING]`, `run show <id>`. Add `--json` for machine-readable output.
+Reading: `status`, `apps [--status SENT]`, `apps show <id>`, `activity [--actor MCP] [--limit N]`, `insights`, `runs [--status RUNNING]`, `run show <id>`. Add `--json` for machine-readable output.
 
-Doing (write token): `check <file|->` cleans a job posting of hidden text and flags lines that try to instruct an AI (exits 3 when it finds something); `apps add --company C --role R [--url U] [--file posting.txt]` tracks an application as a draft (a posting link already tracked gives back the same application); `apps status <id> REJECTED` moves it through the same status machine as the dashboard. Assistants (tokens and the Claude connector) may only set DRAFT, REJECTED and DECLINED. SENT, SCREENING, INTERVIEW, OFFER and ACCEPTED record things only you know, so they are refused (403) and you set them on the application's page; a confirmation step for assistants' proposals is planned. Applications waiting for your review on the Agent screen, and archived ones, are off limits to assistants. `pilot --help` has the rest.
+Doing (write token): `check <file|->` cleans a job posting of hidden text and flags lines that try to instruct an AI (exits 3 when it finds something); `apps add --company C --role R [--url U] [--file posting.txt]` tracks an application as a draft (a posting link already tracked gives back the same application); `apps status <id> REJECTED` moves it through the same status machine as the dashboard. Assistants (tokens and the Claude connector) may only set DRAFT, REJECTED and DECLINED. SENT, SCREENING, INTERVIEW, OFFER and ACCEPTED record things only you know, so they are refused (403) and you set them on the application's page; an assistant proposes them instead (see below). Applications waiting for your review on the Agent screen, and archived ones, are off limits to assistants. Searching and scoring (write token): `search "product designer" [--place Berlin] [--country de] [--remote] [--within week]` runs a job search on the source chosen in Settings and prints numbered postings (each search uses one search from your plan with that source); `search show <id>` reads a kept search again for free; `search more <id>` fetches the next page; `scores save scores.json` keeps the fit scores an assistant worked out. `pilot --help` has the rest.
 
-The same data is available over HTTP with `Authorization: Bearer <token>`: `GET /api/v1/status`, `/applications`, `/activity`, `/insights`, `/runs`, `/runs/{id}`, and `POST /api/v1/applications`, `PATCH /api/v1/applications/{id}/status`, `POST /api/v1/postings/check`, `POST /api/v1/runs`, `POST /api/v1/runs/{id}/events`, `POST /api/v1/runs/{id}/finish`. Answers are `{"data": ...}` or `{"error": {"code", "message"}}`. The client refuses plain `http://` except for localhost, so a token never travels unprotected by accident.
+The same data is available over HTTP with `Authorization: Bearer <token>`: `GET /api/v1/status`, `/applications`, `/applications/{id}`, `/activity`, `/insights`, `/runs`, `/runs/{id}`, `/searches/{id}`, and `POST /api/v1/applications`, `/searches`, `/searches/{id}/more`, `/postings/scores`, `PATCH /api/v1/applications/{id}/status`, `POST /api/v1/postings/check`, `POST /api/v1/runs`, `POST /api/v1/runs/{id}/events`, `POST /api/v1/runs/{id}/finish`. Answers are `{"data": ...}` or `{"error": {"code", "message"}}`. The client refuses plain `http://` except for localhost, so a token never travels unprotected by accident.
 
 There is deliberately no endpoint that sends, submits or deletes anything.
+
+## One operation, three doors
+
+Every operation an assistant can do is one function in `apps/web/src/lib/services/`. REST, the `pilot` command line and MCP are only ways in: they check the input, call that function, and format the answer, so the same thing happens whichever you use, with the same safety checks and the same record in the Activity Ledger. When an assistant does one, it is also reported as a finished run on the Runs page, under the assistant's name (the owner's own clicks are not).
+
+<!-- operations:start (generated from lib/services/operations.ts; edit that file) -->
+| What it does | Service | REST | Command line | MCP tool | Why a door is missing |
+| --- | --- | --- | --- | --- | --- |
+| List applications, newest first | `listApplications` | `GET /api/v1/applications` | `pilot apps` | `list_applications` |  |
+| Read one application with its posting and documents' text | `readApplication` | `GET /api/v1/applications/{id}` | `pilot apps show` | `get_application` |  |
+| Track an application as a draft | `trackApplication` | `POST /api/v1/applications` | `pilot apps add` | none | An MCP assistant saves the application it wrote with save_application, which also keeps the resume and letter. |
+| Put an application back to draft, or mark it rejected or declined | `moveApplication` | `PATCH /api/v1/applications/{id}/status` | `pilot apps status` | `set_application_status` |  |
+| Ask the owner to confirm sent, screening, interview, offer or accepted | `proposeStatus` | `POST /api/v1/applications/{id}/proposals` | `pilot apps propose` | `propose_status` |  |
+| List what is waiting for the owner to confirm | `listPendingProposals` | `GET /api/v1/proposals` | `pilot proposals` | none | An MCP assistant is told what it proposed in the answer to propose_status; the owner answers in the dashboard. |
+| Clean a posting of hidden text and flag lines that instruct an AI | `checkPostingText` | `POST /api/v1/postings/check` | `pilot check` | `get_posting` |  |
+| Keep fit scores the assistant worked out for postings | `saveFitScores` | `POST /api/v1/postings/scores` | `pilot scores save` | `save_job_scores` |  |
+| Run a job search on the chosen source and keep it | `runJobSearch` | `POST /api/v1/searches` | `pilot search` | `search_jobs` |  |
+| Read a kept search again (uses no searches from the plan) | `readSearch` | `GET /api/v1/searches/{id}` | `pilot search show` | none | search_jobs and more_jobs already answer with the postings; a kept search is read in the dashboard. |
+| Show the next page of a kept search (uses one more search from the plan) | `moreJobs` | `POST /api/v1/searches/{id}/more` | `pilot search more` | `more_jobs` |  |
+| List runs | `listRuns` | `GET /api/v1/runs` | `pilot runs` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |
+| Open a run to report work on while it happens | `startRun` | `POST /api/v1/runs` | `pilot run start` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |
+| Add a step to a running run | `addRunStep` | `POST /api/v1/runs/{id}/events` | `pilot run step` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |
+| Close a run as ok, failed or cancelled | `finishRun` | `POST /api/v1/runs/{id}/finish` | `pilot run finish` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |
+| Read a run with its steps | `getRun` | `GET /api/v1/runs/{id}` | `pilot run show` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |
+<!-- operations:end -->
+
+A test reads each door's source and fails when a door stops calling its service, when a route or tool exists that is not in this list, or when this table drifts from `lib/services/operations.ts`. `status`, `activity` and `insights` only read what the dashboard already shows.
 
 ## Let people watch the work: runs
 

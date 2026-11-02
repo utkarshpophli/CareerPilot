@@ -2,7 +2,7 @@ import { ApiScope } from "@/generated/prisma/enums";
 import { optionalDetails, requiredString, runJson, withServiceErrors } from "@/lib/api-runs";
 import { api, jsonBody } from "@/lib/api-v1";
 import { prisma } from "@/lib/prisma";
-import { addRunStep } from "@/lib/runs";
+import { addRunStep } from "@/lib/services/runs";
 
 /**
  * POST /api/v1/runs/{id}/events { "summary": "Fetched Greenhouse", "data"?: { ... } }

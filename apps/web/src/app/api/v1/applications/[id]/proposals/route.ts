@@ -2,7 +2,7 @@ import { ApiScope, ApplicationStatus } from "@/generated/prisma/enums";
 import { optionalString, requiredString, withServiceErrors } from "@/lib/api-runs";
 import { api, ApiError, jsonBody } from "@/lib/api-v1";
 import { prisma } from "@/lib/prisma";
-import { proposeStatus } from "@/lib/proposals";
+import { proposeStatus } from "@/lib/services/applications";
 
 /**
  * POST /api/v1/applications/{id}/proposals { "status": "SENT", "reason": "…" }

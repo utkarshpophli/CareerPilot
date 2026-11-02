@@ -3,31 +3,23 @@ import "server-only";
 import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { ApplicationStatus, DocumentKind } from "@/generated/prisma/enums";
+import { ApplicationStatus } from "@/generated/prisma/enums";
 import { ActionError } from "@/lib/action";
-import { assertAgentMayMove } from "@/lib/agent-status-policy";
 import { isAiUsable } from "@/lib/ai/config";
 import { profileForPrompt } from "@/lib/ai/tasks/prompt-parts";
-import { scoreFrom } from "@/lib/ai/tasks/score-posting";
-import { unitsSchema } from "@/lib/application-data";
-import { fitBand } from "@/lib/fit";
-import { countryCodeFor, countryName } from "@/lib/job-search/countries";
+import { countryName } from "@/lib/job-search/countries";
 import { fullText } from "@/lib/job-search/find";
-import { DEFAULT_RADIUS_KM, foundPostingSchema, POSTED_WITHIN, postingText, RADII_KM, type FoundPosting, type PostedWithin, type SearchQuery, type ShownPosting } from "@/lib/job-search/search";
+import { foundPostingSchema, POSTED_WITHIN, postingText, RADII_KM, type PostedWithin } from "@/lib/job-search/search";
 import { getJob, startJob } from "@/lib/jobs/runner";
-import { withoutPrivateParts } from "@/lib/letter-frame";
-import { hasAlarm } from "@/lib/guards/posting-guard";
 import { fetchPosting } from "@/lib/posting-fetch";
-import { inspectPosting } from "@/lib/posting-check";
-import { saveScore } from "@/lib/posting-scores";
 import { ServiceError } from "@/lib/service-error";
-import { loadSearch, runSearch, showMoreFor } from "@/lib/posting-searches";
+import { describeApplication, listApplications, moveApplication, proposeStatus, readApplication } from "@/lib/services/applications";
+import { checkPostingText, saveFitScores } from "@/lib/services/postings";
+import { moreJobs, postingSummary, runJobSearch } from "@/lib/services/searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
 import { prisma } from "@/lib/prisma";
-import { proposeStatus } from "@/lib/proposals";
 import { loadProfile } from "@/lib/profile-data";
 import { statusInfo } from "@/lib/status";
-import { applyStatusChange } from "@/lib/status-changes";
 import { appVersion } from "@/lib/version";
 
 import { connectorDraftJob } from "./draft";
@@ -45,35 +37,6 @@ const text = (value: unknown): CallToolResult => ({ content: [{ type: "text", te
 const failure = (message: string): CallToolResult => ({ content: [{ type: "text", text: message }], isError: true });
 
 const POSTED = POSTED_WITHIN.map((option) => option.value) as [PostedWithin, ...PostedWithin[]];
-
-/** A posting as Claude sees it in a list: numbered, without its whole text. */
-function postingLine(posting: ShownPosting | FoundPosting, number: number) {
-  const state = "state" in posting ? posting.state : null;
-  return {
-    number,
-    title: posting.title,
-    company: posting.company,
-    place: posting.place,
-    remote: posting.remote,
-    salary: posting.salary || undefined,
-    posted: posting.postedAt?.slice(0, 10),
-    via: posting.via || undefined,
-    url: posting.url || undefined,
-    saved: state?.saved || undefined,
-    applied: state?.applicationId ? true : undefined,
-    fit: state?.score ?? undefined,
-    snippet: posting.description.replace(/\s+/g, " ").slice(0, 280),
-  };
-}
-
-/** The text of a tailored document's parts, in order. */
-function documentText(units: unknown): string {
-  const parsed = unitsSchema.safeParse(units);
-  if (!parsed.success) return "";
-  return withoutPrivateParts(parsed.data)
-    .map((unit) => `## ${unit.label || unit.id}\n${unit.text}`)
-    .join("\n\n");
-}
 
 /** Where a posting comes from, in a tool's input. */
 const postingSource = {
@@ -103,8 +66,8 @@ async function resolvePosting(source: PostingSource): Promise<ResolvedPosting | 
   const located = await locatePosting(source);
   if ("error" in located) return located;
   try {
-    const { text, findings } = await inspectPosting(located.text, "connector");
-    return { ...located, text, alarm: hasAlarm(findings), verdict: findings.verdict };
+    const { text, alarm, verdict } = await checkPostingText(prisma, located.text, "connector");
+    return { ...located, text, alarm, verdict };
   } catch (error) {
     if (error instanceof ActionError) return { error: error.message };
     throw error;
@@ -197,29 +160,24 @@ export function createDossierServer(origin: string): McpServer {
     },
     async (input) => {
       const { basics } = await loadProfile();
-      const country = countryCodeFor(input.country ?? basics.country) || (input.country?.trim().length === 2 ? input.country.trim().toLowerCase() : "");
-      if (!country) return failure("Say which country to search in, e.g. country: 'Germany'.");
-      const remoteOnly = input.remote_only ?? false;
-      const query: SearchQuery = {
-        keywords: input.keywords,
-        place: remoteOnly ? "" : (input.place ?? basics.city).trim(),
-        country,
-        radiusKm: input.radius_km ?? DEFAULT_RADIUS_KM,
-        remoteOnly,
-        postedWithin: input.posted_within ?? "month",
-      };
-      const ran = await runSearch(query);
-      if (!ran.ok) return failure(ran.message);
-      const search = await loadSearch(ran.id);
-      if (!search) return failure("The search ran, but couldn't be read back. Try again.");
-      return text({
-        search_id: search.id,
-        searched: `${query.keywords} in ${query.place || countryName(country)}${query.remoteOnly ? " (remote only)" : ""}`,
-        found: search.postings.length,
-        more_available: search.next !== null,
-        postings: search.postings.map((posting, index) => postingLine(posting, index + 1)),
-        link: linkTo(`/jobs?search=${search.id}`),
-      });
+      try {
+        const { query, search } = await runJobSearch(
+          prisma,
+          { keywords: input.keywords, place: input.place, country: input.country, remoteOnly: input.remote_only, radiusKm: input.radius_km, postedWithin: input.posted_within },
+          basics,
+        );
+        return text({
+          search_id: search.id,
+          searched: `${query.keywords} in ${query.place || countryName(query.country)}${query.remoteOnly ? " (remote only)" : ""}`,
+          found: search.postings.length,
+          more_available: search.next !== null,
+          postings: search.postings.map((posting, index) => postingSummary(posting, index + 1)),
+          link: linkTo(`/jobs?search=${search.id}`),
+        });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
+      }
     },
   );
 
@@ -234,14 +192,18 @@ export function createDossierServer(origin: string): McpServer {
     async ({ search_id }) => {
       const before = await prisma.postingSearch.findUnique({ where: { id: search_id }, select: { found: true } });
       if (!before) return failure("That search is no longer kept. Search again.");
-      const more = await showMoreFor(search_id);
-      if (!more.ok) return failure(more.message);
-      return text({
-        search_id,
-        added: more.postings.length,
-        more_available: more.next !== null,
-        postings: more.postings.map((posting, index) => postingLine(posting, before.found + index + 1)),
-      });
+      try {
+        const more = await moreJobs(prisma, search_id);
+        return text({
+          search_id,
+          added: more.postings.length,
+          more_available: more.next !== null,
+          postings: more.postings.map((posting, index) => postingSummary(posting, before.found + index + 1)),
+        });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
+      }
     },
   );
 
@@ -274,23 +236,21 @@ export function createDossierServer(origin: string): McpServer {
       annotations: { readOnlyHint: false, idempotentHint: true },
     },
     async ({ search_id, scores }) => {
-      const search = search_id ? await prisma.postingSearch.findUnique({ where: { id: search_id }, select: { postings: true } }) : null;
-      if (search_id && !search) return failure("That search is no longer kept. Search again.");
-      const kept = foundPostingSchema.array().catch([]).parse(search?.postings ?? []);
-      const saved: { number?: number; posting_id?: string; title: string; score: number; band: string }[] = [];
-      const missing: (number | string)[] = [];
-      for (const entry of scores) {
-        const row = entry.posting_id ? await prisma.posting.findUnique({ where: { id: entry.posting_id } }) : null;
-        const posting = row ? foundFromPosting(row) : entry.number ? kept[entry.number - 1] : undefined;
-        if (!posting) {
-          missing.push(entry.posting_id ?? entry.number ?? "?");
-          continue;
-        }
-        const fit = scoreFrom({ score: entry.score, reasons: entry.reasons, redFlags: entry.red_flags });
-        await saveScore(posting, fit, WRITTEN_IN_CLAUDE);
-        saved.push({ number: entry.number, posting_id: entry.posting_id, title: posting.title, score: fit.score, band: fitBand(fit.score) });
+      try {
+        const { saved, notFound } = await saveFitScores(prisma, {
+          searchId: search_id,
+          scoredWith: WRITTEN_IN_CLAUDE,
+          scores: scores.map((entry) => ({ number: entry.number, postingId: entry.posting_id, score: entry.score, reasons: entry.reasons, redFlags: entry.red_flags })),
+        });
+        return text({
+          saved: saved.map(({ postingId, ...rest }) => ({ ...rest, posting_id: postingId })),
+          not_found: notFound.length > 0 ? notFound : undefined,
+          link: linkTo(search_id ? `/jobs?search=${search_id}` : "/jobs?view=saved"),
+        });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
       }
-      return text({ saved, not_found: missing.length > 0 ? missing : undefined, link: linkTo(search_id ? `/jobs?search=${search_id}` : "/jobs?view=saved") });
     },
   );
 
@@ -307,12 +267,7 @@ export function createDossierServer(origin: string): McpServer {
       annotations: { readOnlyHint: true },
     },
     async ({ status, include_archived, limit }) => {
-      const rows = await prisma.application.findMany({
-        where: { awaitingReview: false, ...(status ? { status } : {}), ...(include_archived ? {} : { archivedAt: null }) },
-        orderBy: { updatedAt: "desc" },
-        take: limit ?? 30,
-        select: { id: true, title: true, company: true, role: true, location: true, status: true, updatedAt: true, postingUrl: true },
-      });
+      const rows = await listApplications(prisma, { status, includeArchived: include_archived, limit: limit ?? 30, order: "updated" });
       return text(
         rows.map((row) => ({
           id: row.id,
@@ -338,40 +293,24 @@ export function createDossierServer(origin: string): McpServer {
       annotations: { readOnlyHint: true },
     },
     async ({ id }) => {
-      const application = await prisma.application.findUnique({
-        where: { id, awaitingReview: false },
-        select: {
-          id: true,
-          title: true,
-          company: true,
-          role: true,
-          location: true,
-          mode: true,
-          salary: true,
-          status: true,
-          postingUrl: true,
-          postingText: true,
-          match: true,
-          documents: { select: { kind: true, units: true } },
-        },
-      });
+      const application = await readApplication(prisma, id);
       if (!application) return failure("That application no longer exists.");
-      const doc = (kind: DocumentKind) => documentText(application.documents.find((document) => document.kind === kind)?.units);
+      const view = describeApplication(application);
       return text({
-        id: application.id,
-        title: application.title,
-        company: application.company,
-        role: application.role,
-        location: application.location,
-        mode: application.mode,
-        salary: application.salary,
-        status: statusInfo(application.status).label,
-        posting_url: application.postingUrl || undefined,
-        posting: application.postingText.slice(0, 20_000),
-        match: application.match,
-        resume: doc(DocumentKind.RESUME),
-        cover_letter: doc(DocumentKind.COVER_LETTER),
-        link: linkTo(`/applications/${application.id}`),
+        id: view.id,
+        title: view.title,
+        company: view.company,
+        role: view.role,
+        location: view.location,
+        mode: view.mode,
+        salary: view.salary,
+        status: statusInfo(view.status).label,
+        posting_url: view.postingUrl || undefined,
+        posting: view.posting,
+        match: view.match,
+        resume: view.resume,
+        cover_letter: view.coverLetter,
+        link: linkTo(`/applications/${view.id}`),
       });
     },
   );
@@ -499,14 +438,12 @@ export function createDossierServer(origin: string): McpServer {
     },
     async ({ id, status }) => {
       try {
-        await assertAgentMayMove(prisma, id, status);
+        const moved = await moveApplication(prisma, id, status);
+        return text({ id, status: statusInfo(status).label, changed: moved.changed });
       } catch (error) {
-        if (error instanceof ServiceError) return failure(error.message);
+        if (error instanceof ServiceError) return failure(error.code === "not_found" ? "That application no longer exists." : error.message);
         throw error;
       }
-      const result = await applyStatusChange(prisma, id, status);
-      if (result.outcome === "not-found") return failure("That application no longer exists.");
-      return text({ id, status: statusInfo(status).label, changed: result.outcome !== "unchanged" });
     },
   );
 

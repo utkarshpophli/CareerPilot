@@ -155,3 +155,57 @@ test("skills export --target opencode never overwrites the user's own opencode.j
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("search sends the query and prints numbered postings", async () => {
+  const result = await pilot(["search", "product", "designer", "--place", "Berlin", "--country", "de", "--remote", "--within", "week"], {
+    answer: { data: { id: "s1", searched: "product designer (remote only)", found: 1, moreAvailable: false, postings: [{ number: 1, title: "Product Designer", company: "Acme", place: "Berlin" }] } },
+  });
+  assert.equal(result.code, 0);
+  assert.equal(seen[0].method, "POST");
+  assert.equal(seen[0].url, "/api/v1/searches");
+  assert.deepEqual(seen[0].body, { keywords: "product designer", place: "Berlin", country: "de", remoteOnly: true, postedWithin: "week" });
+  assert.match(result.out, /Product Designer\s+Acme/);
+  assert.match(result.out, /s1/);
+});
+
+test("search show reads, search more asks for the next page", async () => {
+  const shown = await pilot(["search", "show", "s1"], { answer: { data: { id: "s1", searched: "x", found: 0, moreAvailable: false, postings: [] } } });
+  assert.equal(shown.code, 0);
+  assert.equal(seen[0].method, "GET");
+  assert.equal(seen[0].url, "/api/v1/searches/s1");
+  const more = await pilot(["search", "more", "s1"], { answer: { data: { id: "s1", added: 0, moreAvailable: false, postings: [] } } });
+  assert.equal(more.code, 0);
+  assert.equal(seen[0].method, "POST");
+  assert.equal(seen[0].url, "/api/v1/searches/s1/more");
+});
+
+test("search without keywords is a usage error and sends nothing", async () => {
+  const result = await pilot(["search"]);
+  assert.equal(result.code, 2);
+  assert.equal(seen.length, 0);
+});
+
+test("scores save sends the file's scores and says what was kept", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "pilot-"));
+  try {
+    const file = join(dir, "scores.json");
+    writeFileSync(file, JSON.stringify({ searchId: "s1", scores: [{ number: 1, score: 80, reasons: ["Figma"] }, { number: 9, score: 5, reasons: ["?"] }] }));
+    const result = await pilot(["scores", "save", file], { answer: { data: { saved: [{ number: 1, title: "Designer", score: 80, band: "good" }], notFound: [9] } } });
+    assert.equal(result.code, 0);
+    assert.equal(seen[0].url, "/api/v1/postings/scores");
+    assert.equal(seen[0].body.searchId, "s1");
+    assert.match(result.out, /Saved 1 score/);
+    assert.match(result.out, /not found: 9/i);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("apps show reads one application", async () => {
+  const result = await pilot(["apps", "show", "a1"], { answer: { data: { id: "a1", title: "Engineer at Acme", company: "Acme", role: "Engineer", location: "", status: "DRAFT", postingUrl: "", posting: "Text", resume: "", coverLetter: "", match: null } } });
+  assert.equal(result.code, 0);
+  assert.equal(seen[0].method, "GET");
+  assert.equal(seen[0].url, "/api/v1/applications/a1");
+  assert.match(result.out, /Engineer at Acme/);
+  assert.equal((await pilot(["apps", "show"])).code, 2);
+});

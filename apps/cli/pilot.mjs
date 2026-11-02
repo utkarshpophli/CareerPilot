@@ -10,14 +10,17 @@ import {
   applicationStatus,
   finishStatus,
   formatActivity,
+  formatApplication,
   formatApplications,
   formatCheck,
   formatInsights,
   formatProposals,
   formatRun,
   formatRuns,
+  formatSearch,
   parseArgs,
   parseData,
+  parseScores,
   plain,
   proposableStatus,
   serverFrom,
@@ -34,9 +37,14 @@ Commands:
   status                              check the token and the server
   apps [--status SENT]                list applications
   apps add --company C --role R       track an application as a draft (--url, --location, --file posting.txt)
+  apps show <id>                      one application with its documents and posting as text
   apps status <id> <STATUS>           DRAFT, REJECTED or DECLINED (SENT and later are the user's to set in the dashboard)
   apps propose <id> <STATUS>          ask the user to confirm SENT, SCREENING, INTERVIEW, OFFER or ACCEPTED (--reason "..."); changes nothing
   proposals                           what is waiting for the user to confirm
+  search <keywords>                   run a job search (--place, --country, --remote, --within day|3days|week|month|any, --radius KM)
+  search show <id>                    a kept search with its numbered postings (costs no search)
+  search more <id>                    the next page of a kept search
+  scores save <file|->                keep fit scores you worked out (JSON list of { number, score, reasons })
   activity [--actor MCP]              recent activity (--limit N, --action application.)
   insights                            applications by platform and resume template
   check <file|->                      clean a job posting and flag hidden instructions (needs a write token)
@@ -57,7 +65,7 @@ Environment:
 
 Exit codes: 0 done, 1 error, 2 wrong usage, 3 "check" found something that looks like an instruction aimed at an AI.`;
 
-const COMMANDS = new Set(["status", "apps", "proposals", "activity", "insights", "check", "runs", "run", "skills"]);
+const COMMANDS = new Set(["status", "apps", "proposals", "search", "scores", "activity", "insights", "check", "runs", "run", "skills"]);
 
 async function request(server, token, path, { method = "GET", body, headers = {} } = {}) {
   let response;
@@ -150,6 +158,10 @@ async function main(argv, env) {
         body: { company: flags.company, role: flags.role, title: flags.title, location: flags.location, postingUrl: flags.url, postingText },
       });
       show(data, data.created ? data.id : `${data.id} (already tracked)`);
+    } else if (args[0] === "show") {
+      need(args, 2, "apps show <id>");
+      const data = await call(`/api/v1/applications/${encodeURIComponent(args[1])}`);
+      show(data, formatApplication(data));
     } else if (args[0] === "status") {
       need(args, 3, "apps status <id> <STATUS>");
       const data = await call(`/api/v1/applications/${encodeURIComponent(args[1])}/status`, { method: "PATCH", body: { status: applicationStatus(args[2]) } });
@@ -166,6 +178,33 @@ async function main(argv, env) {
   } else if (command === "proposals") {
     const data = await call("/api/v1/proposals");
     show(data, formatProposals(data));
+  } else if (command === "search") {
+    if (args[0] === "show" || args[0] === "more") {
+      need(args, 2, `search ${args[0]} <id>`);
+      const path = `/api/v1/searches/${encodeURIComponent(args[1])}`;
+      if (args[0] === "show") {
+        const data = await call(path);
+        show(data, formatSearch(data));
+      } else {
+        const data = await call(`${path}/more`, { method: "POST", body: {} });
+        show(data, `${formatSearch({ ...data, searched: "more results" })}`);
+      }
+    } else {
+      if (args.length === 0) throw new UsageError('Usage: pilot search "<keywords>" [--place P] [--country C] [--remote] [--within week] [--radius 25]');
+      const radius = flags.radius === undefined ? undefined : Number(flags.radius);
+      if (radius !== undefined && !Number.isInteger(radius)) throw new UsageError("--radius is a number of kilometres: 10, 25, 50, 100 or 200.");
+      const data = await call("/api/v1/searches", {
+        method: "POST",
+        body: { keywords: args.join(" "), place: flags.place, country: flags.country, remoteOnly: flags.remote ? true : undefined, radiusKm: radius, postedWithin: flags.within },
+      });
+      show(data, formatSearch(data));
+    }
+  } else if (command === "scores") {
+    if (args[0] !== "save" || args.length !== 2) throw new UsageError("Usage: pilot scores save <file|->  (use - for standard input)");
+    const body = parseScores(readFileSync(args[1] === "-" ? 0 : args[1], "utf8"));
+    const data = await call("/api/v1/postings/scores", { method: "POST", body });
+    const missing = data.notFound?.length ? `\nNot found: ${data.notFound.join(", ")}` : "";
+    show(data, `Saved ${data.saved.length} score${data.saved.length === 1 ? "" : "s"}.${missing}`);
   } else if (command === "activity") {
     const data = await call(`/api/v1/activity${query({ actor: flags.actor?.toUpperCase(), action: flags.action, limit: flags.limit })}`);
     show(data, formatActivity(data.events));

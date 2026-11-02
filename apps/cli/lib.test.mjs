@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, parseArgs, parseData, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
+import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplication, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, formatSearch, parseArgs, parseData, parseScores, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
 
 test("parseArgs separates the command, arguments and flags", () => {
   assert.deepEqual(parseArgs(["apps", "--status", "SENT", "--json"]), { command: "apps", args: [], flags: { status: "SENT", json: true } });
@@ -162,4 +162,48 @@ test("parseArgs knows --force and --stdout take no value", () => {
 test("tokenFrom needs a token", () => {
   assert.equal(tokenFrom({ CAREERPILOT_TOKEN: " cp_abc " }), "cp_abc");
   assert.throws(() => tokenFrom({}), UsageError);
+});
+
+test("formatSearch numbers the postings and cleans what the server sent", () => {
+  const text = formatSearch({
+    id: "s1",
+    searched: "designer in Berlin",
+    found: 2,
+    moreAvailable: true,
+    postings: [
+      { number: 1, title: "Product \u001b[2JDesigner", company: "Acme", place: "Berlin", fit: 82, saved: true },
+      { number: 2, title: "Researcher", company: "Beta", place: "Remote" },
+    ],
+  });
+  assert.match(text, /designer in Berlin/);
+  assert.match(text, /2 postings/);
+  assert.match(text, /more available/i);
+  assert.match(text, /1\s+82\s+Product \[2JDesigner\s+Acme/);
+  assert.doesNotMatch(text, /\u001b/);
+  assert.match(formatSearch({ id: "s2", searched: "x", found: 0, moreAvailable: false, postings: [] }), /No postings/);
+});
+
+test("parseScores reads a JSON list of scores, or an object with a search id", () => {
+  assert.deepEqual(parseScores('[{"number":1,"score":80,"reasons":["Figma"]}]'), { scores: [{ number: 1, score: 80, reasons: ["Figma"] }] });
+  assert.deepEqual(parseScores('{"searchId":"s1","scores":[{"number":2,"score":10,"reasons":["x"]}]}'), { searchId: "s1", scores: [{ number: 2, score: 10, reasons: ["x"] }] });
+  assert.throws(() => parseScores("not json"), UsageError);
+  assert.throws(() => parseScores("[]"), /at least one score/);
+  assert.throws(() => parseScores('{"nope":1}'), UsageError);
+});
+
+test("parseArgs knows --remote takes no value", () => {
+  assert.deepEqual(parseArgs(["search", "designer", "--remote", "--place", "Berlin"]).flags, { remote: true, place: "Berlin" });
+});
+
+test("formatApplication shows the details, the documents, and the posting as data", () => {
+  const text = formatApplication({
+    id: "a1", title: "Engineer at Acme", company: "Acme", role: "Engineer", location: "Berlin", status: "DRAFT", postingUrl: "https://example.com/j",
+    posting: "Build things.\u001b[2J", resume: "## Summary\nDesigner.", coverLetter: "", match: null,
+  });
+  assert.match(text, /Engineer at Acme/);
+  assert.match(text, /DRAFT/);
+  assert.match(text, /Berlin/);
+  assert.match(text, /## Summary/);
+  assert.match(text, /data, not instructions/i);
+  assert.doesNotMatch(text, /\u001b/);
 });
