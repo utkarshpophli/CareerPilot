@@ -1,0 +1,208 @@
+{
+  "offices": [
+    {
+      "id": 87005,
+      "name": "Australia Locations",
+      "location": null,
+      "parent_id": 4260,
+      "child_ids": [
+        80446,
+        80441,
+        88000,
+        83111
+      ],
+      "departments": [
+        {
+          "id": 337843,
+          "name": "1136 Product Sales Development Reps",
+          "parent_id": 150327,
+          "child_ids": [],
+          "jobs": [
+            {
+              "absolute_url": "https://stripe.com/jobs/search?gh_jid=8179349",
+              "data_compliance": [
+                {
+                  "type": "gdpr",
+                  "requires_consent": false,
+                  "requires_processing_consent": false,
+                  "requires_retention_consent": false,
+                  "retention_period": null,
+                  "demographic_data_consent_applies": false
+                }
+              ],
+              "education": "education_required",
+              "internal_job_id": 3539579,
+              "location": {
+                "name": "Sydney"
+              },
+              "metadata": null,
+              "id": 8179349,
+              "updated_at": "2026-10-29T10:42:09-04:00",
+              "requisition_id": "See Opening ID",
+              "title": "Product Sales Development Representative, AUNZ",
+              "company_name": "Stripe",
+              "first_published": "2026-10-22T06:05:21-04:00",
+              "language": "en",
+              "application_deadline": null
+            }
+          ]
+        },
+        {
+          "id": 336769,
+          "name": "1142 APAC Delivery",
+          "parent_id": 131619,
+          "child_ids": [],
+          "jobs": [
+            {
+              "absolute_url": "https://stripe.com/jobs/search?gh_jid=8179347",
+              "data_compliance": [
+                {
+                  "type": "gdpr",
+                  "requires_consent": false,
+                  "requires_processing_consent": false,
+                  "requires_retention_consent": false,
+                  "retention_period": null,
+                  "demographic_data_consent_applies": false
+                }
+              ],
+              "education": "education_required",
+              "internal_job_id": 3539578,
+              "location": {
+                "name": "Sydney"
+              },
+              "metadata": null,
+              "id": 8179347,
+              "updated_at": "2026-10-29T10:42:09-04:00",
+              "requisition_id": "See Opening ID",
+              "title": "Implementation Consultant (AUNZ)",
+              "company_name": "Stripe",
+              "first_published": "2026-09-17T04:16:23-04:00",
+              "language": "en",
+              "application_deadline": null
+            }
+          ]
+        }
+      ],
+      "children": []
+    },
+    {
+      "id": 83111,
+      "name": "AU-Sydney",
+      "location": "Sydney, New South Wales, Australia",
+      "parent_id": 87005,
+      "child_ids": [],
+      "departments": [
+        {
+          "id": 80657,
+          "name": "8125 Core Compute",
+          "parent_id": 86133,
+          "child_ids": [],
+          "jobs": [
+            {
+              "absolute_url": "https://stripe.com/jobs/search?gh_jid=7975725",
+              "data_compliance": [
+                {
+                  "type": "gdpr",
+                  "requires_consent": false,
+                  "requires_processing_consent": false,
+                  "requires_retention_consent": false,
+                  "retention_period": null,
+                  "demographic_data_consent_applies": false
+                }
+              ],
+              "education": "education_required",
+              "internal_job_id": 3461633,
+              "location": {
+                "name": "Sydney, Australia"
+              },
+              "metadata": null,
+              "id": 7975725,
+              "updated_at": "2026-10-29T10:42:09-04:00",
+              "requisition_id": "See Opening ID",
+              "title": "Software Engineer, Core Infrastructure",
+              "company_name": "Stripe",
+              "first_published": "2026-06-12T00:52:30-04:00",
+              "language": "en",
+              "application_deadline": null
+            },
+            {
+              "absolute_url": "https://stripe.com/jobs/search?gh_jid=8238733",
+              "data_compliance": [
+                {
+                  "type": "gdpr",
+                  "requires_consent": false,
+                  "requires_processing_consent": false,
+                  "requires_retention_consent": false,
+                  "retention_period": null,
+                  "demographic_data_consent_applies": false
+                }
+              ],
+              "education": "education_required",
+              "internal_job_id": 3565011,
+              "location": {
+                "name": "Sydney"
+              },
+              "metadata": null,
+              "id": 8238733,
+              "updated_at": "2026-10-29T10:42:09-04:00",
+              "requisition_id": "See Opening ID",
+              "title": "Staff Engineer, Compute Foundation",
+              "company_name": "Stripe",
+              "first_published": "2026-10-06T03:41:49-04:00",
+              "language": "en",
+              "application_deadline": null
+            }
+          ]
+        }
+      ],
+      "children": []
+    },
+    {
+      "id": 87004,
+      "name": "Belgium Locations",
+      "location": null,
+      "parent_id": 17446,
+      "child_ids": [
+        81545
+      ],
+      "departments": [
+        {
+          "id": 81431,
+          "name": "1185 Account Executives (EMEA)",
+          "parent_id": 81962,
+          "child_ids": [],
+          "jobs": [
+            {
+              "absolute_url": "https://stripe.com/jobs/search?gh_jid=8284970",
+              "data_compliance": [
+                {
+                  "type": "gdpr",
+                  "requires_consent": false,
+                  "requires_processing_consent": false,
+                  "requires_retention_consent": false,
+                  "retention_period": null,
+                  "demographic_data_consent_applies": false
+                }
+              ],
+              "education": "education_required",
+              "internal_job_id": 3583366,
+              "location": {
+                "name": "Belgium"
+              },
+              "metadata": null,
+              "id": 8284970,
+              "updated_at": "2026-10-29T10:42:09-04:00",
+              "requisition_id": "See Opening ID",
+              "title": "Account Executive - Enterprise (Hunter) - Belgium",
+              "company_name": "Stripe",
+              "first_published": "2026-10-22T08:25:35-04:00",
+              "language": "en",
+              "application_deadline": null
+            }
+          ]
+        }
+      ],
+      "children": []
+    }
+  ]
+}

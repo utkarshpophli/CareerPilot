@@ -226,4 +226,13 @@ describe("Greenhouse against real recordings", () => {
       expect(posting.postedAt === null || !Number.isNaN(Date.parse(posting.postedAt))).toBe(true);
     }
   });
+
+  it("the offices answer yields the offices each job is open in, as the parser expects", () => {
+    const map = buildOfficeMap(real("greenhouse-offices.json"));
+    expect(map.size).toBeGreaterThan(0);
+    for (const [id, names] of map) {
+      expect(typeof id).toBe("number");
+      expect([...names].every((name) => name.trim() !== "")).toBe(true);
+    }
+  });
 });

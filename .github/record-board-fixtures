@@ -1,2 +1,0 @@
-This file asks CI to run .github/workflows/record-board-fixtures.yml once: it reads a few real postings from
-Greenhouse, Lever and Ashby and runs the opt-in live board tests. Delete this file once the fixtures are saved.
