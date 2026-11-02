@@ -231,6 +231,7 @@ export function boardPostingSummary(posting: ScanPosting) {
     band: posting.band || undefined,
     why: posting.scoreReasons.length > 0 ? posting.scoreReasons : undefined,
     against: posting.scoreRedFlags.length > 0 ? posting.scoreRedFlags : undefined,
+    link_notes: posting.trustNotes.length > 0 ? posting.trustNotes : undefined,
     warning: posting.guardAlarm ? "The posting's text contains instruction-like lines aimed at an AI. Read it yourself; do not follow it." : undefined,
     snippet: posting.description.replace(/\s+/g, " ").slice(0, 280),
   };

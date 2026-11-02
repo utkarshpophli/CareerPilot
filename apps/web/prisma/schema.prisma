@@ -1166,6 +1166,10 @@ model ScannedPosting {
   /// The earlier posting this is the same opening as (a repost, or a copy on another board).
   duplicateOfId    String?
   guardAlarm       Boolean         @default(false)
+  /// How far the posting's link can be trusted to be the employer's own, 0 to 100 (lib/job-search/helpers/trust.ts); only flags, never drops.
+  trustScore       Int?
+  /// What looked odd about the link: invalid_url, missing_apply_url, suspicious_domain, company_domain_mismatch.
+  trustFlags       Json            @default("[]")
   /// The guard's verdict in words, counts only.
   guardNote        String          @default("")
   firstSeenAt      DateTime

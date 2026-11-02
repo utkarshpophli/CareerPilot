@@ -31,6 +31,7 @@ const posting = (extra: Partial<ScanPosting> = {}): ScanPosting => ({
   scoreReasons: ["The title matches the role you want: Product Designer", "Mentions 3 of your skills: Figma"],
   scoreRedFlags: ["Pay up to EUR 50,000 is below your minimum of EUR 60,000"],
   guardAlarm: false,
+  trustNotes: [],
   ...extra,
 });
 
@@ -59,6 +60,13 @@ describe("ReviewList", () => {
     expect(within(item).queryByRole("img", { name: /Score/ })).toBeNull();
     expect(item).toHaveTextContent("Not scored");
     expect(within(item).getByRole("alert")).toHaveTextContent(/instruction-like/i);
+  });
+
+  it("says what looked odd about a posting's link, without hiding the posting", () => {
+    render(<ReviewList postings={[posting({ trustNotes: ["The link goes through a shortener or form host, so you cannot see where it leads."] })]} view="new" />);
+    const item = cards()[0]!;
+    expect(within(item).getByRole("list", { name: "About the link" })).toHaveTextContent("shortener");
+    expect(within(item).getByRole("link", { name: /Senior Product Designer/ })).toBeInTheDocument();
   });
 
   it("shows what the board published as text only, never as markup or a link", () => {

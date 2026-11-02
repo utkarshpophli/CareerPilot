@@ -146,6 +146,35 @@ describe("ingestBoardScan", () => {
   });
 });
 
+describe("the link check at ingestion", () => {
+  it("stores how far the posting's link can be trusted, and what looked odd about it", async () => {
+    const acme = await company();
+    await ingestBoardScan(
+      db,
+      acme,
+      [
+        posting("1", { company: "Acme", url: "https://careers.acme.com/jobs/1" }),
+        posting("2", { company: "Bit", url: "https://bit.ly/abc" }),
+        posting("3", { company: "Acme Robotics", url: "https://totally-other.example/job/3" }),
+        posting("4", { company: "Acme", url: "https://job-boards.greenhouse.io/acme/jobs/4" }),
+      ],
+      t0,
+    );
+    const by = async (id: string) => db.scannedPosting.findFirstOrThrow({ where: { externalId: `acme:${id}` } });
+    expect(await by("1")).toMatchObject({ trustScore: 100, trustFlags: [] });
+    expect(await by("2")).toMatchObject({ trustScore: 75, trustFlags: ["suspicious_domain"] });
+    expect(await by("3")).toMatchObject({ trustScore: 85, trustFlags: ["company_domain_mismatch"] });
+    expect(await by("4")).toMatchObject({ trustScore: 100, trustFlags: [] });
+  });
+
+  it("only flags: a posting with an odd link is kept, shown with the reason, and not dropped", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1", { company: "Bit", url: "https://bit.ly/abc" })], t0);
+    const [shown] = await listScannedPostings(db, {});
+    expect(shown).toMatchObject({ title: "Product Designer", trustNotes: [expect.stringMatching(/shortener/i)] });
+  });
+});
+
 describe("listScannedPostings", () => {
   async function kept() {
     const acme = await company();

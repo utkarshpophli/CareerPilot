@@ -8,6 +8,7 @@ import { ServiceError } from "@/lib/service-error";
 import type { BoardPosting } from "@/lib/job-search/boards";
 import { MAX_DESCRIPTION } from "@/lib/job-search/boards/html-text";
 import { canonicalKey, contentFingerprint, normalizeUrl, relation } from "@/lib/job-identity";
+import { trustCheck, TRUST_FLAG_TEXT, type TrustFlag } from "@/lib/job-search/helpers/trust";
 import { scorePosting, type Preferences } from "@/lib/job-scoring";
 
 // Postings found by a scan, kept (M4d). The employer's board is the truth about whether a posting is open: what a
@@ -63,6 +64,7 @@ export async function ingestBoardScan(db: PrismaClient, company: { id: string },
     const location = line(posting.location, 300);
     const description = text.slice(0, MAX_DESCRIPTION);
     const identified = { company: companyName, title, url: posting.url };
+    const trust = trustCheck({ url: posting.url, company: companyName });
     const fields = {
       companyId: company.id,
       companyName,
@@ -79,6 +81,8 @@ export async function ingestBoardScan(db: PrismaClient, company: { id: string },
       canonicalKey: canonicalKey(identified),
       fingerprint: contentFingerprint({ company: companyName, title, location, description }),
       guardAlarm: alarm,
+      trustScore: trust.score,
+      trustFlags: trust.flags,
       guardNote: alarm ? findings.verdict.slice(0, 300) : "",
       lastSeenAt: now,
       closedAt: null,
@@ -192,6 +196,8 @@ export type ScanPosting = {
   scoreReasons: string[];
   scoreRedFlags: string[];
   guardAlarm: boolean;
+  /** What looked odd about the posting's link, in words; empty when nothing did. */
+  trustNotes: string[];
 };
 
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
@@ -215,6 +221,7 @@ export function toScanPosting(row: ScannedPosting, isNew: boolean): ScanPosting 
     scoreReasons: strings(row.scoreReasons),
     scoreRedFlags: strings(row.scoreRedFlags),
     guardAlarm: row.guardAlarm,
+    trustNotes: strings(row.trustFlags).flatMap((flag) => (flag in TRUST_FLAG_TEXT ? [TRUST_FLAG_TEXT[flag as TrustFlag]] : [])),
   };
 }
 

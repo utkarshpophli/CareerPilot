@@ -10,6 +10,10 @@ A verdict reached from documentation alone says so. Nothing here was checked by 
 | Adzuna | search | existing (key from the owner) | n/a |
 | FreeHire | search | existing | n/a |
 | Bundesagentur für Arbeit | search | existing (owner accepts the note in Settings) | n/a |
+| Jobindex | search | not allowed (robots.txt and terms) | [jobindex.md](jobindex.md) |
+| Jobbank | search | not allowed (terms) | [jobbank.md](jobbank.md) |
+| Jobnet | search | deferred (no published interface, no terms found) | [jobnet.md](jobnet.md) |
+| Jobdanmark | search | allowed with limits (listing data only, opt-in) | [jobdanmark.md](jobdanmark.md) |
 | Greenhouse | board | allowed (single-employer ATS) | [greenhouse.md](greenhouse.md) |
 | Lever | board | allowed (single-employer ATS) | [lever.md](lever.md) |
 | Ashby | board | allowed with limits (slow, rate limited) | [ashby.md](ashby.md) |

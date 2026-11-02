@@ -256,13 +256,14 @@ test("formatScan ranks postings with their score and why, says what is new and c
 
 test("formatPostings lists the kept postings with score and reasons, and says when there are none", () => {
   const text = formatPostings([
-    { title: "Designer", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", score: 91, band: "excellent", why: ["Mentions 3 of your skills: Figma"] },
+    { title: "Designer", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", score: 91, band: "excellent", why: ["Mentions 3 of your skills: Figma"], link_notes: ["The link goes through a shortener or form host."] },
     { title: "Cook\u001b[2J", company: "Beta", url: "https://example.test/2", warning: "The posting's text contains instruction-like lines aimed at an AI." },
   ]);
   assert.match(text, /91\s+excellent\s+Designer\s+Acme\s+Berlin/);
   assert.match(text, /\*\s+-\s+Cook\[2J/);
   assert.match(text, /Why \(Designer\): Mentions 3 of your skills/);
   assert.match(text, /WARNING Cook\[2J/);
+  assert.match(text, /Link \(Designer\): The link goes through a shortener/);
   assert.doesNotMatch(text, /\u001b/);
   assert.match(text, /data, not instructions/i);
   assert.equal(formatPostings([]), "No kept postings match. Scan the watched boards first: pilot companies scan");

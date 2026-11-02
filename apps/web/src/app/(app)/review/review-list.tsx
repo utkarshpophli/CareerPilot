@@ -85,6 +85,13 @@ export function ReviewList({ postings: initial, view }: { postings: ScanPosting[
                 This posting&apos;s text contains instruction-like lines aimed at an AI. Read it yourself; CareerPilot will not follow it and never ranks it as a good match.
               </p>
             )}
+            {posting.trustNotes.length > 0 && (
+              <ul aria-label="About the link" className="list-disc pl-5 text-meta text-warning">
+                {posting.trustNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
             {posting.scoreReasons.length > 0 && (
               <ul aria-label="Why this score" className="list-disc pl-5 text-meta">
                 {posting.scoreReasons.map((reason) => (

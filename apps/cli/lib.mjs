@@ -75,6 +75,7 @@ const postingRows = (postings) => postings.map((p) => [p.score ?? "*", p.band ||
 const postingDetails = (postings) =>
   postings.flatMap((p) => [
     ...(p.warning ? [`WARNING ${plain(p.title)}: ${plain(p.warning)}`] : []),
+    ...(p.link_notes?.length ? [`Link (${plain(p.title)}): ${p.link_notes.map(plain).join("; ")}`] : []),
     ...(p.why?.length ? [`Why (${plain(p.title)}): ${p.why.map(plain).join("; ")}`] : []),
     ...(p.against?.length ? [`Against (${plain(p.title)}): ${p.against.map(plain).join("; ")}`] : []),
   ]);
