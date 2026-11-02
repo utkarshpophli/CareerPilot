@@ -24,4 +24,4 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - run: node scripts/probe-sources.mjs danish-terms
+      - run: node scripts/probe-sources.mjs jobdanmark-full-terms

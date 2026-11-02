@@ -88,6 +88,11 @@ const KEYWORDS = /automat|robot|scrap|crawl|indsaml|systematisk|kopier|data ?min
 const textOf = (html) => html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 
 const group = process.argv[2] ?? "danish";
+if (group === "jobdanmark-full-terms") {
+  const response = await get("https://jobdanmark.dk/brugerbetingelser");
+  emit("jobdanmark-brugerbetingelser", { status: response.status, text: textOf(await response.text()).slice(0, 12000) });
+  process.exit(0);
+}
 if (group === "danish-terms") {
   for (const [name, urls] of Object.entries(TERMS)) {
     const pages = [];
