@@ -24,6 +24,7 @@ export const ACTIONS = {
   companyAdded: "company.added",
   boardsScanned: "boards.scanned",
   postingChecked: "posting.checked",
+  postingReviewed: "posting.reviewed",
   proposalCreated: "proposal.created",
   proposalConfirmed: "proposal.confirmed",
   proposalDismissed: "proposal.dismissed",

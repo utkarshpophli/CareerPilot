@@ -3,6 +3,8 @@ import "server-only";
 import type { PrismaClient, ScannedPosting } from "@/generated/prisma/client";
 import type { BoardSource, ScannedState } from "@/generated/prisma/enums";
 import { guard, hasAlarm } from "@/lib/guards/posting-guard";
+import { ACTIONS, recordActivity } from "@/lib/ledger";
+import { ServiceError } from "@/lib/service-error";
 import type { BoardPosting } from "@/lib/job-search/boards";
 import { MAX_DESCRIPTION } from "@/lib/job-search/boards/html-text";
 import { canonicalKey, contentFingerprint, normalizeUrl, relation } from "@/lib/job-identity";
@@ -225,4 +227,29 @@ export async function listScannedPostings(db: PrismaClient, { state, minScore, i
     take: Math.min(LIST_MAX, Math.max(1, limit)),
   });
   return rows.map((row) => toScanPosting(row, row.state === "NEW"));
+}
+
+const REVIEW_SUMMARY = { SAVED: "Saved", DISMISSED: "Dismissed", NEW: "Moved back to review" } as const;
+
+/**
+ * The owner's answer to a posting in the Review queue: keep it, set it aside, or put it back. Only the dashboard
+ * calls this (through a session-checked action); there is deliberately no REST or MCP door for it.
+ */
+export async function setScannedState(db: PrismaClient, id: string, state: ScannedState): Promise<{ changed: boolean; state: ScannedState; title: string }> {
+  return db.$transaction(async (tx) => {
+    const row = await tx.scannedPosting.findUnique({ where: { id }, select: { title: true, state: true } });
+    if (!row) throw new ServiceError("not_found", "That posting is no longer in the list.");
+    if (row.state === state) return { changed: false, state, title: row.title };
+    await tx.scannedPosting.update({ where: { id }, data: { state } });
+    await recordActivity(tx, { action: ACTIONS.postingReviewed, summary: `${REVIEW_SUMMARY[state]}: ${row.title}`, targetType: "scanned_posting", targetId: id, data: { state } });
+    return { changed: true, state, title: row.title };
+  });
+}
+
+/** How many open postings are in each state (copies of an opening already kept are not counted), for the Review queue's tabs. */
+export async function countScannedPostings(db: PrismaClient): Promise<Record<ScannedState, number>> {
+  const groups = await db.scannedPosting.groupBy({ by: ["state"], where: { closedAt: null, duplicateOfId: null }, _count: { _all: true } });
+  const counts: Record<ScannedState, number> = { NEW: 0, SAVED: 0, DISMISSED: 0 };
+  for (const group of groups) counts[group.state] = group._count._all;
+  return counts;
 }

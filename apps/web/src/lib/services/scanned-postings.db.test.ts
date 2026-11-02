@@ -3,7 +3,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { BoardPosting } from "@/lib/job-search/boards";
 import { createTestClient, resetDatabase } from "@/test/db";
 
-import { ingestBoardScan, listScannedPostings } from "./scanned-postings";
+import { ACTIONS } from "@/lib/ledger";
+
+import { countScannedPostings, ingestBoardScan, listScannedPostings, setScannedState } from "./scanned-postings";
 
 const db = createTestClient();
 beforeEach(() => resetDatabase(db));
@@ -180,5 +182,55 @@ describe("listScannedPostings", () => {
     expect(await listScannedPostings(db, { includeDuplicates: true })).toHaveLength(2);
     expect(await listScannedPostings(db, { includeDuplicates: true, limit: 1 })).toHaveLength(1);
     expect(await listScannedPostings(db, { limit: 100_000 })).toHaveLength(1);
+  });
+});
+
+describe("setScannedState", () => {
+  it("saves, dismisses and moves a posting back, and writes each to the Activity Ledger as the owner", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1")], t0);
+    const id = (await db.scannedPosting.findFirstOrThrow()).id;
+
+    expect(await setScannedState(db, id, "SAVED")).toEqual({ changed: true, state: "SAVED", title: "Product Designer" });
+    expect((await db.scannedPosting.findUniqueOrThrow({ where: { id } })).state).toBe("SAVED");
+    expect(await setScannedState(db, id, "DISMISSED")).toMatchObject({ changed: true });
+    expect(await setScannedState(db, id, "NEW")).toMatchObject({ changed: true });
+
+    const events = await db.activityEvent.findMany({ where: { action: ACTIONS.postingReviewed }, orderBy: { at: "asc" } });
+    expect(events.map((event) => event.summary)).toEqual(["Saved: Product Designer", "Dismissed: Product Designer", "Moved back to review: Product Designer"]);
+    expect(events[0]).toMatchObject({ actorKind: "USER", targetType: "scanned_posting", targetId: id });
+  });
+
+  it("does nothing, and writes nothing, when the posting already has that state", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1")], t0);
+    const id = (await db.scannedPosting.findFirstOrThrow()).id;
+    expect(await setScannedState(db, id, "NEW")).toMatchObject({ changed: false });
+    expect(await db.activityEvent.count({ where: { action: ACTIONS.postingReviewed } })).toBe(0);
+  });
+
+  it("says plainly when the posting is gone", async () => {
+    await expect(setScannedState(db, "nope", "SAVED")).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("keeps a dismissed posting out of later scans' lists but not out of the database, so it is not found 'new' again", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1")], t0);
+    await setScannedState(db, (await db.scannedPosting.findFirstOrThrow()).id, "DISMISSED");
+    await ingestBoardScan(db, acme, [posting("1")], later(5));
+    expect(await listScannedPostings(db, {})).toHaveLength(0);
+    expect(await db.scannedPosting.count()).toBe(1);
+  });
+});
+
+describe("countScannedPostings", () => {
+  it("counts the open postings in each state, leaving out closed ones and copies", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1", { title: "A" }), posting("2", { title: "B" }), posting("3", { title: "C" }), posting("4", { title: "D" }), posting("5", { title: "A", url: "https://elsewhere.example/5" })], t0);
+    const id = async (title: string) => (await db.scannedPosting.findFirstOrThrow({ where: { title } })).id;
+    await setScannedState(db, await id("B"), "SAVED");
+    await setScannedState(db, await id("C"), "DISMISSED");
+    await db.scannedPosting.update({ where: { id: await id("D") }, data: { closedAt: later(1) } });
+    expect(await countScannedPostings(db)).toEqual({ NEW: 1, SAVED: 1, DISMISSED: 1 });
   });
 });

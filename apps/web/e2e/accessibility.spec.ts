@@ -57,6 +57,7 @@ const SCREENS = [
   "/settings?section=about",
   // Added with the Runs page (Sprint 1) and the Security section (Sprint 2).
   "/runs",
+  "/review",
   "/applications/nope",
   "/nowhere",
 ];
