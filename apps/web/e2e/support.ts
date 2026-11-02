@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { Pool, types } from "pg";
 
 // Playwright runs this file as CommonJS, so no import.meta: resolve from the app folder it is run in.
@@ -77,6 +77,15 @@ types.setTypeParser(TIMESTAMP_WITHOUT_TIME_ZONE, (value) => new Date(`${value.re
 let pool: Pool | undefined;
 
 /** Runs SQL against the test database, for setting up and checking data. */
+/**
+ * Waits until React has taken over an element (it puts its props on the DOM node when it does). A page
+ * is visible and focusable before that, and a key pressed or a click made in between reaches nothing:
+ * on a busy machine that is the difference between a test that passes and one that fails one run in thirty.
+ */
+export async function hydrated(locator: Locator): Promise<void> {
+  await expect.poll(() => locator.evaluate((element) => Object.keys(element).some((key) => key.startsWith("__reactProps$"))), { message: "React has not taken over this element yet" }).toBe(true);
+}
+
 export async function sql<Row extends object = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<Row[]> {
   pool ??= new Pool({ connectionString: e2eDatabaseUrl(), max: 2 });
   return (await pool.query<Row>(text, values)).rows;

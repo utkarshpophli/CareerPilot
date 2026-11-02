@@ -54,3 +54,21 @@ describe("publishedPorts", () => {
     expect(publishedPorts(sample)).toEqual(["5432:5432", "127.0.0.1:5433:5432"]);
   });
 });
+
+// The production image runs ./start.sh as its command. The node base image's entrypoint runs any command that is
+// a file without the executable bit as `node ./start.sh`, which reads the shell script as JavaScript and stops with
+// a SyntaxError on its first comment line. The first real CI run of the image found this: git had the file as 100644
+// and a Windows checkout cannot be relied on to keep the bit, so the Dockerfile sets it itself.
+describe("the production image's start script", () => {
+  it("is copied in executable, whatever mode the checkout gave it", () => {
+    const copy = read("Dockerfile")
+      .split(/\r?\n/)
+      .find((line) => /^COPY\b.*docker\/start\.sh/.test(line));
+    expect(copy, "the Dockerfile copies docker/start.sh").toBeDefined();
+    expect(copy).toMatch(/--chmod=0?7[0-7][0-7]/);
+  });
+
+  it("is the command, as a path the entrypoint can run", () => {
+    expect(read("Dockerfile")).toMatch(/^CMD \["\.\/start\.sh"\]$/m);
+  });
+});

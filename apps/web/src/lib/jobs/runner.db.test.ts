@@ -18,8 +18,12 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 
 const prisma = () => db.client!;
 
-/** Waits until `check` passes, for work that runs in the background. */
-async function eventually(check: () => Promise<void>, timeout = 3000) {
+/**
+ * Waits until `check` passes, for work that runs in the background. The limit is only how long to wait before
+ * calling it a failure: a passing test never waits for it, and a slow or busy machine (a CI runner) can take
+ * well over the few seconds that used to be allowed here.
+ */
+async function eventually(check: () => Promise<void>, timeout = 20_000) {
   const started = Date.now();
   for (;;) {
     try {
