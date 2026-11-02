@@ -180,6 +180,13 @@ export function JobSearchSection({ initial }: { initial: JobSearchSettingsView }
               </p>
             )}
 
+            {source === "JOBDANMARK" && (
+              <p className="text-sm text-muted">
+                No key needed. CareerPilot asks Jobdanmark&apos;s own search for Danish listings, one search at a time, and shows what it answers: title, employer, address and dates, with a link
+                to the ad. It does not read the ad pages. The job agent doesn&apos;t search this source; choose JSearch, Adzuna or FreeHire for it.
+              </p>
+            )}
+
             {testable && (
               <div className="flex flex-wrap items-center gap-3.5 pt-1">
                 <Button variant="secondary" onClick={() => void test()} disabled={connection.status === "testing"}>

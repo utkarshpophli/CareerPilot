@@ -103,6 +103,11 @@ describe("Settings → Job agent (E16-7)", () => {
     expect(screen.getByRole("link", { name: "Settings → Job search" })).toHaveAttribute("href", "/settings?section=jobs");
   });
 
+  it("says it doesn't search Jobdanmark either", () => {
+    open({ source: "JOBDANMARK" });
+    expect(screen.getByRole("note")).toHaveTextContent("The agent doesn't search Jobdanmark. Choose JSearch, Adzuna or FreeHire in Settings → Job search for it.");
+  });
+
   it("switches back and says why when a change isn't saved", async () => {
     const user = userEvent.setup();
     vi.mocked(saveAgentSettings).mockResolvedValueOnce({ ok: false, error: "Type what the agent should look for before turning it on." });

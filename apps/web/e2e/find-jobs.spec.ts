@@ -161,3 +161,24 @@ test("searches FreeHire, which needs no key and has no radius", async ({ page })
   await page.getByRole("radio", { name: "JSearch" }).click();
   await chosen("JSEARCH");
 });
+
+test("searches Jobdanmark, which needs no key, has no radius and shows listings only", async ({ page }) => {
+  const chosen = async (source: string) =>
+    expect.poll(async () => (await sql<{ value: string }>(`SELECT value FROM "Setting" WHERE key = 'jobSource'`))[0]?.value).toContain(source);
+  await page.goto("/settings?section=jobs");
+  await page.getByRole("radio", { name: "Jobdanmark" }).click();
+  await expect(page.getByText(/^No key needed\. CareerPilot asks Jobdanmark/)).toBeVisible();
+  await chosen("JOBDANMARK");
+
+  await page.goto("/jobs?q=designer&where=Aarhus&country=dk");
+  const form = page.getByRole("search", { name: "Search postings" });
+  await expect(form.getByLabel("Within")).toBeDisabled();
+  await form.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Produktdesigner" })).toBeVisible();
+  await expect(page.getByText(/^1 posting from Jobdanmark · searched/)).toBeVisible();
+  await expect(page.getByText("Jobs by Jobdanmark").last()).toBeVisible();
+
+  await page.goto("/settings?section=jobs");
+  await page.getByRole("radio", { name: "JSearch" }).click();
+  await chosen("JSEARCH");
+});

@@ -47,6 +47,7 @@ const FROM_ENV: Record<NonNullable<Env["CAREERPILOT_JOBS_SOURCE"]>, JobSource | 
   adzuna: "ADZUNA",
   arbeitsagentur: "ARBEITSAGENTUR",
   freehire: "FREEHIRE",
+  jobdanmark: "JOBDANMARK",
   off: null,
 };
 
@@ -153,6 +154,7 @@ export function credentialsFor<S extends JobSource>(config: JobSearchConfig, sou
       return {} as SourceCredentials[S];
     }
     case "FREEHIRE":
+    case "JOBDANMARK":
       return {} as SourceCredentials[S];
   }
 }

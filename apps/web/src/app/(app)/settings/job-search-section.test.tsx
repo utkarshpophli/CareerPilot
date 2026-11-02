@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 describe("JobSearchSection", () => {
-  it("offers the four sources and Off, as a radio group, Off by default", () => {
+  it("offers the five sources and Off, as a radio group, Off by default", () => {
     render(<JobSearchSection initial={off} />);
     expect(screen.getByRole("heading", { name: "Job search" })).toBeInTheDocument();
     expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual([
@@ -44,6 +44,7 @@ describe("JobSearchSection", () => {
       "Adzuna",
       "FreeHire",
       "Bundesagentur für Arbeit",
+      "Jobdanmark",
       "Off",
     ]);
     expect(screen.getByRole("radio", { name: "Off" })).toBeChecked();
@@ -128,7 +129,7 @@ describe("JobSearchSection", () => {
 
   it("leaves the Arbeitsagentur out when the server doesn't offer it", () => {
     render(<JobSearchSection initial={withSource({ arbeitsagentur: { offered: false, acceptedAt: null } })} />);
-    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(["JSearch", "Adzuna", "FreeHire", "Off"]);
+    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(["JSearch", "Adzuna", "FreeHire", "Jobdanmark", "Off"]);
   });
 
   it("says which FreeHire it searches, with no key to ask for", () => {
@@ -139,6 +140,12 @@ describe("JobSearchSection", () => {
     unmount();
     render(<JobSearchSection initial={withSource({ source: "FREEHIRE", freehire: { host: "jobs.example" } })} />);
     expect(screen.getByText("No key needed. CareerPilot searches your own FreeHire at jobs.example.")).toBeInTheDocument();
+  });
+
+  it("says Jobdanmark needs no key and reads listings only", () => {
+    render(<JobSearchSection initial={withSource({ source: "JOBDANMARK" })} />);
+    expect(screen.getByText(/No key needed\. CareerPilot asks Jobdanmark/)).toHaveTextContent("It does not read the ad pages.");
+    expect(screen.queryByLabelText(/key/i)).not.toBeInTheDocument();
   });
 
   it("shows keys from the environment and keys that can't be read", () => {

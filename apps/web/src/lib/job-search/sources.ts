@@ -92,7 +92,22 @@ export const SOURCE_INFO: Record<JobSource, SourceInfo> = {
     // It has a city filter, but only for the names it knows, and a country with it widens rather than narrows.
     radius: false,
   },
+  JOBDANMARK: {
+    name: "Jobdanmark",
+    description: "Danish job listings from Jobdanmark's own search: title, employer, address and dates, with a link to the ad. It does not read the ad pages.",
+    tag: "Denmark only · free, no key · listings only",
+    keyUrl: null,
+    quotaPeriod: null,
+    attribution: "Jobs by Jobdanmark",
+    attributionLink: null,
+    countries: ["dk"],
+    // Its place filter takes a municipality, not a distance.
+    radius: false,
+  },
 };
+
+/** Jobdanmark's own address (its search call, listing data only; docs/sources/jobdanmark.md). */
+export const JOBDANMARK_URL = "https://jobdanmark.dk";
 
 /** FreeHire's public catalogue; CAREERPILOT_FREEHIRE_URL can name a self-hosted one instead. */
 export const FREEHIRE_URL = "https://freehire.me";

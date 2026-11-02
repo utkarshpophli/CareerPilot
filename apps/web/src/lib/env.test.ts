@@ -175,7 +175,7 @@ describe("job search variables (E14-4)", () => {
 
   it("rejects sources and hosts it doesn't know, without echoing keys", () => {
     expect(problems({ ...valid, CAREERPILOT_JOBS_SOURCE: "linkedin", CAREERPILOT_JSEARCH_HOST: "google", CAREERPILOT_JSEARCH_KEY: "ak_secret" })).toEqual([
-      'CAREERPILOT_JOBS_SOURCE must be one of jsearch, adzuna, arbeitsagentur, freehire, off (got "linkedin").',
+      'CAREERPILOT_JOBS_SOURCE must be one of jsearch, adzuna, arbeitsagentur, freehire, jobdanmark, off (got "linkedin").',
       'CAREERPILOT_JSEARCH_HOST must be openwebninja or rapidapi (got "google").',
     ]);
   });

@@ -93,10 +93,10 @@ export function AgentSection({
         Once a day it runs one search, scores the new postings against your profile, and keeps the best on the Agent screen. It never sends or applies.
       </SettingsSectionIntro>
 
-      {source === "ARBEITSAGENTUR" ? (
-        // It searches on its own, which the BA's terms forbid most clearly (#223).
+      {source === "ARBEITSAGENTUR" || source === "JOBDANMARK" ? (
+        // It searches on its own, which the BA's terms forbid most clearly (#223) and Jobdanmark's limits (one search per click) do not cover.
         <p role="note" className="rounded-card bg-warning-surface px-4 py-3 text-meta text-warning">
-          The agent doesn&apos;t search the Bundesagentur für Arbeit. Choose JSearch, Adzuna or FreeHire in{" "}
+          The agent doesn&apos;t search {source === "JOBDANMARK" ? "Jobdanmark" : "the Bundesagentur für Arbeit"}. Choose JSearch, Adzuna or FreeHire in{" "}
           <Link href="/settings?section=jobs" className="font-medium text-warning underline underline-offset-2">
             Settings → Job search
           </Link>{" "}
