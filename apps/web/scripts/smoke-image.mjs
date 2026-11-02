@@ -97,7 +97,11 @@ try {
 } catch (error) {
   failed = true;
   console.error(`SMOKE TEST FAILED: ${error.message}`);
-  if (image) console.error(docker("logs", "--tail", "60", CONTAINER).stdout);
+  if (image) {
+    // A container writes its errors to stderr, so both streams are the log.
+    const logs = docker("logs", "--tail", "80", CONTAINER);
+    console.error(`--- container log ---\n${logs.stdout}${logs.stderr}`);
+  }
 } finally {
   if (image) execFileSync("docker", ["rm", "-f", CONTAINER], { stdio: "ignore" });
 }

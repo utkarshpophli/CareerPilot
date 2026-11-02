@@ -11,7 +11,8 @@ import { NOT_OPERATIONS, OPERATIONS, operationTable, TABLE_END, TABLE_START } fr
 
 const root = join(__dirname, "..", "..", "..");
 const src = join(root, "src");
-const read = (path: string) => readFileSync(path, "utf8");
+// Windows checks files out with CRLF line endings; what is compared and scanned here is not about line endings.
+const read = (path: string) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 const tools = read(join(src, "lib", "connector", "tools.ts"));
 const pilot = read(join(root, "..", "cli", "pilot.mjs"));
 const docs = read(join(root, "..", "..", "docs", "AGENTS.md"));
