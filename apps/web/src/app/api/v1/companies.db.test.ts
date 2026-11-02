@@ -29,6 +29,14 @@ vi.mock("@/lib/job-search/boards/request", async (original) => {
     },
   };
 });
+vi.mock("@/lib/profile-data", async () => {
+  const { demoProfile } = await import("@/lib/demo-profile");
+  const profile = demoProfile();
+  profile.basics.headline = "Product Designer";
+  profile.basics.city = "Berlin";
+  profile.skills = [{ ...profile.skills[0]!, id: "figma", name: "Figma" }];
+  return { loadProfile: async () => profile };
+});
 const prisma = () => db.client!;
 
 beforeEach(async () => {
@@ -79,6 +87,9 @@ describe("POST /api/v1/companies/scan", () => {
     expect(posting).toMatchObject({ title: "Product Designer", company: "Acme", location: "Berlin", url: "https://job-boards.greenhouse.io/acme/jobs/1" });
     expect(posting.snippet.length).toBeLessThanOrEqual(280);
     expect(posting).not.toHaveProperty("description");
+    // Scored against the profile (headline, skills, city), with the reasons, by code.
+    expect(posting).toMatchObject({ new: true, band: "excellent", why: expect.arrayContaining([expect.stringMatching(/Figma/)]) });
+    expect(answer.data).toMatchObject({ added: 2, closed: 0, hidden: { dismissed: 0, duplicates: 0 } });
     // Reported like any assistant's work.
     expect(await prisma().agentRun.findMany({ where: { kind: "companies.scan" } })).toMatchObject([{ status: "OK", actorName: "claude-code" }]);
   });

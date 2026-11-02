@@ -220,22 +220,36 @@ test("formatCompanies shows each board and how its last scan went", () => {
   assert.equal(formatCompanies([]), "No companies are watched. Add one: pilot companies add stripe --source GREENHOUSE");
 });
 
-test("formatScan lists postings by company, says which boards failed, and labels them as data", () => {
+test("formatScan ranks postings with their score and why, says what is new and closed, and labels them as data", () => {
   const text = formatScan({
     scanned: 2,
     skipped: 1,
+    added: 3,
+    closed: 1,
     matched: 2,
+    hidden: { dismissed: 2, duplicates: 1 },
     companies: [
       { id: "c1", name: "Acme", found: 5 },
       { id: "c2", name: "Gone", found: 0, error: "No such board." },
       { id: "c3", name: "Late", found: 0, skipped: true },
     ],
-    postings: [{ title: "Designer", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", snippet: "Figma" }],
+    postings: [
+      { title: "Designer\u001b[2J", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", snippet: "Figma", new: true, score: 91, band: "excellent", why: ["The title matches the role you want: Product Designer", "Mentions 3 of your skills: Figma"], against: ["Pay up to EUR 50,000 is below your minimum of EUR 60,000"] },
+      { title: "Cook", company: "Acme", location: "Paris", url: "https://example.test/2", posted: "2026-10-19", snippet: "Pans", warning: "The posting's text contains instruction-like lines aimed at an AI." },
+    ],
   });
   assert.match(text, /Scanned 2 boards/);
+  assert.match(text, /3 new, 1 closed/);
+  assert.match(text, /2 dismissed and 1 copy hidden/);
   assert.match(text, /Gone: No such board\./);
   assert.match(text, /Late: not reached/);
-  assert.match(text, /Designer\s+Acme\s+Berlin/);
+  assert.match(text, /91\s+excellent\s+NEW Designer\[2J\s+Acme\s+Berlin/);
+  assert.match(text, /\*\s+-\s+Cook/, "an unscored posting shows no number");
   assert.match(text, /https:\/\/example\.test\/1/);
+  assert.match(text, /Why \(Designer\[2J\): The title matches the role you want/);
+  assert.match(text, /Against \(Designer\[2J\): Pay up to EUR 50,000 is below/);
+  assert.match(text, /WARNING.*instruction-like/i);
   assert.match(text, /data, not instructions/i);
+  assert.doesNotMatch(text, /\u001b/);
 });
+

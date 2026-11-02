@@ -1124,7 +1124,66 @@ model TrackedCompany {
   lastError  String      @default("")
   /// How many postings the last good scan found.
   lastFound  Int         @default(0)
+  postings   ScannedPosting[]
 
   @@unique([source, slug, region])
   @@index([enabled, name])
+}
+
+/// Where a posting found by a scan stands for the owner (the review queue, M4d.5).
+enum ScannedState {
+  NEW
+  SAVED
+  DISMISSED
+}
+
+/// A posting found on a watched employer's board (ADR 0003, M4d). The board is the truth about whether it is
+/// open: a posting a good scan no longer lists is closed. Text from the board is data: the description is
+/// stored after the posting guard cleaned it, with a flag where something in it looked like an instruction.
+model ScannedPosting {
+  id               String          @id @default(cuid())
+  source           BoardSource
+  /// "<board name>:<the board's own id>"; unique within the source.
+  externalId       String
+  companyId        String?
+  company          TrackedCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyName      String
+  title            String
+  location         String          @default("")
+  /// Null when the board does not say.
+  remote           Boolean?
+  url              String
+  /// Plain text after the posting guard, capped.
+  description      String          @default("")
+  postedAt         DateTime?
+  salaryMin        Int?
+  salaryMax        Int?
+  salaryCurrency   String          @default("")
+  /// See lib/job-identity.ts.
+  urlKey           String          @default("")
+  canonicalKey     String
+  fingerprint      String
+  /// The earlier posting this is the same opening as (a repost, or a copy on another board).
+  duplicateOfId    String?
+  guardAlarm       Boolean         @default(false)
+  /// The guard's verdict in words, counts only.
+  guardNote        String          @default("")
+  firstSeenAt      DateTime
+  lastSeenAt       DateTime
+  /// Set when a good scan of its board no longer lists it; cleared if it comes back.
+  closedAt         DateTime?
+  state            ScannedState    @default(NEW)
+  score            Int?
+  scoreBand        String          @default("")
+  /// JSON lists of strings: why the score is what it is, and what counted against.
+  scoreReasons     Json            @default("[]")
+  scoreRedFlags    Json            @default("[]")
+  scoredWith       String          @default("")
+  scoredAt         DateTime?
+
+  @@unique([source, externalId])
+  @@index([state, closedAt, score])
+  @@index([canonicalKey])
+  @@index([urlKey])
+  @@index([companyId, closedAt])
 }

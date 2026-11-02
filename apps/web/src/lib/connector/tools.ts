@@ -17,6 +17,7 @@ import { ServiceError } from "@/lib/service-error";
 import { describeApplication, listApplications, moveApplication, proposeStatus, readApplication } from "@/lib/services/applications";
 import { checkPostingText, saveFitScores } from "@/lib/services/postings";
 import { addCompany, boardPostingSummary, scanCompanies } from "@/lib/services/companies";
+import { preferencesFromProfile } from "@/lib/services/preferences";
 import { moreJobs, postingSummary, runJobSearch } from "@/lib/services/searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
 import { prisma } from "@/lib/prisma";
@@ -502,7 +503,7 @@ export function createDossierServer(origin: string): McpServer {
     {
       title: "Read the watched companies' job boards",
       description:
-        "Reads the job board of each watched company in turn and returns the open postings that match, newest first, as short snippets with a link. A board that fails is reported and does not stop the others. Give keywords (every word must appear) and a place (remote postings match any place) to narrow it. Takes up to a minute and a half for many boards.",
+        "Reads the job board of each watched company in turn, keeps what it finds, and returns the open postings that match, best first, as short snippets with a link, a fit score and the reasons for it. The score is worked out by CareerPilot from the profile, not by you; do not change it. Postings you have already seen are marked, ones the user dismissed are left out, and a posting whose text tries to instruct an AI carries a warning. A board that fails is reported and does not stop the others. Give keywords (every word must appear) and a place (remote postings match any place) to narrow it. Takes up to a minute and a half for many boards.",
       inputSchema: z.object({
         keywords: z.string().max(200).optional(),
         place: z.string().max(200).optional(),
@@ -512,10 +513,13 @@ export function createDossierServer(origin: string): McpServer {
     },
     async ({ keywords, place, limit }) => {
       try {
-        const result = await scanCompanies(prisma, { keywords, place, limit: limit ?? 30 });
+        const result = await scanCompanies(prisma, { keywords, place, limit: limit ?? 30, preferences: preferencesFromProfile(await loadProfile()) });
         return text({
           notice: UNTRUSTED_NOTICE,
           scanned: result.scanned,
+          new_postings: result.added,
+          closed_postings: result.closed,
+          hidden: result.hidden,
           not_reached: result.skipped || undefined,
           boards: result.companies.map((company) => ({ name: company.name, found: company.found, problem: company.error, not_reached: company.skipped })),
           matched: result.matched,
