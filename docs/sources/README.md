@@ -18,4 +18,4 @@ A verdict reached from documentation alone says so. Nothing here was checked by 
 | Lever | board | allowed (single-employer ATS) | [lever.md](lever.md) |
 | Ashby | board | allowed with limits (slow, rate limited) | [ashby.md](ashby.md) |
 
-M4c adds the rest of career-ops's providers to this table, each ported, dropped with a reason, or deferred with a reason, and the total must add up to the original count.
+M4c adds the rest of career-ops's providers (the full list and where each stands is [career-ops-providers.md](career-ops-providers.md)) to this table, each ported, dropped with a reason, or deferred with a reason, and the total must add up to the original count.

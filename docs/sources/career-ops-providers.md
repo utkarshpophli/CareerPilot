@@ -1,0 +1,136 @@
+# career-ops providers: where each one stands
+
+career-ops ships 126 provider modules (`upstream/career-ops/providers/*.mjs`, helper files that start with `_` not counted). M4c ports, drops or defers every one, each with a verdict file in this folder before it ships. This table is checked by a test (`src/lib/job-search/providers-ledger.test.ts`): a provider missing here, listed twice, or listed without being in the upstream folder fails it, so the total cannot drift.
+
+Status words: **ported** (a verdict file exists and the adapter ships), **dropped** (with the reason), **queued** (not looked at yet: no verdict, nothing in the product calls it). Nothing is "deferred" yet; that word is for a source that was read and could not be decided.
+
+| Provider | Batch | Status | Verdict |
+|---|---|---|---|
+| 4dayweek | not sorted yet | queued: verdict file first | - |
+| a16z-speedrun-talent | not sorted yet | queued: verdict file first | - |
+| adp-workforcenow | not sorted yet | queued: verdict file first | - |
+| agentic-jobs | not sorted yet | queued: verdict file first | - |
+| alibaba | 2 company pages | queued: verdict file first | - |
+| amazon | 2 company pages | queued: verdict file first | - |
+| apple | 2 company pages | queued: verdict file first | - |
+| applitrack | not sorted yet | queued: verdict file first | - |
+| arbeitnow | not sorted yet | queued: verdict file first | - |
+| arbeitsagentur | done | ported earlier (owner accepts a note first) | n/a |
+| ashby | done | ported (allowed with limits) | docs/sources/ashby.md |
+| atlassian | not sorted yet | queued: verdict file first | - |
+| avature | not sorted yet | queued: verdict file first | - |
+| bamboohr | 1 public ATS | queued: verdict file first | - |
+| beesite | not sorted yet | queued: verdict file first | - |
+| breezy | not sorted yet | queued: verdict file first | - |
+| builtin | not sorted yet | queued: verdict file first | - |
+| bulldogjob | not sorted yet | queued: verdict file first | - |
+| bwi | not sorted yet | queued: verdict file first | - |
+| careerviet | not sorted yet | queued: verdict file first | - |
+| clearcompany | not sorted yet | queued: verdict file first | - |
+| collage | not sorted yet | queued: verdict file first | - |
+| comeet | not sorted yet | queued: verdict file first | - |
+| computrabajo | not sorted yet | queued: verdict file first | - |
+| consider | not sorted yet | queued: verdict file first | - |
+| cryptocurrencyjobs | not sorted yet | queued: verdict file first | - |
+| csod | not sorted yet | queued: verdict file first | - |
+| dassault | not sorted yet | queued: verdict file first | - |
+| deel | not sorted yet | queued: verdict file first | - |
+| deutschebahn | not sorted yet | queued: verdict file first | - |
+| dover | not sorted yet | queued: verdict file first | - |
+| echojobs | not sorted yet | queued: verdict file first | - |
+| eightfold | not sorted yet | queued: verdict file first | - |
+| eploy | not sorted yet | queued: verdict file first | - |
+| feishu-jobs | not sorted yet | queued: verdict file first | - |
+| flowxtra | not sorted yet | queued: verdict file first | - |
+| garena | not sorted yet | queued: verdict file first | - |
+| gem | not sorted yet | queued: verdict file first | - |
+| generalist-world | not sorted yet | queued: verdict file first | - |
+| getonbrd | not sorted yet | queued: verdict file first | - |
+| getro | not sorted yet | queued: verdict file first | - |
+| glints | not sorted yet | queued: verdict file first | - |
+| google | not sorted yet | queued: verdict file first | - |
+| greenhouse | done | ported | docs/sources/greenhouse.md |
+| gupy | not sorted yet | queued: verdict file first | - |
+| hackernews | not sorted yet | queued: verdict file first | - |
+| hecklerkoch | not sorted yet | queued: verdict file first | - |
+| higheredjobs | not sorted yet | queued: verdict file first | - |
+| himalayas | not sorted yet | queued: verdict file first | - |
+| hiringroom | not sorted yet | queued: verdict file first | - |
+| homerun | not sorted yet | queued: verdict file first | - |
+| ibm | not sorted yet | queued: verdict file first | - |
+| icims | not sorted yet | queued: verdict file first | - |
+| inrecruiting | not sorted yet | queued: verdict file first | - |
+| itviec | not sorted yet | queued: verdict file first | - |
+| jazzhr | not sorted yet | queued: verdict file first | - |
+| jibeapply | not sorted yet | queued: verdict file first | - |
+| jobbankca | not sorted yet | queued: verdict file first | - |
+| jobicy | not sorted yet | queued: verdict file first | - |
+| jobscz | not sorted yet | queued: verdict file first | - |
+| jobspresso | not sorted yet | queued: verdict file first | - |
+| jobstreet | not sorted yet | queued: verdict file first | - |
+| jobvite | not sorted yet | queued: verdict file first | - |
+| join | not sorted yet | queued: verdict file first | - |
+| joinup | not sorted yet | queued: verdict file first | - |
+| justjoin | not sorted yet | queued: verdict file first | - |
+| kalibrr | not sorted yet | queued: verdict file first | - |
+| landingjobs | not sorted yet | queued: verdict file first | - |
+| larajobs | not sorted yet | queued: verdict file first | - |
+| lever | done | ported | docs/sources/lever.md |
+| local-parser | dropped | dropped: runs a program named in a config file; no place in a self-hosted app that assistants can configure | n/a |
+| magneto | not sorted yet | queued: verdict file first | - |
+| manfred | not sorted yet | queued: verdict file first | - |
+| meituan | not sorted yet | queued: verdict file first | - |
+| mokahr | not sorted yet | queued: verdict file first | - |
+| mycareersfuture | not sorted yet | queued: verdict file first | - |
+| neogov | not sorted yet | queued: verdict file first | - |
+| nodesk | not sorted yet | queued: verdict file first | - |
+| nofluffjobs | not sorted yet | queued: verdict file first | - |
+| notion | not sorted yet | queued: verdict file first | - |
+| occ | not sorted yet | queued: verdict file first | - |
+| oraclecloud | not sorted yet | queued: verdict file first | - |
+| pageup | not sorted yet | queued: verdict file first | - |
+| paylocity | not sorted yet | queued: verdict file first | - |
+| peoplesoft | not sorted yet | queued: verdict file first | - |
+| personio | 1 public ATS | queued: verdict file first | - |
+| phenom | not sorted yet | queued: verdict file first | - |
+| pinpoint | not sorted yet | queued: verdict file first | - |
+| platsbanken | not sorted yet | queued: verdict file first | - |
+| pracecz | not sorted yet | queued: verdict file first | - |
+| prevueaps | not sorted yet | queued: verdict file first | - |
+| pythonorg | not sorted yet | queued: verdict file first | - |
+| radancy | not sorted yet | queued: verdict file first | - |
+| recruitee | 1 public ATS | queued: verdict file first | - |
+| redrover | not sorted yet | queued: verdict file first | - |
+| remoteok | not sorted yet | queued: verdict file first | - |
+| remotive | not sorted yet | queued: verdict file first | - |
+| remotli | not sorted yet | queued: verdict file first | - |
+| rheinmetall | not sorted yet | queued: verdict file first | - |
+| rippling | not sorted yet | queued: verdict file first | - |
+| schoolspring | not sorted yet | queued: verdict file first | - |
+| senjob | not sorted yet | queued: verdict file first | - |
+| smartrecruiters | 1 public ATS | queued: verdict file first | - |
+| softgarden | not sorted yet | queued: verdict file first | - |
+| solidjobs | not sorted yet | queued: verdict file first | - |
+| startup-jobs | not sorted yet | queued: verdict file first | - |
+| successfactors | not sorted yet | queued: verdict file first | - |
+| taleo | not sorted yet | queued: verdict file first | - |
+| teamtailor | 1 public ATS | queued: verdict file first | - |
+| techinasia | not sorted yet | queued: verdict file first | - |
+| telegram-channel | not sorted yet | queued: verdict file first | - |
+| tencent | not sorted yet | queued: verdict file first | - |
+| thehub | not sorted yet | queued: verdict file first | - |
+| themuse | not sorted yet | queued: verdict file first | - |
+| tkms | not sorted yet | queued: verdict file first | - |
+| torre | not sorted yet | queued: verdict file first | - |
+| ultipro | not sorted yet | queued: verdict file first | - |
+| vdab | not sorted yet | queued: verdict file first | - |
+| weworkremotely | not sorted yet | queued: verdict file first | - |
+| workable | 1 public ATS | queued: verdict file first | - |
+| workday | not sorted yet | queued: verdict file first | - |
+| workingnomads | not sorted yet | queued: verdict file first | - |
+| wp-job-manager | not sorted yet | queued: verdict file first | - |
+| wttj | not sorted yet | queued: verdict file first | - |
+| yourator | not sorted yet | queued: verdict file first | - |
+| zoho-recruit | not sorted yet | queued: verdict file first | - |
+
+Totals: 126 providers; 4 ported, 1 dropped, 121 queued.

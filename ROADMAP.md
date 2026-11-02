@@ -159,6 +159,8 @@ For **every** source, before it ships: read its terms and robots rules and recor
 
 Done when: every source in the table in `docs/sources/README.md` is ported, dropped with a reason, or deferred with a reason, and the count adds up to the original.
 
+**Status 2026-11-02: STARTED, no new source ported yet.** The ledger [`docs/sources/career-ops-providers.md`](docs/sources/career-ops-providers.md) lists all 126 provider modules (the roadmap's "about 125" counts the same folder); a test fails if one is missing, listed twice or not upstream. Today: 4 ported (Greenhouse, Lever, Ashby, Arbeitsagentur), 1 dropped (`local-parser`: it runs a program named in a config file), 121 queued, none looked at yet. **Why nothing else is ported:** every source needs a verdict from its terms and robots rules first, and this build environment cannot read other sites (the network policy blocks them, which `WebFetch` confirmed again for SmartRecruiters' documentation), so each batch needs one run of the GitHub Actions source probe (`scripts/probe-sources.mjs`, marker `.github/probe-sources`) to collect `robots.txt` and the terms links, then a reading of them. Batch 1 (Workable, SmartRecruiters, Recruitee, Personio, Teamtailor, BambooHR) is next.
+
 #### M4d. Identity, liveness and scoring (about 2 weeks, can overlap M4c)
 
 | # | Task | Source to port | Notes |
