@@ -56,6 +56,8 @@ export type FrontDoor = {
     proposals: PendingProposal[];
     /** How many proposals wait in all. */
     proposalCount: number;
+    /** Postings found by scans that nobody has looked at yet (the Review page's "To review"). */
+    newPostings: number;
     total: number;
   };
 };
@@ -73,6 +75,8 @@ export type FrontDoorInput = {
   attention: number;
   /** The assistants' proposals waiting for the owner, newest first. */
   proposals: PendingProposal[];
+  /** Open postings found by scans that are waiting on the Review page. */
+  newPostings: number;
 };
 
 const trendOf = (thisWeek: number, lastWeek: number): Trend => (thisWeek > lastWeek ? "up" : thisWeek < lastWeek ? "down" : "flat");
@@ -84,7 +88,7 @@ function bestTemplate(rows: InsightRow[]): InsightRow | null {
   return answered[0] ?? null;
 }
 
-export function computeFrontDoor({ insights, assistants, running, agentDrafts, attention, proposals }: FrontDoorInput): FrontDoor {
+export function computeFrontDoor({ insights, assistants, running, agentDrafts, attention, proposals, newPostings }: FrontDoorInput): FrontDoor {
   const weeks = insights.weekly.slice(-WEEKS_SHOWN).map((week) => ({ weekStart: week.weekStart, started: week.created, sent: week.sent }));
   const thisWeek = weeks.at(-1) ?? { started: 0, sent: 0 };
   const lastWeek = weeks.at(-2) ?? { started: 0, sent: 0 };
@@ -118,6 +122,6 @@ export function computeFrontDoor({ insights, assistants, running, agentDrafts, a
       callsToday: assistants.reduce((sum, assistant) => sum + assistant.callsToday, 0),
       runs: assistants.reduce((sum, assistant) => sum + assistant.runs, 0),
     },
-    needsYou: { agentDrafts, attention, proposals: proposals.slice(0, PROPOSALS_SHOWN), proposalCount: proposals.length, total: agentDrafts + attention + proposals.length },
+    needsYou: { agentDrafts, attention, proposals: proposals.slice(0, PROPOSALS_SHOWN), proposalCount: proposals.length, newPostings, total: agentDrafts + attention + proposals.length + newPostings },
   };
 }

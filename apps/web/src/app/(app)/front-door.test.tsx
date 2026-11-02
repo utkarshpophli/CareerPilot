@@ -13,7 +13,7 @@ vi.mock("@/components/toast", () => ({ toast: vi.fn(), toastResult: (result: unk
 
 const now = new Date("2026-11-04T10:00:00Z");
 
-const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0, proposals: [] });
+const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0, proposals: [], newPostings: 0 });
 
 function app(overrides: Partial<InsightApplication> & { id: string }): InsightApplication {
   return {
@@ -37,6 +37,7 @@ const fullDoor = () =>
     running: [{ id: "r1", title: "Scan Berlin", actorName: "claude-code", lastStep: "Fetched 3 boards", stalled: false }],
     agentDrafts: 2,
     attention: 3,
+    newPostings: 7,
     proposals: [
       {
         id: "p1", applicationId: "a1", status: "SENT", reason: "The user told me", actorName: "claude-code", state: "PENDING",
@@ -91,6 +92,19 @@ describe("FrontDoorCards with a few applications", () => {
     expect(within(needs).getByRole("button", { name: "Mark as Sent for Engineer at Acme" })).toBeInTheDocument();
     expect(within(needs).getByRole("link", { name: /2 drafts from your assistants/ })).toHaveAttribute("href", "/agent");
     expect(within(needs).getByRole("link", { name: "3 things" })).toHaveAttribute("href", "#attention-heading");
+    expect(within(needs).getByRole("link", { name: "7 new postings" })).toHaveAttribute("href", "/review");
+  });
+
+  it("says 'new posting' for one, and nothing about postings when there are none", () => {
+    const one = fullDoor();
+    one.needsYou.newPostings = 1;
+    const { unmount } = render(<FrontDoorCards door={one} />);
+    expect(screen.getByRole("link", { name: "1 new posting" })).toHaveAttribute("href", "/review");
+    unmount();
+    const none = fullDoor();
+    none.needsYou.newPostings = 0;
+    render(<FrontDoorCards door={none} />);
+    expect(screen.queryByRole("link", { name: /new posting/ })).toBeNull();
   });
 
   it("says the trend in words for a screen reader, and keeps singular and plural right", () => {

@@ -35,7 +35,7 @@ const assistant = (overrides: Partial<ConnectedAssistant>): ConnectedAssistant =
   ...overrides,
 });
 
-const base = { assistants: [] as ConnectedAssistant[], running: [], agentDrafts: 0, attention: 0, proposals: [] as PendingProposal[] };
+const base = { assistants: [] as ConnectedAssistant[], running: [], agentDrafts: 0, attention: 0, proposals: [] as PendingProposal[], newPostings: 0 };
 const door = (apps: InsightApplication[], extra: Partial<Parameters<typeof computeFrontDoor>[0]> = {}) => computeFrontDoor({ insights: computeInsights(apps, now), ...base, ...extra });
 
 describe("with nothing at all", () => {
@@ -46,7 +46,7 @@ describe("with nothing at all", () => {
     expect(empty.where).toEqual({ rows: [], more: 0 });
     expect(empty.resume).toMatchObject({ resumes: 0, versions: 0, revisions: 0, perApplication: 0, templates: [], bestTemplate: null });
     expect(empty.assistants).toMatchObject({ connected: 0, shown: [], more: 0, running: [], callsToday: 0, runs: 0 });
-    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, total: 0 });
+    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, total: 0 });
   });
 });
 
@@ -163,7 +163,12 @@ describe("assistants", () => {
 
 describe("needs you", () => {
   it("adds agent drafts waiting for review to the things worth a look", () => {
-    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, proposals: [], proposalCount: 0, total: 5 });
+    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, proposals: [], proposalCount: 0, newPostings: 0, total: 5 });
+  });
+
+  it("counts the postings found by scans that wait on the Review page", () => {
+    expect(door([], { newPostings: 4 }).needsYou).toMatchObject({ newPostings: 4, total: 4 });
+    expect(door([], { agentDrafts: 1, attention: 1, newPostings: 4 }).needsYou.total).toBe(6);
   });
 
   const proposal = (n: number): PendingProposal => ({

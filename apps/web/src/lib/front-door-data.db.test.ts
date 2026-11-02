@@ -25,7 +25,7 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.applications).toMatchObject({ total: 0, sent: 0, trend: "flat" });
     expect(door.assistants).toMatchObject({ connected: 0, running: [] });
-    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, total: 0 });
+    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, total: 0 });
   });
 
   it("counts applications, platforms and resume versions from real rows", async () => {
@@ -52,6 +52,18 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.needsYou.agentDrafts).toBe(1);
     expect(door.applications.total).toBe(1);
+  });
+
+  it("counts the postings scans found that nobody has looked at, and not dismissed, saved, closed or copied ones", async () => {
+    const row = (id: string, extra: Record<string, unknown> = {}) => ({
+      source: "GREENHOUSE" as const, externalId: `acme:${id}`, companyName: "Acme", title: `Role ${id}`, url: `https://example.test/${id}`, canonicalKey: `acme_${id}`, fingerprint: id,
+      firstSeenAt: now, lastSeenAt: now, ...extra,
+    });
+    await prisma().scannedPosting.createMany({
+      data: [row("1"), row("2"), row("3", { state: "SAVED" }), row("4", { state: "DISMISSED" }), row("5", { closedAt: now }), row("6", { duplicateOfId: "x" })],
+    });
+    const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
+    expect(door.needsYou).toMatchObject({ newPostings: 2, total: 2 });
   });
 
   it("lists the assistants' proposals waiting for the owner, and not the ones already answered", async () => {

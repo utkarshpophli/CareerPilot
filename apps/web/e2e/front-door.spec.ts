@@ -47,6 +47,21 @@ test("shows a connected assistant, a running run, and an agent draft waiting for
   await expect(page.getByRole("region", { name: "Applications" })).not.toContainText("Drafted by an assistant");
 });
 
+test("counts the postings scans found that wait on the Review page, and links there", async ({ page }) => {
+  await sql(
+    `INSERT INTO "ScannedPosting" (id, source, "externalId", "companyName", title, url, "canonicalKey", fingerprint, "firstSeenAt", "lastSeenAt", state)
+     VALUES ('fd-p1', 'GREENHOUSE', 'acme:1', 'Acme', 'Designer', 'https://example.test/1', 'acme_designer', 'a', now(), now(), 'NEW'),
+            ('fd-p2', 'GREENHOUSE', 'acme:2', 'Acme', 'Researcher', 'https://example.test/2', 'acme_researcher', 'b', now(), now(), 'NEW'),
+            ('fd-p3', 'GREENHOUSE', 'acme:3', 'Acme', 'Cook', 'https://example.test/3', 'acme_cook', 'c', now(), now(), 'DISMISSED')`,
+  );
+  await page.goto("/");
+  const link = page.getByRole("region", { name: "Needs you" }).getByRole("link", { name: "2 new postings" });
+  await expect(link).toHaveAttribute("href", "/review");
+  await link.click();
+  await expect(page).toHaveURL(/\/review$/);
+  await sql(`DELETE FROM "ScannedPosting"`);
+});
+
 // The app's shell has no phone layout of its own (its sidebar is 260px wide unless collapsed to icons; roadmap M10 has
 // the responsive pass), so a phone is tested in the shell's small state: the sidebar collapsed.
 test("fits a phone with the sidebar collapsed, and has no serious accessibility problems", async ({ page }) => {
