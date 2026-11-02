@@ -28,13 +28,16 @@ import { redirectProblem } from "@/lib/connector/oauth";
 import { countTailoredDocuments, deleteAllDownloads, zipPdfsJob } from "@/lib/jobs/zip-pdfs";
 import { disconnectGoogle } from "@/lib/google/account";
 import { prisma } from "@/lib/prisma";
+import { loadProfile } from "@/lib/profile-data";
 import { jevKey, loadScoringConfig, scoringView } from "@/lib/scoring/config";
 import { SCORERS } from "@/lib/scoring/scorers";
 import { askJev } from "@/lib/scoring/typesafe";
 import { applySecretChange, JOB_SOURCE_KEY, TYPESAFE_KEY } from "@/lib/secrets";
 
 import { seedBuiltIns } from "../../../../prisma/seed/built-ins";
-import { isJobRetention } from "@/lib/settings";
+import { preferencesFor } from "@/lib/services/preferences";
+import { rescoreAllPostings } from "@/lib/services/scanned-postings";
+import { isJobRetention, type ScanPreferences } from "@/lib/settings";
 import { loadSettings, saveSettings } from "@/lib/settings-data";
 
 // Settings → AI provider (E6-3). Every field saves on its own, so a test
@@ -417,4 +420,35 @@ export const createToken = action(
 export const revokeToken = action(z.object({ id: z.string().min(1).max(64) }), async ({ id }) => {
   if (!(await revokeApiToken(id))) throw new ActionError("That token is gone or was revoked already.");
   return { tokens: await apiTokenRows() };
+});
+
+// Settings → Posting preferences (M4d): what scans score postings against besides the profile.
+const line = z.string().trim().min(1).max(80);
+const lines = z.array(line).max(30);
+const scanPreferencesInput = z.object({
+  remote: z.enum(["yes", "no", "unknown"]),
+  minSalary: z.object({ amount: z.number().int().min(1).max(100_000_000), currency: z.string().regex(/^[A-Za-z]{3}$/) }).nullable(),
+  excludeKeywords: lines,
+  excludeCompanies: lines,
+});
+
+/** The same line once, whatever its case. */
+const once = (items: string[]) => items.filter((item, index) => items.findIndex((other) => other.toLowerCase() === item.toLowerCase()) === index);
+
+/**
+ * Saves the preferences and scores the kept postings again at once, since the numbers on the Review page would
+ * otherwise stop meaning what they say. Returns the saved preferences.
+ */
+export const saveScanPreferences = action(scanPreferencesInput, async (input, { toast }) => {
+  const preferences: ScanPreferences = {
+    remote: input.remote,
+    minSalary: input.minSalary ? { amount: input.minSalary.amount, currency: input.minSalary.currency.toUpperCase() } : null,
+    excludeKeywords: once(input.excludeKeywords),
+    excludeCompanies: once(input.excludeCompanies),
+  };
+  await saveSettings({ scanPreferences: preferences });
+  const scored = await rescoreAllPostings(prisma, preferencesFor(await loadProfile(), preferences), new Date());
+  revalidatePath("/review");
+  toast(scored > 0 ? `Saved. ${scored} posting${scored === 1 ? "" : "s"} scored again.` : "Saved.");
+  return preferences;
 });

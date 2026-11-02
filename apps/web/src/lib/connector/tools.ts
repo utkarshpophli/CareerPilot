@@ -17,7 +17,8 @@ import { ServiceError } from "@/lib/service-error";
 import { describeApplication, listApplications, moveApplication, proposeStatus, readApplication } from "@/lib/services/applications";
 import { checkPostingText, saveFitScores } from "@/lib/services/postings";
 import { addCompany, boardPostingSummary, scanCompanies } from "@/lib/services/companies";
-import { preferencesFromProfile } from "@/lib/services/preferences";
+import { preferencesFor } from "@/lib/services/preferences";
+import { loadSettings } from "@/lib/settings-data";
 import { listScannedPostings } from "@/lib/services/scanned-postings";
 import { moreJobs, postingSummary, runJobSearch } from "@/lib/services/searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
@@ -514,7 +515,7 @@ export function createDossierServer(origin: string): McpServer {
     },
     async ({ keywords, place, limit }) => {
       try {
-        const result = await scanCompanies(prisma, { keywords, place, limit: limit ?? 30, preferences: preferencesFromProfile(await loadProfile()) });
+        const result = await scanCompanies(prisma, { keywords, place, limit: limit ?? 30, preferences: preferencesFor(await loadProfile(), (await loadSettings()).scanPreferences) });
         return text({
           notice: UNTRUSTED_NOTICE,
           scanned: result.scanned,

@@ -121,6 +121,19 @@ export async function ingestBoardScan(db: PrismaClient, company: { id: string },
   return result;
 }
 
+const forScoring = (row: ScannedPosting) => ({
+  title: row.title,
+  companyName: row.companyName,
+  location: row.location,
+  remote: row.remote,
+  description: row.description,
+  salary: row.salaryMin !== null && row.salaryMax !== null ? { min: row.salaryMin, max: row.salaryMax, currency: row.salaryCurrency } : null,
+  postedAt: row.postedAt,
+  guardAlarm: row.guardAlarm,
+});
+
+const NO_SCORE = { score: null, scoreBand: "", scoreReasons: [], scoreRedFlags: [], scoredWith: "", scoredAt: null } as const;
+
 /**
  * Scores a board's open postings that have no score yet (a score is forgotten when the posting changes, and the
  * owner's dismissed ones are not worth the work). The number is decided by code from the posting and the preferences
@@ -130,26 +143,31 @@ export async function scoreOpenPostings(db: PrismaClient, companyId: string, pre
   const rows = await db.scannedPosting.findMany({ where: { companyId, closedAt: null, score: null, state: { not: "DISMISSED" } } });
   let scored = 0;
   for (const row of rows) {
-    const result = scorePosting(
-      {
-        title: row.title,
-        companyName: row.companyName,
-        location: row.location,
-        remote: row.remote,
-        description: row.description,
-        salary: row.salaryMin !== null && row.salaryMax !== null ? { min: row.salaryMin, max: row.salaryMax, currency: row.salaryCurrency } : null,
-        postedAt: row.postedAt,
-        guardAlarm: row.guardAlarm,
-      },
-      preferences,
-      now,
-    );
+    const result = scorePosting(forScoring(row), preferences, now);
     if (!result) continue;
     await db.scannedPosting.update({
       where: { id: row.id },
       data: { score: result.score, scoreBand: result.band, scoreReasons: result.reasons, scoreRedFlags: result.redFlags, scoredWith: result.version, scoredAt: now },
     });
     scored++;
+  }
+  return scored;
+}
+
+/**
+ * Scores every open posting again, for when the preferences changed (an old number would no longer mean what the
+ * screen says it means). A posting with nothing to compare against loses its score. Returns how many were scored.
+ */
+export async function rescoreAllPostings(db: PrismaClient, preferences: Preferences, now: Date): Promise<number> {
+  const rows = await db.scannedPosting.findMany({ where: { closedAt: null, state: { not: "DISMISSED" } } });
+  let scored = 0;
+  for (const row of rows) {
+    const result = scorePosting(forScoring(row), preferences, now);
+    await db.scannedPosting.update({
+      where: { id: row.id },
+      data: result ? { score: result.score, scoreBand: result.band, scoreReasons: result.reasons, scoreRedFlags: result.redFlags, scoredWith: result.version, scoredAt: now } : NO_SCORE,
+    });
+    if (result) scored++;
   }
   return scored;
 }

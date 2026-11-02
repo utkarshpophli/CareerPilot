@@ -5,7 +5,8 @@ import { withServiceErrors } from "@/lib/api-runs";
 import { api, jsonBody, parseBody } from "@/lib/api-v1";
 import { loadProfile } from "@/lib/profile-data";
 import { prisma } from "@/lib/prisma";
-import { preferencesFromProfile } from "@/lib/services/preferences";
+import { preferencesFor } from "@/lib/services/preferences";
+import { loadSettings } from "@/lib/settings-data";
 import { boardPostingSummary, scanCompanies } from "@/lib/services/companies";
 
 const scanBody = z.object({
@@ -27,7 +28,7 @@ const scanBody = z.object({
 export const POST = (request: Request) =>
   api(request, ApiScope.WRITE, async () => {
     const options = parseBody(scanBody, await jsonBody(request));
-    const preferences = preferencesFromProfile(await loadProfile());
+    const preferences = preferencesFor(await loadProfile(), (await loadSettings()).scanPreferences);
     const result = await withServiceErrors(() => scanCompanies(prisma, { ...options, preferences }));
     return { ...result, postings: result.postings.map(boardPostingSummary) };
   });

@@ -33,6 +33,7 @@ import { DocumentsSection } from "./documents-section";
 import { GoogleSection } from "./google-section";
 import { GoogleNotice } from "./google-notice";
 import { JobSearchSection } from "./job-search-section";
+import { PostingPreferencesSection } from "./posting-preferences-section";
 import { ScoringSection } from "./scoring-section";
 import { AboutSection, type AboutFacts } from "./about-section";
 import { ApiTokensSection } from "./api-tokens-section";
@@ -62,6 +63,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         <JobSearchSection initial={jobSearchView(await loadJobSearchConfig())} />
       ) : section === "scoring" ? (
         <ScoringSection initial={scoringView(await loadScoringConfig())} />
+      ) : section === "matching" ? (
+        <PostingPreferencesSection initial={settings.scanPreferences} />
       ) : section === "agent" ? (
         <AgentSection
           initial={{

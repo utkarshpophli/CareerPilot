@@ -1,5 +1,6 @@
 import type { Preferences } from "@/lib/job-scoring";
 import type { ProfileData } from "@/lib/profile";
+import type { ScanPreferences } from "@/lib/settings";
 
 // What a scan scores postings against, taken from the profile. Only what the profile says is used: it has no field
 // for remote work, pay or things to avoid, so those stay unknown and empty until the owner can set them (they are
@@ -26,4 +27,11 @@ export function preferencesFromProfile(profile: ProfileData): Preferences {
     excludeKeywords: [],
     excludeCompanies: [],
   };
+}
+
+/** The profile's preferences plus what the owner set in Settings → Posting preferences. */
+export function preferencesFor(profile: ProfileData, stored: ScanPreferences | undefined): Preferences {
+  const base = preferencesFromProfile(profile);
+  if (!stored) return base;
+  return { ...base, remote: stored.remote, ...(stored.minSalary ? { minSalary: stored.minSalary } : {}), excludeKeywords: stored.excludeKeywords, excludeCompanies: stored.excludeCompanies };
 }

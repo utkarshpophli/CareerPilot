@@ -94,6 +94,13 @@ describe("POST /api/v1/companies/scan", () => {
     expect(await prisma().agentRun.findMany({ where: { kind: "companies.scan" } })).toMatchObject([{ status: "OK", actorName: "claude-code" }]);
   });
 
+  it("scores with the owner's saved preferences too: a word they avoid vetoes a posting", async () => {
+    await prisma().setting.create({ data: { key: "scanPreferences", value: JSON.stringify({ remote: "unknown", minSalary: null, excludeKeywords: ["figma"], excludeCompanies: [] }) } });
+    await call(add, await token(), { source: "GREENHOUSE", board: "acme", name: "Acme" });
+    const answer = await json(await call(scan, await token(), { keywords: "designer" }));
+    expect(answer.data.postings[0]).toMatchObject({ title: "Product Designer", score: 0, band: "poor", against: [expect.stringMatching(/figma/i)] });
+  });
+
   it("shows a board that failed, in words safe to show, without failing the scan", async () => {
     await call(add, await token(), { source: "GREENHOUSE", board: "gone", name: "Gone" });
     const answer = await json(await call(scan, await token(), {}));

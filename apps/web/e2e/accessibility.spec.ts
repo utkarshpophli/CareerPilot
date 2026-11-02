@@ -49,6 +49,7 @@ const SCREENS = [
   "/settings?section=ai",
   "/settings?section=jobs",
   "/settings?section=scoring",
+  "/settings?section=matching",
   "/settings?section=agent",
   "/settings?section=documents",
   "/settings?section=google",

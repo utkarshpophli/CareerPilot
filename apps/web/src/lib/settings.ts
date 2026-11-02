@@ -83,6 +83,24 @@ const json = <T extends z.ZodType>(schema: T) =>
     })
     .pipe(schema);
 
+/** What postings found by scans are scored against, beyond the profile (Settings → Posting preferences). */
+const avoid = z.array(z.string().trim().min(1).max(80)).max(30);
+export const scanPreferencesSchema = z.object({
+  /** Whether remote work is wanted. "unknown" is the honest default: the profile does not say. */
+  remote: z.enum(["yes", "no", "unknown"]).catch("unknown"),
+  /** The lowest pay worth looking at, a yearly amount in a currency. Postings in another currency are not compared. */
+  minSalary: z
+    .object({ amount: z.number().int().min(1).max(100_000_000), currency: z.string().regex(/^[A-Za-z]{3}$/).transform((code) => code.toUpperCase()) })
+    .nullable()
+    .catch(null),
+  /** A posting that mentions one of these is vetoed (scored 0). */
+  excludeKeywords: avoid.catch([]),
+  /** A posting from one of these companies is vetoed. */
+  excludeCompanies: avoid.catch([]),
+});
+export type ScanPreferences = z.output<typeof scanPreferencesSchema>;
+export const DEFAULT_SCAN_PREFERENCES: ScanPreferences = { remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] };
+
 /** A list stored as a JSON array of strings. */
 const stringList = json(z.array(z.string()));
 
@@ -161,6 +179,8 @@ export const settingsSchema = z.object({
   // AI model. Jev's key is encrypted like the others, under its own key.
   scorer: z.enum(SCORERS).nullable().catch(null),
   typesafeKeyEnc: z.string().nullable().catch(null),
+  // Posting preferences (M4d): what scans score postings against besides the profile.
+  scanPreferences: json(scanPreferencesSchema).catch(DEFAULT_SCAN_PREFERENCES),
   // Job agent (E16): one search, run once a day. Off until it's turned on.
   // It asks the source in Settings → Job search, with its key.
   agentEnabled: flag(false),

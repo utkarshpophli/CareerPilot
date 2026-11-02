@@ -72,6 +72,7 @@ describe("stored settings", () => {
       agentMaxDrafts: 3,
       agentAutoDraft: false,
       agentRuns: [],
+      scanPreferences: { remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] },
       startupsViewedAt: null,
       startupsLastRefresh: null,
       updateCheck: false,

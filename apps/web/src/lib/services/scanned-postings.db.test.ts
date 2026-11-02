@@ -5,7 +5,7 @@ import { createTestClient, resetDatabase } from "@/test/db";
 
 import { ACTIONS } from "@/lib/ledger";
 
-import { countScannedPostings, ingestBoardScan, listScannedPostings, setScannedState } from "./scanned-postings";
+import { countScannedPostings, ingestBoardScan, listScannedPostings, rescoreAllPostings, setScannedState } from "./scanned-postings";
 
 const db = createTestClient();
 beforeEach(() => resetDatabase(db));
@@ -232,5 +232,40 @@ describe("countScannedPostings", () => {
     await setScannedState(db, await id("C"), "DISMISSED");
     await db.scannedPosting.update({ where: { id: await id("D") }, data: { closedAt: later(1) } });
     expect(await countScannedPostings(db)).toEqual({ NEW: 1, SAVED: 1, DISMISSED: 1 });
+  });
+});
+
+describe("rescoreAllPostings", () => {
+  const prefs = { titles: ["Product Designer"], skills: [], places: ["Berlin"], remote: "unknown" as const, excludeKeywords: [], excludeCompanies: [] };
+
+  it("scores every open posting again against new preferences, replacing the old numbers", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1"), posting("2", { title: "Cook", location: "Paris" })], t0);
+    await db.scannedPosting.updateMany({ data: { score: 1, scoreBand: "poor", scoredWith: "old" } });
+    const count = await rescoreAllPostings(db, prefs, later(1));
+    expect(count).toBe(2);
+    const rows = await db.scannedPosting.findMany({ orderBy: { externalId: "asc" } });
+    expect(rows[0]).toMatchObject({ scoredWith: "board-score@1", scoredAt: later(1) });
+    expect(rows[0]!.score).toBeGreaterThan(rows[1]!.score!);
+  });
+
+  it("applies a veto the owner just added, and leaves dismissed and closed postings alone", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1"), posting("2", { description: "Commission only." }), posting("3", { title: "Gone" })], t0);
+    await db.scannedPosting.updateMany({ where: { title: "Gone" }, data: { closedAt: later(1) } });
+    await db.scannedPosting.updateMany({ where: { externalId: "acme:1" }, data: { state: "DISMISSED" } });
+    await rescoreAllPostings(db, { ...prefs, excludeKeywords: ["commission only"] }, later(2));
+    expect(await db.scannedPosting.findFirstOrThrow({ where: { externalId: "acme:2" } })).toMatchObject({ score: 0, scoreBand: "poor", scoreRedFlags: [expect.stringMatching(/commission only/)] });
+    expect((await db.scannedPosting.findFirstOrThrow({ where: { externalId: "acme:1" } })).score).toBeNull();
+    expect((await db.scannedPosting.findFirstOrThrow({ where: { externalId: "acme:3" } })).score).toBeNull();
+  });
+
+  it("forgets scores when there is nothing to compare with any more", async () => {
+    const acme = await company();
+    await ingestBoardScan(db, acme, [posting("1")], t0);
+    await rescoreAllPostings(db, prefs, later(1));
+    expect((await db.scannedPosting.findFirstOrThrow()).score).not.toBeNull();
+    await rescoreAllPostings(db, { ...prefs, titles: [], places: [] }, later(2));
+    expect(await db.scannedPosting.findFirstOrThrow()).toMatchObject({ score: null, scoreBand: "", scoredAt: null });
   });
 });
