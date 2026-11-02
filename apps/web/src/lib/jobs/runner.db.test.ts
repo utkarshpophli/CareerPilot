@@ -77,10 +77,11 @@ describe("the job runner", () => {
     await eventually(async () => (await status(id)).toBe("RUNNING"));
     await release("Jane");
     await eventually(async () => (await status(id)).toBe("DONE"));
+    // The row says DONE before the subscriber has been told, so wait for the last notification too.
+    await eventually(async () => expect(seen.at(-1)).toBe("DONE · Greeting"));
     stop();
     expect(await getJob(id)).toMatchObject({ step: "Greeting", error: null, result: { greeting: "Hello, Jane" } });
     expect(seen).toContain("RUNNING · Waiting");
-    expect(seen.at(-1)).toBe("DONE · Greeting");
     const row = await prisma().job.findUniqueOrThrow({ where: { id } });
     expect(row).toMatchObject({ type: "test-gated", key: "application:1", input: { name: "Jane", fail: "no" } });
     expect(row.startedAt).not.toBeNull();

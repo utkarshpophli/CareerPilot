@@ -29,7 +29,9 @@ test("writes the email, ready to copy, with the PDFs to attach", async ({ page, 
   await page.getByRole("button", { name: "Copy the subject" }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Application: Senior Product Designer, Payments");
   await page.getByRole("button", { name: "Copy message" }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^Dear John,\n\nI'm applying[^]*Warm regards,\nJane Doe$/);
+  // Chromium on Windows hands back the clipboard with CRLF line endings.
+  const copied = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n");
+  expect(copied).toMatch(/^Dear John,\n\nI'm applying[^]*Warm regards,\nJane Doe$/);
   await expect(page.getByRole("link", { name: "Open in mail app" })).toHaveAttribute(
     "href",
     /^mailto:careers@example\.com\?subject=Application%3A%20Senior%20Product%20Designer%2C%20Payments&body=Dear%20John%2C%0D%0A/,
