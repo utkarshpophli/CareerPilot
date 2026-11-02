@@ -1,0 +1,27 @@
+name: Probe job sources
+
+# Reads robots.txt, the terms-like links on the front page, and one small sample of each source's answer, so a verdict can
+# be written from evidence (docs/sources) and adapters can be tested against the real shape. It does nothing unless the pull
+# request contains the marker file .github/probe-sources (add it to ask for a run, delete it when done). Never part of the
+# normal CI. One request per site; the script honours robots.txt.
+on:
+  pull_request:
+    paths:
+      - .github/probe-sources
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe the Danish portals
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/probe-sources.mjs danish

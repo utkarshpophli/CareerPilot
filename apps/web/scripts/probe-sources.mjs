@@ -1,0 +1,117 @@
+// Reads, for each job source, what is needed to decide whether it may be used, and one small sample of its answer so the
+// adapter's tests can use the real shape. Run by .github/workflows/probe-sources.yml (this sandbox cannot reach the sites).
+//
+//   node scripts/probe-sources.mjs danish
+//
+// For each site it fetches robots.txt, reads the front page for links that look like terms, privacy or data rules, and, only
+// when robots.txt allows the path for a polite crawler, makes ONE sample request. Everything is printed between BEGIN/END
+// lines (one line each) so a CI log read from the end cannot cut it off. Identifies itself honestly; no browser disguise.
+
+const USER_AGENT = "CareerPilot-source-check/1.0 (+https://github.com/utkarshpophli/CareerPilot; one request per site)";
+const GROUPS = {
+  danish: [
+    {
+      name: "jobindex",
+      origin: "https://www.jobindex.dk",
+      sample: { method: "GET", path: "/jobsoegning?q=designer&jobage=7", note: "search results are an HTML page" },
+    },
+    {
+      name: "jobbank",
+      origin: "https://jobbank.dk",
+      sample: { method: "GET", path: "/job/rss?q=designer", note: "RSS feed" },
+    },
+    {
+      name: "jobnet",
+      origin: "https://jobnet.dk",
+      sample: { method: "GET", path: "/bff/FindJob/Search?resultsPerPage=3&pageNumber=1&orderType=PublicationDate&searchString=designer", headers: { "x-csrf": "1" }, note: "STAR's front-end JSON" },
+    },
+    {
+      name: "jobdanmark",
+      origin: "https://jobdanmark.dk",
+      sample: {
+        method: "POST",
+        path: "/api/jobsearch/search/1",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jobTypes: [], filters: [{ type: "freetext", value: "designer", displayText: "designer" }], locationMode: "Text", distance: 50 }),
+        note: "the site's own search call",
+      },
+    },
+  ],
+};
+
+/** The rules of the first matching group for our agent, else for "*": [{ allow, path }]. */
+function rulesFor(robots) {
+  const groups = [];
+  let current = null;
+  for (const raw of robots.split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, "").trim();
+    const match = /^([A-Za-z-]+)\s*:\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const [, field, value] = [null, match[1].toLowerCase(), match[2].trim()];
+    if (field === "user-agent") {
+      if (!current || current.rules.length > 0) groups.push((current = { agents: [], rules: [] }));
+      current.agents.push(value.toLowerCase());
+    } else if ((field === "allow" || field === "disallow") && current) current.rules.push({ allow: field === "allow", path: value });
+  }
+  const mine = groups.find((group) => group.agents.some((agent) => agent !== "*" && "careerpilot-source-check".includes(agent))) ?? groups.find((group) => group.agents.includes("*"));
+  return mine?.rules ?? [];
+}
+
+/** Longest matching rule wins; Allow wins a tie; nothing matching means allowed. */
+function allowed(rules, path) {
+  let best = null;
+  for (const rule of rules) {
+    if (!rule.path) continue;
+    const pattern = new RegExp("^" + rule.path.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\\\$$/, "$"));
+    if (pattern.test(path) && (!best || rule.path.length > best.path.length || (rule.path.length === best.path.length && rule.allow))) best = rule;
+  }
+  return best ? best.allow : true;
+}
+
+const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}[... ${text.length - max} characters cut]` : text);
+const get = (url, init = {}) => fetch(url, { redirect: "follow", signal: AbortSignal.timeout(30_000), ...init, headers: { "user-agent": USER_AGENT, "accept-language": "da,en;q=0.8", ...(init.headers ?? {}) } });
+
+function emit(name, value) {
+  console.log(`BEGIN ${name}`);
+  console.log(JSON.stringify(value));
+  console.log(`END ${name}`);
+}
+
+const group = process.argv[2] ?? "danish";
+for (const site of GROUPS[group] ?? []) {
+  const result = { site: site.name, origin: site.origin };
+  try {
+    const robots = await get(`${site.origin}/robots.txt`);
+    const text = await robots.text();
+    result.robots = { status: robots.status, contentType: robots.headers.get("content-type"), text: clip(text, 6000) };
+    const rules = robots.ok && /user-agent/i.test(text) ? rulesFor(text) : [];
+    result.samplePath = site.sample.path;
+    result.sampleAllowedByRobots = allowed(rules, site.sample.path.split("?")[0]);
+  } catch (error) {
+    result.robots = { error: String(error.message ?? error) };
+    result.sampleAllowedByRobots = false;
+  }
+  try {
+    const front = await get(site.origin);
+    const html = await front.text();
+    result.front = { status: front.status, server: front.headers.get("server"), cloudflare: /cloudflare|just a moment|cf-chl/i.test(html) || /cloudflare/i.test(front.headers.get("server") ?? "") };
+    const links = [...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+      .map(([, href, label]) => ({ href, label: label.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() }))
+      .filter(({ href, label }) => /vilk|betingelse|terms|brugerbetingelser|cookie|persondata|privat|privacy|databeskyt|api|scrap|robot|data/i.test(`${href} ${label}`));
+    result.termsLinks = links.slice(0, 25);
+  } catch (error) {
+    result.front = { error: String(error.message ?? error) };
+  }
+  if (result.sampleAllowedByRobots) {
+    try {
+      const response = await get(site.origin + site.sample.path, { method: site.sample.method, headers: site.sample.headers, body: site.sample.body });
+      const body = await response.text();
+      result.sample = { status: response.status, contentType: response.headers.get("content-type"), bytes: body.length, note: site.sample.note, cloudflareChallenge: /just a moment|cf-chl/i.test(body), body: clip(body, 5000) };
+    } catch (error) {
+      result.sample = { error: String(error.message ?? error) };
+    }
+  } else {
+    result.sample = { skipped: "robots.txt does not allow this path for a polite crawler, or could not be read" };
+  }
+  emit(site.name, result);
+}
