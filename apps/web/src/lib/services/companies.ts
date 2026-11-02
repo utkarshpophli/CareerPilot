@@ -235,3 +235,52 @@ export function boardPostingSummary(posting: ScanPosting) {
     snippet: posting.description.replace(/\s+/g, " ").slice(0, 280),
   };
 }
+
+/** Turns watching a board off or on (Settings). A board that is off is not scanned and its postings stay as they are. */
+export async function setCompanyEnabled(db: PrismaClient, id: string, enabled: boolean): Promise<{ changed: boolean; enabled: boolean; name: string }> {
+  return db.$transaction(async (tx) => {
+    const company = await tx.trackedCompany.findUnique({ where: { id }, select: { name: true, enabled: true } });
+    if (!company) throw new ServiceError("not_found", "That company is no longer in the list.");
+    if (company.enabled === enabled) return { changed: false, enabled, name: company.name };
+    await tx.trackedCompany.update({ where: { id }, data: { enabled } });
+    await recordActivity(tx, {
+      action: ACTIONS.companyToggled,
+      summary: enabled ? `Watching ${company.name}'s board again` : `Stopped watching ${company.name}'s board for now`,
+      targetType: "company",
+      targetId: id,
+    });
+    return { changed: true, enabled, name: company.name };
+  });
+}
+
+/**
+ * Stops watching a company for good (Settings; deliberately not something an assistant can do). Its open postings are
+ * closed, except the ones the owner saved, which stay in their list. Dismissed postings stay too, so they are not
+ * found "new" again if the company is added back.
+ */
+export async function removeCompany(db: PrismaClient, id: string): Promise<{ name: string; closed: number }> {
+  return db.$transaction(async (tx) => {
+    const company = await tx.trackedCompany.findUnique({ where: { id }, select: { name: true } });
+    if (!company) throw new ServiceError("not_found", "That company is no longer in the list.");
+    const closed = await tx.scannedPosting.updateMany({ where: { companyId: id, closedAt: null, state: "NEW" }, data: { closedAt: new Date() } });
+    await tx.trackedCompany.delete({ where: { id } });
+    await recordActivity(tx, { action: ACTIONS.companyRemoved, summary: `Stopped watching ${company.name} and removed it`, targetType: "company", targetId: id, data: { closed: closed.count } });
+    return { name: company.name, closed: closed.count };
+  });
+}
+
+/** A watched company as the Settings screen gets it: plain values, times as ISO text. */
+export type CompanyListItem = { id: string; source: BoardSource; slug: string; region: string; name: string; enabled: boolean; lastScanAt: string | null; lastOkAt: string | null; lastError: string; lastFound: number };
+
+export const toCompanyListItem = (company: CompanyView): CompanyListItem => ({
+  id: company.id,
+  source: company.source,
+  slug: company.slug,
+  region: company.region,
+  name: company.name,
+  enabled: company.enabled,
+  lastScanAt: company.lastScanAt?.toISOString() ?? null,
+  lastOkAt: company.lastOkAt?.toISOString() ?? null,
+  lastError: company.lastError,
+  lastFound: company.lastFound,
+});

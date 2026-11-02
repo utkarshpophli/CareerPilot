@@ -39,12 +39,12 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 2. Claude Code's OAuth sign-in has not been completed by hand (`/mcp`), and no real task has been run through each assistant (`run start/step/finish`, `apps add`, `companies scan`). OpenCode was verified live.
 3. `jobs/runner.db.test.ts` was reported flaky; the failure was **not reproduced** (0 of 8 under load). Its wait ceiling was raised to 20 s. If it fails again, read the failure output.
 4. The Greenhouse real fixture is still to be saved from the CI recording; Lever and Ashby are saved under `boards/fixtures/real/`.
-5. The Review queue screen, the owner's settings for scoring preferences (remote, pay, exclusions), and the owner's dismiss and save actions are not built.
+5. Built since: the Review page (`/review`), Settings → Posting preferences and Settings → Watched companies. Not built: a Needs-you count of new postings on the dashboard, and saved searches per source.
 6. Owner to-dos (cannot be done by an agent): enable branch protection and secret scanning on GitHub; make the repository public before any shared use; merge `DEV` into `main`.
 
 ## Next steps, in order
 
-1. M4d: the Review queue screen (new, scored, live postings with reasons; the owner dismisses or saves), and the scoring preferences settings. Then M4b.5 (Settings screen for tracked companies, with health) and M4b.4 (the Danish portals).
+1. M4b.4 (the Danish portals from ai-job-search), a Needs-you count of new postings on the dashboard, then M4c.
 2. M4c: port the rest of career-ops's sources in batches, each with a verdict file in `docs/sources/` first. Only the sources whose terms allow it.
 3. M5 onward (worker, queue, budgets, retention), M6 to M10. Keep going down `ROADMAP.md`.
 

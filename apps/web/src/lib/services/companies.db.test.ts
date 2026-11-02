@@ -7,7 +7,7 @@ import { createTestClient, resetDatabase } from "@/test/db";
 
 import type { Preferences } from "@/lib/job-scoring";
 
-import { addCompany, listCompanies, MAX_COMPANIES, scanCompanies } from "./companies";
+import { addCompany, listCompanies, MAX_COMPANIES, removeCompany, scanCompanies, setCompanyEnabled } from "./companies";
 
 const db = createTestClient();
 beforeEach(() => resetDatabase(db));
@@ -250,5 +250,37 @@ describe("listCompanies", () => {
     await addCompany(db, { source: "LEVER", board: "zed", name: "Zed" });
     await addCompany(db, { source: "ASHBY", board: "abc", name: "Abc" });
     expect((await listCompanies(db)).map((c) => c.name)).toEqual(["Abc", "Zed"]);
+  });
+});
+
+describe("setCompanyEnabled and removeCompany (the owner's, from Settings)", () => {
+  it("turns a board off and on, and a board that is off is not scanned", async () => {
+    const acme = await addCompany(db, { source: "GREENHOUSE", board: "acme", name: "Acme" });
+    expect(await setCompanyEnabled(db, acme.id, false)).toMatchObject({ changed: true, enabled: false, name: "Acme" });
+    expect(await setCompanyEnabled(db, acme.id, false)).toMatchObject({ changed: false });
+    const result = await scanCompanies(db, {}, { adapters: fake({ acme: [posting("acme", "1", "Designer")] }) });
+    expect(result.scanned).toBe(0);
+    await setCompanyEnabled(db, acme.id, true);
+    expect((await scanCompanies(db, {}, { adapters: fake({ acme: [posting("acme", "1", "Designer")] }) })).scanned).toBe(1);
+    const lines = await db.activityEvent.findMany({ where: { action: ACTIONS.companyToggled }, orderBy: { at: "asc" } });
+    expect(lines.map((line) => line.summary)).toEqual(["Stopped watching Acme's board for now", "Watching Acme's board again"]);
+  });
+
+  it("removes a company, closes its postings, and keeps the ones the owner saved", async () => {
+    const acme = await addCompany(db, { source: "GREENHOUSE", board: "acme", name: "Acme" });
+    await scanCompanies(db, {}, { adapters: fake({ acme: [posting("acme", "1", "Designer"), posting("acme", "2", "Researcher"), posting("acme", "3", "Cook")] }) });
+    await db.scannedPosting.updateMany({ where: { title: "Researcher" }, data: { state: "SAVED" } });
+    await db.scannedPosting.updateMany({ where: { title: "Cook" }, data: { state: "DISMISSED" } });
+
+    expect(await removeCompany(db, acme.id)).toEqual({ name: "Acme", closed: 1 });
+    expect(await db.trackedCompany.count()).toBe(0);
+    const rows = await db.scannedPosting.findMany({ orderBy: { title: "asc" } });
+    expect(rows.map((row) => [row.title, row.closedAt !== null, row.companyId])).toEqual([["Cook", false, null], ["Designer", true, null], ["Researcher", false, null]]);
+    expect(await db.activityEvent.findFirstOrThrow({ where: { action: ACTIONS.companyRemoved } })).toMatchObject({ summary: "Stopped watching Acme and removed it", actorKind: "USER" });
+  });
+
+  it("says plainly when the company is gone", async () => {
+    await expect(removeCompany(db, "nope")).rejects.toMatchObject({ code: "not_found" });
+    await expect(setCompanyEnabled(db, "nope", true)).rejects.toMatchObject({ code: "not_found" });
   });
 });

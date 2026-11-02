@@ -19,6 +19,7 @@ import { loadGoogleClientConfig, redirectUri } from "@/lib/google/oauth";
 import { lastKnownTimeZone, userTimeZone } from "@/lib/time-zone";
 import { appVersion } from "@/lib/version";
 import { prisma } from "@/lib/prisma";
+import { listCompanies, toCompanyListItem } from "@/lib/services/companies";
 import { loadProfileName } from "@/lib/profile-data";
 import { scoringProblem } from "@/lib/scoring";
 import { loadScoringConfig, scoringView } from "@/lib/scoring/config";
@@ -33,6 +34,7 @@ import { DocumentsSection } from "./documents-section";
 import { GoogleSection } from "./google-section";
 import { GoogleNotice } from "./google-notice";
 import { JobSearchSection } from "./job-search-section";
+import { CompaniesSection } from "./companies-section";
 import { PostingPreferencesSection } from "./posting-preferences-section";
 import { ScoringSection } from "./scoring-section";
 import { AboutSection, type AboutFacts } from "./about-section";
@@ -63,6 +65,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         <JobSearchSection initial={jobSearchView(await loadJobSearchConfig())} />
       ) : section === "scoring" ? (
         <ScoringSection initial={scoringView(await loadScoringConfig())} />
+      ) : section === "companies" ? (
+        <CompaniesSection initial={(await listCompanies(prisma)).map(toCompanyListItem)} />
       ) : section === "matching" ? (
         <PostingPreferencesSection initial={settings.scanPreferences} />
       ) : section === "agent" ? (
