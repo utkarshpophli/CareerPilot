@@ -1,0 +1,17 @@
+# Job source verdicts
+
+One file per source, written before the source ships (ADR 0003). A verdict is **allowed**, **allowed with limits**, or **not allowed**, with what was checked and on what date. A source with no verdict file does not ship.
+
+A verdict reached from documentation alone says so. Nothing here was checked by calling the source from the build environment unless the file says it was.
+
+| Source | Kind | Verdict | File |
+|---|---|---|---|
+| JSearch | search | existing (key from the owner) | n/a |
+| Adzuna | search | existing (key from the owner) | n/a |
+| FreeHire | search | existing | n/a |
+| Bundesagentur für Arbeit | search | existing (owner accepts the note in Settings) | n/a |
+| Greenhouse | board | allowed (single-employer ATS) | [greenhouse.md](greenhouse.md) |
+| Lever | board | allowed (single-employer ATS) | [lever.md](lever.md) |
+| Ashby | board | allowed with limits (slow, rate limited) | [ashby.md](ashby.md) |
+
+M4c adds the rest of career-ops's providers to this table, each ported, dropped with a reason, or deferred with a reason, and the total must add up to the original count.

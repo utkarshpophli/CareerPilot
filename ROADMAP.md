@@ -137,7 +137,7 @@ Dossier already has an adapter interface (`lib/job-search/adapter.ts`) and four 
 
 | # | Task | Notes |
 |---|---|---|
-| 4b.1 | Unify the adapter contract: id, name, country scope, required keys, `search(query)`, `fetchDescription`, rate and robots rules | ADR before code |
+| 4b.1 | Unify the adapter contract: id, name, country scope, required keys, `search(query)`, `fetchDescription`, rate and robots rules | ADR before code | **DONE 2026-11-02.** [ADR 0003](docs/adr/0003-job-sources.md): two kinds of source (search sources as today; board sources that list one employer's postings by slug), pure parsers over recorded responses, one network function that enforces https, a fixed host list, no redirects, size and time limits, slug validation; posting identity `(source, "<slug>:<id>")`; tracked companies table; a verdict file per source in `docs/sources/` before it ships |
 | 4b.2 | Port the shared helpers as TypeScript with the MIT notice kept: SSRF-safe URL checks (`_safe-url`, `_ip-guard`, `_dns-cache`), `_http`, `_html-to-text`, `_html-entities`, `_salary-text`, `_ids`, `_trust-validator`, `_country` | We already have an SSRF-safe fetch; reuse it, port only what adds value; tests ported with the code |
 | 4b.3 | **First sources, the big ATS platforms:** Greenhouse, Lever, Ashby, plus the ones in the list below that are public JSON APIs | Fixture-based tests only (recorded responses); one opt-in live test per source, never in CI |
 | 4b.4 | ai-job-search's portal CLIs as adapters: FreeHire (already in dossier), Jobindex, Jobbank (Denmark), Jobdanmark, Jobnet. **Not LinkedIn** | Each is a small Bun/TypeScript CLI today; port the request and parse logic, drop the CLI shell |
