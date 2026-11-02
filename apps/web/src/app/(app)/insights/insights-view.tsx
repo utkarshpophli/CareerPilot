@@ -44,6 +44,8 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
       {rows.length === 0 ? (
         <p className="text-muted">Nothing here yet.</p>
       ) : (
+        // The table scrolls sideways inside its card on a narrow screen instead of widening the page.
+        <div className="overflow-x-auto">
         <table className="w-full text-field">
           <caption className="sr-only">{title}</caption>
           <thead>
@@ -87,6 +89,7 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );

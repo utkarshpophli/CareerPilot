@@ -66,6 +66,9 @@ describe("computeInsights", () => {
       app({ id: "r2", title: "Designer", documents: [{ kind: "RESUME", themeName: null, versionCauses: ["WRITTEN"] }] }),
     ];
     const { resume } = computeInsights(withDocuments, now);
+    // Two resumes; 4 + 1 versions in all, first drafts included, and the cover letter's are not counted.
+    expect(resume.resumes).toBe(2);
+    expect(resume.versions).toBe(5);
     expect(resume.revisions).toBe(3);
     expect(resume.perApplication).toBe(1.5);
     expect(resume.byCause).toEqual({ REGENERATED: 1, REFINED: 2 });
@@ -95,7 +98,7 @@ describe("computeInsights", () => {
   it("is all zeros with nothing to count", () => {
     const insights = computeInsights([], now);
     expect(insights.totals).toMatchObject({ applications: 0, sent: 0, replyRate: null });
-    expect(insights.resume).toMatchObject({ revisions: 0, perApplication: 0, mostRevised: [] });
+    expect(insights.resume).toMatchObject({ resumes: 0, versions: 0, revisions: 0, perApplication: 0, mostRevised: [] });
     expect(insights.byPlatform).toEqual([]);
   });
 });

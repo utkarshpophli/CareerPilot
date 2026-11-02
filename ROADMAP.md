@@ -94,7 +94,7 @@ Goal: someone who has never seen the project connects Claude Code and OpenCode i
 
 Risks: OpenCode and Claude Code change their config formats; the generated text must carry the date it was checked and be re-verified on each release. OAuth to `localhost` from a desktop tool may need the redirect allow-list (already in Settings, MCP connector).
 
-### M3. The dashboard as the front door: NEXT (about 1 week)
+### M3. The dashboard as the front door: DONE 2026-11-02 (about 1 week)
 
 Goal: the front screen answers "how many, where, how many resume versions, which template, what are my assistants doing" without a click.
 
@@ -111,6 +111,12 @@ Cards (each links to the detail page; all read from data that already exists unl
 Tasks: query functions in `lib/dashboard-data.ts` with tests (empty, one, many); card components with dom tests; keep the funnel and week chart; layout works at phone width; accessibility scan includes the new cards.
 
 Done when the dashboard on a database with a few applications shows all five cards correctly, and the empty state still shows the three first steps.
+
+**Result.** Built and verified. `lib/front-door.ts` arranges figures that already exist (Insights, connected assistants, running runs, agent drafts) and is tested on empty, one and many; `lib/front-door-data.ts` loads them (database tests); `app/(app)/front-door.tsx` draws the five cards, each linking to its detail page (Insights, Connect, Runs, Agent, "Worth a look"). They sit above the funnel, outside the time filter, and are absent from the empty welcome, which still teaches the three first steps. The Resume card needed two more Insights figures (resumes, and all versions including first drafts). Browser specs run on the demo data and on seeded assistant, run and agent-draft rows, in UTC+5:30, with axe at desktop and phone width (93 dashboard-related specs pass). The full unit and database suites pass (2,090).
+
+Two choices to know about. "Needs you" shows agent drafts waiting for review and the count of things in "Worth a look"; **proposals from assistants are not in it yet** (they arrive with M4a). "Template with the most replies" is the most replies, ties broken by reply rate, and says "of N sent" so a small sample is not mistaken for a finding.
+
+**Found on the way, fixed:** the funnel's sideways-scrolling areas were not keyboard-reachable (axe `scrollable-region-focusable`, only visible on a narrow screen), and the Insights tables widened the page on a phone. **Found, not fixed:** the app shell has no phone layout of its own (the sidebar stays 260px wide unless collapsed to icons, so every page overflows at 375px with it open, including ones this project did not touch). The cards were tested with the sidebar collapsed, the shell's supported small state; a real responsive shell is added to M10 task 10.2.
 
 ### M4. Assistants and the app do the job-search work: NEXT (about 6 to 8 weeks in four parts)
 
@@ -236,7 +242,7 @@ The part that makes "how many times did my resume change, which template" rich, 
 | # | Task |
 |---|---|
 | 10.1 | Final security review of the finished product against `docs/security/`; every finding fixed or accepted in an ADR |
-| 10.2 | Accessibility gate (axe in e2e on every screen, including Runs, Connect and the new cards), keyboard pass, reduced-motion check |
+| 10.2 | Accessibility gate (axe in e2e on every screen, including Runs, Connect and the new cards), keyboard pass, reduced-motion check, **and a phone layout for the app shell** (sidebar as an off-canvas menu below a width; today every page overflows at 375px with the sidebar open) |
 | 10.3 | Publish a container image under this project's own name with a pinned base, SBOM and licence texts inside; versioned releases and release notes; the update check points at them |
 | 10.4 | Docs: install on Windows, macOS, Linux, Docker and a small server behind HTTPS; connect Claude Code and OpenCode; backup and restore; upgrade; troubleshooting |
 | 10.5 | Legal review (engineering notes are not legal advice): AGPL for a fork with no named upstream holder, the two credited forks, per-source terms, trademark of "career-ops" |

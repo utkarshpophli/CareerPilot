@@ -154,6 +154,21 @@ describe("the dashboard (E9-7)", () => {
     expect(screen.getByRole("link", { name: "Connect an assistant" })).toHaveAttribute("href", "/connect");
   });
 
+  // The front-door cards answer the main questions without a click (roadmap M3).
+  it("shows the front-door cards above the funnel, outside the time filter", () => {
+    render(<Dashboard {...props} range="30d" frontDoor={<section aria-label="Front door">cards</section>} />);
+    const cards = screen.getByRole("region", { name: "Front door" });
+    const funnel = screen.getByRole("heading", { name: "Your funnel" });
+    expect(cards.compareDocumentPosition(funnel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cards.closest("[aria-busy]")).toBeNull();
+  });
+
+  it("leaves the front-door cards out of the empty welcome, which keeps teaching the first steps", () => {
+    render(<Dashboard {...props} empty figures={{ ...figures, sent: 0 }} frontDoor={<section aria-label="Front door">cards</section>} />);
+    expect(screen.queryByRole("region", { name: "Front door" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Welcome to CareerPilot" })).toBeInTheDocument();
+  });
+
   it("shows the calendar after the cards, outside the time filter (E15-6)", () => {
     const calendar = <section aria-label="Calendar" />;
     const { rerender } = render(<Dashboard {...props} calendar={calendar} />);

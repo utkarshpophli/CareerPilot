@@ -38,6 +38,10 @@ export type Insights = {
   /** Resume templates (themes), by how many resumes used each. */
   byTemplate: InsightRow[];
   resume: {
+    /** How many resumes there are (one per application at most). */
+    resumes: number;
+    /** Every saved resume version, first drafts included. */
+    versions: number;
     /** Versions saved after the first draft: regenerated, refined, restored, trimmed… */
     revisions: number;
     perApplication: number;
@@ -118,10 +122,14 @@ export function computeInsights(applications: InsightApplication[], now: Date): 
   const causes: Partial<Record<VersionCause, number>> = {};
   const revised: { applicationId: string; title: string; revisions: number }[] = [];
   let revisions = 0;
+  let resumes = 0;
+  let versions = 0;
   for (const application of applications) {
     let own = 0;
     for (const document of application.documents) {
       if (document.kind !== "RESUME") continue;
+      resumes += 1;
+      versions += document.versionCauses.length;
       for (const cause of document.versionCauses) {
         if (cause === "WRITTEN") continue;
         causes[cause] = (causes[cause] ?? 0) + 1;
@@ -151,6 +159,8 @@ export function computeInsights(applications: InsightApplication[], now: Date): 
       return resumes.length > 0 ? resumes.map((resume) => resume.themeName ?? BASE_TEMPLATE) : [];
     }),
     resume: {
+      resumes,
+      versions,
       revisions,
       perApplication: applications.length > 0 ? revisions / applications.length : 0,
       byCause: causes,
