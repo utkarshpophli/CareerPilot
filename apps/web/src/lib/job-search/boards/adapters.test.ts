@@ -210,3 +210,20 @@ describe("against real recordings", () => {
     }
   });
 });
+
+describe("Greenhouse against real recordings", () => {
+  it("every posting has a title, an https link, a numeric id under its board, and plain text with no markup left", () => {
+    const json = real("greenhouse-jobs.json");
+    const postings = parseGreenhouse(json, { slug: "stripe" }, "Stripe");
+    expect(postings.length).toBe((json as { jobs: unknown[] }).jobs.length);
+    for (const posting of postings) {
+      expect(posting.title).not.toBe("");
+      expect(posting.url).toMatch(/^https:\/\//);
+      expect(posting.externalId).toMatch(/^stripe:\d+$/);
+      expect(posting.description.length).toBeGreaterThan(0);
+      expect(posting.description).not.toMatch(/<\/?[a-z][^>]*>/i);
+      expect(posting.description).not.toMatch(/&(?:lt|gt|amp|nbsp|#\d+);/);
+      expect(posting.postedAt === null || !Number.isNaN(Date.parse(posting.postedAt))).toBe(true);
+    }
+  });
+});

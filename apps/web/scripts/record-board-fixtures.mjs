@@ -9,15 +9,37 @@
 
 const BOARDS = {
   "greenhouse-jobs": { url: "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
-  "greenhouse-offices": { url: "https://boards-api.greenhouse.io/v1/boards/stripe/offices", pick: (json) => ({ ...json, offices: json.offices.slice(0, 2) }) },
+  // Most of a big board's offices hold no postings, so take the first few that do (anywhere in the tree), flattened.
+  "greenhouse-offices": { url: "https://boards-api.greenhouse.io/v1/boards/stripe/offices", pick: (json) => ({ offices: officesWithJobs(json.offices).slice(0, 3) }) },
   "lever-postings": { url: "https://api.lever.co/v0/postings/palantir", pick: (json) => json.slice(0, 3) },
   "ashby-board": { url: "https://api.ashbyhq.com/posting-api/job-board/openai?includeCompensation=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
 };
 
 const MAX_STRING = 2000;
 
+/** Offices (at any depth) that list at least one job, cut down to a few departments and jobs each, without their children. */
+function officesWithJobs(offices) {
+  const found = [];
+  const walk = (list) => {
+    for (const office of list ?? []) {
+      const departments = (office.departments ?? []).filter((department) => department.jobs?.length);
+      if (departments.length > 0) {
+        found.push({
+          ...office,
+          child_ids: (office.child_ids ?? []).slice(0, 5),
+          children: [],
+          departments: departments.slice(0, 2).map((department) => ({ ...department, child_ids: (department.child_ids ?? []).slice(0, 5), jobs: department.jobs.slice(0, 3) })),
+        });
+      }
+      walk(office.children);
+    }
+  };
+  walk(offices);
+  return found;
+}
+
 /** Shortens long strings anywhere in a value, leaving everything else as it is. */
-export function shorten(value) {
+function shorten(value) {
   if (typeof value === "string") return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}[... ${value.length - MAX_STRING} characters cut]` : value;
   if (Array.isArray(value)) return value.map(shorten);
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, shorten(inner)]));
