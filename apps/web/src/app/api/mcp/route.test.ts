@@ -138,6 +138,7 @@ describe("the Claude connector at /api/mcp (#221)", () => {
 
     const { result } = await answer(await call({ jsonrpc: "2.0", id: 2, method: "tools/list" }, token));
     expect(result?.tools?.map((entry) => entry.name).sort()).toEqual([
+      "add_company",
       "check_draft",
       "draft_application",
       "get_application",
@@ -148,6 +149,7 @@ describe("the Claude connector at /api/mcp (#221)", () => {
       "propose_status",
       "save_application",
       "save_job_scores",
+      "scan_companies",
       "search_jobs",
       "set_application_status",
     ]);

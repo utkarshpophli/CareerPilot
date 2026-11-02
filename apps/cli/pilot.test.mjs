@@ -209,3 +209,35 @@ test("apps show reads one application", async () => {
   assert.match(result.out, /Engineer at Acme/);
   assert.equal((await pilot(["apps", "show"])).code, 2);
 });
+
+test("companies lists, adds and scans through the API", async () => {
+  const listed = await pilot(["companies"], { answer: { data: [{ id: "c1", name: "Acme", source: "GREENHOUSE", slug: "acme", enabled: true, lastOkAt: null, lastError: "", lastFound: 0 }] } });
+  assert.equal(listed.code, 0);
+  assert.equal(seen[0].method, "GET");
+  assert.equal(seen[0].url, "/api/v1/companies");
+
+  const added = await pilot(["companies", "add", "https://job-boards.greenhouse.io/acme", "--name", "Acme Corp"], { answer: { data: { id: "c1", name: "Acme Corp", source: "GREENHOUSE", slug: "acme", created: true } } });
+  assert.equal(added.code, 0);
+  assert.deepEqual(seen[0].body, { board: "https://job-boards.greenhouse.io/acme", name: "Acme Corp" });
+  assert.match(added.out, /Now watching Acme Corp/);
+  const withSource = await pilot(["companies", "add", "stripe", "--source", "greenhouse"], { answer: { data: { id: "c2", name: "stripe", created: false } } });
+  assert.deepEqual(seen[0].body, { board: "stripe", source: "GREENHOUSE" });
+  assert.match(withSource.out, /Already watching stripe/);
+
+  const scanned = await pilot(["companies", "scan", "product", "designer", "--place", "Berlin", "--limit", "10"], {
+    answer: { data: { scanned: 1, skipped: 0, matched: 0, companies: [{ id: "c1", name: "Acme", found: 3 }], postings: [] } },
+  });
+  assert.equal(scanned.code, 0);
+  assert.equal(seen[0].url, "/api/v1/companies/scan");
+  assert.deepEqual(seen[0].body, { keywords: "product designer", place: "Berlin", limit: 10 });
+});
+
+test("companies add without a board, or an unknown source, is a usage error and sends nothing", async () => {
+  assert.equal((await pilot(["companies", "add"])).code, 2);
+  assert.equal(seen.length, 0);
+  const result = await pilot(["companies", "add", "stripe", "--source", "workday"]);
+  assert.equal(result.code, 2);
+  assert.match(result.err, /GREENHOUSE, LEVER or ASHBY/);
+  assert.equal(seen.length, 0);
+  assert.equal((await pilot(["companies", "remove", "c1"])).code, 2);
+});

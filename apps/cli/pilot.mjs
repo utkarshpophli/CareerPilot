@@ -8,15 +8,18 @@ import { dirname, join } from "node:path";
 
 import {
   applicationStatus,
+  boardSource,
   finishStatus,
   formatActivity,
   formatApplication,
   formatApplications,
   formatCheck,
+  formatCompanies,
   formatInsights,
   formatProposals,
   formatRun,
   formatRuns,
+  formatScan,
   formatSearch,
   parseArgs,
   parseData,
@@ -41,6 +44,9 @@ Commands:
   apps status <id> <STATUS>           DRAFT, REJECTED or DECLINED (SENT and later are the user's to set in the dashboard)
   apps propose <id> <STATUS>          ask the user to confirm SENT, SCREENING, INTERVIEW, OFFER or ACCEPTED (--reason "..."); changes nothing
   proposals                           what is waiting for the user to confirm
+  companies                           the watched employer job boards and how each last scan went
+  companies add <board>               watch a board (--source GREENHOUSE|LEVER|ASHBY, or paste its careers link; --name "Acme")
+  companies scan [keywords]           read the watched boards (--place P, --limit N); postings come back as snippets with links
   search <keywords>                   run a job search (--place, --country, --remote, --within day|3days|week|month|any, --radius KM)
   search show <id>                    a kept search with its numbered postings (costs no search)
   search more <id>                    the next page of a kept search
@@ -65,7 +71,7 @@ Environment:
 
 Exit codes: 0 done, 1 error, 2 wrong usage, 3 "check" found something that looks like an instruction aimed at an AI.`;
 
-const COMMANDS = new Set(["status", "apps", "proposals", "search", "scores", "activity", "insights", "check", "runs", "run", "skills"]);
+const COMMANDS = new Set(["status", "apps", "proposals", "companies", "search", "scores", "activity", "insights", "check", "runs", "run", "skills"]);
 
 async function request(server, token, path, { method = "GET", body, headers = {} } = {}) {
   let response;
@@ -178,6 +184,22 @@ async function main(argv, env) {
   } else if (command === "proposals") {
     const data = await call("/api/v1/proposals");
     show(data, formatProposals(data));
+  } else if (command === "companies") {
+    if (args[0] === "add") {
+      if (args.length < 2) throw new UsageError('Usage: pilot companies add <board> [--source GREENHOUSE|LEVER|ASHBY] [--name "Acme"]');
+      const data = await call("/api/v1/companies", { method: "POST", body: { board: args[1], source: flags.source ? boardSource(flags.source) : undefined, name: flags.name || undefined } });
+      show(data, data.created ? `Now watching ${data.name} (${data.source} ${data.slug}).` : `Already watching ${data.name}.`);
+    } else if (args[0] === "scan") {
+      const limit = flags.limit === undefined ? undefined : Number(flags.limit);
+      if (limit !== undefined && !Number.isInteger(limit)) throw new UsageError("--limit is a number of postings.");
+      const data = await call("/api/v1/companies/scan", { method: "POST", body: { keywords: args.slice(1).join(" ") || undefined, place: flags.place || undefined, limit } });
+      show(data, formatScan(data));
+    } else if (args.length === 0) {
+      const data = await call("/api/v1/companies");
+      show(data, formatCompanies(data));
+    } else {
+      throw new UsageError("Usage: pilot companies [add <board> | scan [keywords]]  (removing a company is done in Settings)");
+    }
   } else if (command === "search") {
     if (args[0] === "show" || args[0] === "more") {
       need(args, 2, `search ${args[0]} <id>`);

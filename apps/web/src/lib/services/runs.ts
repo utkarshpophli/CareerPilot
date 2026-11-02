@@ -19,6 +19,9 @@ export { addRunStep, finishRun, getRun, listRuns, startRun } from "@/lib/runs";
 /** Who counts as an assistant: a token client over REST or the pilot CLI, or a connected MCP client. */
 const ASSISTANTS: readonly ActivityActor[] = [ActivityActor.CLI, ActivityActor.MCP];
 
+/** Adds a step to the operation's run; does nothing when nobody is watching (the owner's own click, or reporting failed). */
+export type StepReporter = (summary: string, data?: Prisma.InputJsonObject) => Promise<void>;
+
 export type OperationRun = { kind: string; title: string; applicationId?: string | null };
 export type OperationResult = { summary: string; data?: Prisma.InputJsonObject };
 
@@ -41,12 +44,15 @@ async function quietly<T>(what: string, report: () => Promise<T>): Promise<T | u
  * the reason (the error still goes to the caller). `describe` returns small
  * counts, never documents.
  */
-export async function reportAsRun<T>(db: PrismaClient, operation: OperationRun, work: () => Promise<T>, describe?: (result: T) => OperationResult): Promise<T> {
-  if (!ASSISTANTS.includes(currentActor().kind)) return work();
+export async function reportAsRun<T>(db: PrismaClient, operation: OperationRun, work: (run: { step: StepReporter }) => Promise<T>, describe?: (result: T) => OperationResult): Promise<T> {
+  if (!ASSISTANTS.includes(currentActor().kind)) return work({ step: async () => {} });
   const run = await quietly("start", () => startRun(db, operation));
+  const step: StepReporter = async (summary, data) => {
+    if (run) await quietly("step", () => addRunStep(db, run.id, { summary, data }));
+  };
   let result: T;
   try {
-    result = await work();
+    result = await work({ step });
   } catch (error) {
     if (run) await quietly("finish", () => finishRun(db, run.id, { status: RunStatus.FAILED, summary: reasonFor(error) }));
     throw error;

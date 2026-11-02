@@ -25,6 +25,28 @@ describe("reportAsRun", () => {
     expect(events[1]!.data).toEqual({ found: 7 });
   });
 
+  it("lets the work add its own steps, in order, before the closing one", async () => {
+    await asAssistant(() =>
+      reportAsRun(
+        db,
+        { kind: "companies.scan", title: "Scan" },
+        async ({ step }) => {
+          await step("First board", { found: 1 });
+          await step("Second board");
+          return 2;
+        },
+        (n) => ({ summary: `Done: ${n}` }),
+      ),
+    );
+    const run = await db.agentRun.findFirstOrThrow();
+    expect(run).toMatchObject({ status: "OK", stepCount: 3, lastStep: "Done: 2" });
+    const steps = await db.activityEvent.findMany({ where: { runId: run.id, action: ACTIONS.runStep }, orderBy: { at: "asc" } });
+    expect(steps.map((event) => event.summary)).toEqual(["First board", "Second board", "Done: 2"]);
+    // The owner's own scan has no run to add steps to, and the work still runs.
+    expect(await reportAsRun(db, { kind: "x", title: "x" }, async ({ step }) => (await step("ignored"), "ok"))).toBe("ok");
+    expect(await db.agentRun.count()).toBe(1);
+  });
+
   it("reports nothing for the owner's own clicks or for the app's own work", async () => {
     await reportAsRun(db, { kind: "searches.run", title: "x" }, async () => 1);
     await runAsActor({ kind: "SYSTEM" }, () => reportAsRun(db, { kind: "searches.run", title: "x" }, async () => 1));

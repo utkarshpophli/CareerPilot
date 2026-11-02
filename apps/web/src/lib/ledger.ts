@@ -21,6 +21,8 @@ export const ACTIONS = {
   jobFinished: "job.finished",
   mcpToolCalled: "mcp.tool_called",
   agentScanFinished: "agent.scan_finished",
+  companyAdded: "company.added",
+  boardsScanned: "boards.scanned",
   postingChecked: "posting.checked",
   proposalCreated: "proposal.created",
   proposalConfirmed: "proposal.confirmed",

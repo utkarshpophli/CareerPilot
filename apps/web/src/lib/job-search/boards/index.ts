@@ -3,7 +3,7 @@ import { greenhouse } from "./greenhouse";
 import { lever } from "./lever";
 import { BOARD_SOURCES, type BoardAdapter, type BoardSource } from "./types";
 
-export { BOARD_SOURCES, BoardError, type BoardPosting, type BoardRef, type BoardSource } from "./types";
+export { BOARD_SOURCES, BoardError, type BoardAdapter, type BoardPosting, type BoardRef, type BoardSource } from "./types";
 
 const ADAPTERS: Record<BoardSource, BoardAdapter> = { GREENHOUSE: greenhouse, LEVER: lever, ASHBY: ashby };
 

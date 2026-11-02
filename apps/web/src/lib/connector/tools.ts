@@ -9,12 +9,14 @@ import { isAiUsable } from "@/lib/ai/config";
 import { profileForPrompt } from "@/lib/ai/tasks/prompt-parts";
 import { countryName } from "@/lib/job-search/countries";
 import { fullText } from "@/lib/job-search/find";
+import { BOARD_SOURCES } from "@/lib/job-search/boards";
 import { foundPostingSchema, POSTED_WITHIN, postingText, RADII_KM, type PostedWithin } from "@/lib/job-search/search";
 import { getJob, startJob } from "@/lib/jobs/runner";
 import { fetchPosting } from "@/lib/posting-fetch";
 import { ServiceError } from "@/lib/service-error";
 import { describeApplication, listApplications, moveApplication, proposeStatus, readApplication } from "@/lib/services/applications";
 import { checkPostingText, saveFitScores } from "@/lib/services/postings";
+import { addCompany, boardPostingSummary, scanCompanies } from "@/lib/services/companies";
 import { moreJobs, postingSummary, runJobSearch } from "@/lib/services/searches";
 import { foundFromPosting, storePosting } from "@/lib/postings";
 import { prisma } from "@/lib/prisma";
@@ -464,6 +466,61 @@ export function createDossierServer(origin: string): McpServer {
       try {
         const proposal = await proposeStatus(prisma, { applicationId: id, status, reason: reason ?? "" });
         return text({ id, status: statusInfo(status).label, waiting_for: "the user to confirm it on the dashboard", proposal: proposal.id });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "add_company",
+    {
+      title: "Watch a company's job board",
+      description:
+        "Starts watching an employer's own job board on Greenhouse, Lever or Ashby, so scan_companies can read its open postings. Give the board's name (for example 'stripe') and its source, or paste the company's careers address and leave the source out. It only records a name; nothing is sent.",
+      inputSchema: z.object({
+        board: z.string().min(1).max(500).describe("The board's name on the source, or the company's careers address"),
+        source: z.enum(BOARD_SOURCES).optional().describe("GREENHOUSE, LEVER or ASHBY; leave out when board is a careers address"),
+        name: z.string().max(200).optional().describe("What to call the company"),
+      }),
+      annotations: { readOnlyHint: false, idempotentHint: true },
+    },
+    async (input) => {
+      try {
+        const company = await addCompany(prisma, input);
+        return text({ id: company.id, name: company.name, source: company.source, board: company.slug, created: company.created });
+      } catch (error) {
+        if (error instanceof ServiceError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "scan_companies",
+    {
+      title: "Read the watched companies' job boards",
+      description:
+        "Reads the job board of each watched company in turn and returns the open postings that match, newest first, as short snippets with a link. A board that fails is reported and does not stop the others. Give keywords (every word must appear) and a place (remote postings match any place) to narrow it. Takes up to a minute and a half for many boards.",
+      inputSchema: z.object({
+        keywords: z.string().max(200).optional(),
+        place: z.string().max(200).optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      }),
+      annotations: { readOnlyHint: false, openWorldHint: true },
+    },
+    async ({ keywords, place, limit }) => {
+      try {
+        const result = await scanCompanies(prisma, { keywords, place, limit: limit ?? 30 });
+        return text({
+          notice: UNTRUSTED_NOTICE,
+          scanned: result.scanned,
+          not_reached: result.skipped || undefined,
+          boards: result.companies.map((company) => ({ name: company.name, found: company.found, problem: company.error, not_reached: company.skipped })),
+          matched: result.matched,
+          postings: result.postings.map(boardPostingSummary),
+        });
       } catch (error) {
         if (error instanceof ServiceError) return failure(error.message);
         throw error;

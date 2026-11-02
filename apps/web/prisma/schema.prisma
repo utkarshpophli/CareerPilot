@@ -1095,3 +1095,36 @@ model StatusProposal {
   @@index([state, createdAt])
   @@index([applicationId, state])
 }
+
+/// Which board source an employer's job board is on (ADR 0003).
+enum BoardSource {
+  GREENHOUSE
+  LEVER
+  ASHBY
+}
+
+/// An employer whose own job board the owner (or an assistant, as a draft-level
+/// action: it only reads public data) asked to watch. A scan reads each enabled
+/// board in turn and records how it went here, so a broken board shows as such
+/// instead of quietly returning nothing.
+model TrackedCompany {
+  id         String      @id @default(cuid())
+  source     BoardSource
+  /// The board's name on the source, for example "stripe".
+  slug       String
+  /// "eu" where the source has a separate EU service (Lever); empty otherwise.
+  region     String      @default("")
+  /// What the owner calls it; shown on postings.
+  name       String
+  enabled    Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  lastScanAt DateTime?
+  lastOkAt   DateTime?
+  /// Words for the screen, safe to show; empty when the last scan worked.
+  lastError  String      @default("")
+  /// How many postings the last good scan found.
+  lastFound  Int         @default(0)
+
+  @@unique([source, slug, region])
+  @@index([enabled, name])
+}

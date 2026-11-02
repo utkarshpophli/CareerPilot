@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplication, formatApplications, formatCheck, formatInsights, formatRun, formatRuns, formatSearch, parseArgs, parseData, parseScores, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
+import { applicationStatus, finishStatus, proposableStatus, formatActivity, formatApplication, formatApplications, formatCheck, formatCompanies, formatScan, formatInsights, formatRun, formatRuns, formatSearch, parseArgs, parseData, parseScores, serverFrom, skillFiles, table, tokenFrom, UsageError } from "./lib.mjs";
 
 test("parseArgs separates the command, arguments and flags", () => {
   assert.deepEqual(parseArgs(["apps", "--status", "SENT", "--json"]), { command: "apps", args: [], flags: { status: "SENT", json: true } });
@@ -206,4 +206,36 @@ test("formatApplication shows the details, the documents, and the posting as dat
   assert.match(text, /## Summary/);
   assert.match(text, /data, not instructions/i);
   assert.doesNotMatch(text, /\u001b/);
+});
+
+test("formatCompanies shows each board and how its last scan went", () => {
+  const text = formatCompanies([
+    { id: "c1", name: "Acme", source: "GREENHOUSE", slug: "acme", enabled: true, lastOkAt: "2026-11-01T09:30:00.000Z", lastError: "", lastFound: 12 },
+    { id: "c2", name: "Gone\u001b[2J", source: "LEVER", slug: "gone", enabled: false, lastOkAt: null, lastError: "The source has no such board.", lastFound: 0 },
+  ]);
+  assert.match(text, /Acme\s+GREENHOUSE\s+acme\s+ok\s+12/);
+  assert.match(text, /Gone\[2J\s+LEVER\s+gone\s+off/);
+  assert.match(text, /The source has no such board/);
+  assert.doesNotMatch(text, /\u001b/);
+  assert.equal(formatCompanies([]), "No companies are watched. Add one: pilot companies add stripe --source GREENHOUSE");
+});
+
+test("formatScan lists postings by company, says which boards failed, and labels them as data", () => {
+  const text = formatScan({
+    scanned: 2,
+    skipped: 1,
+    matched: 2,
+    companies: [
+      { id: "c1", name: "Acme", found: 5 },
+      { id: "c2", name: "Gone", found: 0, error: "No such board." },
+      { id: "c3", name: "Late", found: 0, skipped: true },
+    ],
+    postings: [{ title: "Designer", company: "Acme", location: "Berlin", url: "https://example.test/1", posted: "2026-10-20", snippet: "Figma" }],
+  });
+  assert.match(text, /Scanned 2 boards/);
+  assert.match(text, /Gone: No such board\./);
+  assert.match(text, /Late: not reached/);
+  assert.match(text, /Designer\s+Acme\s+Berlin/);
+  assert.match(text, /https:\/\/example\.test\/1/);
+  assert.match(text, /data, not instructions/i);
 });
