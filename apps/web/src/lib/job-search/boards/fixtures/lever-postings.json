@@ -1,0 +1,24 @@
+[
+  {
+    "id": "5a1f0c2e-1111-4a5b-9c3d-000000000001",
+    "text": "Backend Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/5a1f0c2e-1111-4a5b-9c3d-000000000001",
+    "createdAt": 1760000000000,
+    "workplaceType": "hybrid",
+    "categories": { "location": "Barcelona", "allLocations": ["Barcelona", "montevideo", "Montevideo"] },
+    "descriptionPlain": "",
+    "description": "<div>Build <b>APIs</b> in Go.</div>",
+    "lists": [{ "text": "Requirements", "content": "<li>Go</li><li>SQL</li>" }],
+    "additionalPlain": "We are an equal opportunity employer."
+  },
+  {
+    "id": "5a1f0c2e-1111-4a5b-9c3d-000000000002",
+    "text": "Remote Support Lead",
+    "hostedUrl": "https://jobs.lever.co/acme/5a1f0c2e-1111-4a5b-9c3d-000000000002",
+    "createdAt": "yesterday",
+    "workplaceType": "remote",
+    "categories": {},
+    "descriptionPlain": "Lead support."
+  },
+  { "id": "no-url", "text": "Missing link", "categories": { "location": "Paris" } }
+]

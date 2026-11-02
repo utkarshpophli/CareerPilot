@@ -1,0 +1,6 @@
+{
+  "offices": [
+    { "name": "Zurich", "departments": [{ "jobs": [{ "id": 4012346 }] }], "children": [] },
+    { "name": "Amsterdam", "departments": [{ "jobs": [{ "id": 4012346 }] }], "children": [{ "name": "Utrecht", "departments": [{ "jobs": [{ "id": 4012346 }] }] }] }
+  ]
+}

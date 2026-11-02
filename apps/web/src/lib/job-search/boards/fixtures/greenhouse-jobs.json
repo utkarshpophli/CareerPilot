@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "id": 4012345,
+      "requisition_id": "REQ-77",
+      "title": "Senior Product Designer",
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/4012345",
+      "first_published": "2026-10-20T08:15:00-04:00",
+      "location": { "name": "Berlin, Germany" },
+      "content": "&lt;p&gt;Design &amp;amp; ship &lt;strong&gt;Figma&lt;/strong&gt; systems.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years&lt;/li&gt;&lt;/ul&gt;"
+    },
+    {
+      "id": 4012346,
+      "title": "Account Executive",
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/4012346",
+      "first_published": "not a date",
+      "location": { "name": "Hybrid" },
+      "content": ""
+    },
+    { "id": 4012347, "title": "No link, so not usable", "location": { "name": "Remote" } },
+    { "id": { "weird": true }, "title": "Odd id", "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/9", "location": { "name": "Remote - Canada" } }
+  ]
+}
