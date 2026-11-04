@@ -62,6 +62,14 @@ test("counts the postings scans found that wait on the Review page, and links th
   await sql(`DELETE FROM "ScannedPosting"`);
 });
 
+test("counts the drafts whose job was found closed, and links to the draft when there is one", async ({ page }) => {
+  await sql(`INSERT INTO "Application" (id, "updatedAt", title, "postingOpen", "postingCheckedAt", "postingCheckNote") VALUES ('fd-closed', now(), 'Designer at Closed Co', false, now(), 'Greenhouse no longer lists it on the employer''s board.')`);
+  await page.goto("/");
+  const link = page.getByRole("region", { name: "Needs you" }).getByRole("link", { name: "1 draft" });
+  await expect(link).toHaveAttribute("href", "/applications/fd-closed");
+  await sql(`DELETE FROM "Application" WHERE id = 'fd-closed'`);
+});
+
 // The app's shell has no phone layout of its own (its sidebar is 260px wide unless collapsed to icons; roadmap M10 has
 // the responsive pass), so a phone is tested in the shell's small state: the sidebar collapsed.
 test("fits a phone with the sidebar collapsed, and has no serious accessibility problems", async ({ page }) => {

@@ -25,7 +25,7 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.applications).toMatchObject({ total: 0, sent: 0, trend: "flat" });
     expect(door.assistants).toMatchObject({ connected: 0, running: [] });
-    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, total: 0 });
+    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, total: 0 });
   });
 
   it("counts applications, platforms and resume versions from real rows", async () => {
@@ -64,6 +64,20 @@ describe("loadFrontDoor", () => {
     });
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.needsYou).toMatchObject({ newPostings: 2, total: 2 });
+  });
+
+  it("counts drafts whose job was found closed, and not sent, archived, unchecked or still-open ones", async () => {
+    const make = (id: string, data: Record<string, unknown>) => prisma().application.create({ data: { id, title: id, ...data } });
+    await make("closed-1", { postingOpen: false, createdAt: new Date("2026-11-01T00:00:00Z") });
+    await make("closed-2", { postingOpen: false, createdAt: new Date("2026-11-02T00:00:00Z") });
+    await make("open", { postingOpen: true });
+    await make("unknown", {});
+    await make("sent", { postingOpen: false, status: "SENT", sentAt: now });
+    await make("archived", { postingOpen: false, archivedAt: now });
+    await make("agent-draft", { postingOpen: false, awaitingReview: true });
+    const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
+    // The newest first, as the rest of the dashboard lists them.
+    expect(door.needsYou.closedDrafts).toEqual({ count: 2, firstId: "closed-2" });
   });
 
   it("lists the assistants' proposals waiting for the owner, and not the ones already answered", async () => {

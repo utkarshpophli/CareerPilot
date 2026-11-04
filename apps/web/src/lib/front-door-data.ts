@@ -15,12 +15,15 @@ import { countScannedPostings } from "./services/scanned-postings";
  * `attention` is how many things "Worth a look" lists.
  */
 export async function loadFrontDoor({ runs, attention, timeZone, now = new Date() }: { runs: RunView[]; attention: number; timeZone: string; now?: Date }): Promise<FrontDoor> {
-  const [insights, assistants, agentDrafts, proposals, scanned] = await Promise.all([
+  const closedWhere = { postingOpen: false, status: "DRAFT", archivedAt: null, awaitingReview: false } as const;
+  const [insights, assistants, agentDrafts, proposals, scanned, closedCount, closedFirst] = await Promise.all([
     loadInsights(now),
     listConnectedAssistants(prisma, startOfDay(now, timeZone)),
     prisma.application.count({ where: { awaitingReview: true } }),
     listPendingProposals(prisma, now),
     countScannedPostings(prisma),
+    prisma.application.count({ where: closedWhere }),
+    prisma.application.findFirst({ where: closedWhere, orderBy: { createdAt: "desc" }, select: { id: true } }),
   ]);
-  return computeFrontDoor({ insights, assistants, running: runs.filter((run) => run.status === "RUNNING"), agentDrafts, attention, proposals, newPostings: scanned.NEW });
+  return computeFrontDoor({ insights, assistants, running: runs.filter((run) => run.status === "RUNNING"), agentDrafts, attention, proposals, newPostings: scanned.NEW, closedDrafts: { count: closedCount, firstId: closedFirst?.id ?? null } });
 }

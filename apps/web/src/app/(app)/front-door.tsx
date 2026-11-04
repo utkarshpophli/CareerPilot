@@ -165,7 +165,7 @@ export function FrontDoorCards({ door, timeZone }: { door: FrontDoor; timeZone?:
           <>
             <ProposalList proposals={needsYou.proposals} />
             {needsYou.proposalCount > needsYou.proposals.length && <p className="text-meta text-muted">{needsYou.proposalCount - needsYou.proposals.length} more waiting.</p>}
-            {(needsYou.agentDrafts > 0 || needsYou.attention > 0 || needsYou.newPostings > 0) && (
+            {(needsYou.agentDrafts > 0 || needsYou.attention > 0 || needsYou.newPostings > 0 || needsYou.closedDrafts.count > 0) && (
               <ul className="flex flex-col gap-1.5 text-sm">
                 {needsYou.agentDrafts > 0 && (
                   <li>
@@ -181,6 +181,14 @@ export function FrontDoorCards({ door, timeZone }: { door: FrontDoor; timeZone?:
                       {plural(needsYou.newPostings, "new posting", "new postings")}
                     </Link>{" "}
                     found on the boards you watch, to review
+                  </li>
+                )}
+                {needsYou.closedDrafts.count > 0 && (
+                  <li>
+                    <Link href={needsYou.closedDrafts.count === 1 && needsYou.closedDrafts.firstId ? `/applications/${needsYou.closedDrafts.firstId}` : "/applications"} className="underline underline-offset-2">
+                      {plural(needsYou.closedDrafts.count, "draft", "drafts")}
+                    </Link>{" "}
+                    whose job {needsYou.closedDrafts.count === 1 ? "looks" : "look"} closed on the employer&apos;s board
                   </li>
                 )}
                 {needsYou.attention > 0 && (

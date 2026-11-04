@@ -13,7 +13,7 @@ vi.mock("@/components/toast", () => ({ toast: vi.fn(), toastResult: (result: unk
 
 const now = new Date("2026-11-04T10:00:00Z");
 
-const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0, proposals: [], newPostings: 0 });
+const emptyDoor = () => computeFrontDoor({ insights: computeInsights([], now), assistants: [], running: [], agentDrafts: 0, attention: 0, proposals: [], newPostings: 0, closedDrafts: { count: 0, firstId: null } });
 
 function app(overrides: Partial<InsightApplication> & { id: string }): InsightApplication {
   return {
@@ -38,6 +38,7 @@ const fullDoor = () =>
     agentDrafts: 2,
     attention: 3,
     newPostings: 7,
+    closedDrafts: { count: 2, firstId: "app-9" },
     proposals: [
       {
         id: "p1", applicationId: "a1", status: "SENT", reason: "The user told me", actorName: "claude-code", state: "PENDING",
@@ -93,6 +94,21 @@ describe("FrontDoorCards with a few applications", () => {
     expect(within(needs).getByRole("link", { name: /2 drafts from your assistants/ })).toHaveAttribute("href", "/agent");
     expect(within(needs).getByRole("link", { name: "3 things" })).toHaveAttribute("href", "#attention-heading");
     expect(within(needs).getByRole("link", { name: "7 new postings" })).toHaveAttribute("href", "/review");
+    expect(within(needs).getByRole("link", { name: "2 drafts" })).toHaveAttribute("href", "/applications");
+  });
+
+  it("links straight to the draft when only one job looks closed, and says nothing when none does", () => {
+    const one = fullDoor();
+    one.needsYou.closedDrafts = { count: 1, firstId: "app-9" };
+    const { unmount } = render(<FrontDoorCards door={one} />);
+    const link = screen.getByRole("link", { name: "1 draft" });
+    expect(link).toHaveAttribute("href", "/applications/app-9");
+    expect(link.closest("li")).toHaveTextContent("1 draft whose job looks closed on the employer's board");
+    unmount();
+    const none = fullDoor();
+    none.needsYou.closedDrafts = { count: 0, firstId: null };
+    render(<FrontDoorCards door={none} />);
+    expect(screen.queryByText(/looks closed|look closed/)).toBeNull();
   });
 
   it("says 'new posting' for one, and nothing about postings when there are none", () => {
