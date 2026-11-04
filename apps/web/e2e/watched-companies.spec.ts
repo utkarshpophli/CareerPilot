@@ -9,6 +9,8 @@ import { hydrated, resetData, sql } from "./support";
 test.beforeEach(resetData);
 
 async function expectAccessible(page: Page) {
+  // Next drops the <title> for a moment while it re-renders after a server action; axe's document-title rule saw that gap.
+  await expect(page).toHaveTitle(/\S/);
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical").map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`)).toEqual([]);
 }
