@@ -47,7 +47,7 @@ Commands:
   proposals                           what is waiting for the user to confirm
   postings                            the kept postings, best score first (--min-score N, --state NEW|SAVED|DISMISSED, --limit N)
   companies                           the watched employer job boards and how each last scan went
-  companies add <board>               watch a board (--source GREENHOUSE|LEVER|ASHBY|WORKABLE|RECRUITEE|TEAMTAILOR, or paste its careers link; --name "Acme")
+  companies add <board>               watch a board (--source GREENHOUSE|LEVER|ASHBY|WORKABLE|RECRUITEE|TEAMTAILOR|ATLASSIAN, or paste its careers link; --name "Acme")
   companies scan [keywords]           read the watched boards (--place P, --limit N); postings come back as snippets with links
   search <keywords>                   run a job search (--place, --country, --remote, --within day|3days|week|month|any, --radius KM)
   search show <id>                    a kept search with its numbered postings (costs no search)
@@ -188,7 +188,7 @@ async function main(argv, env) {
     show(data, formatProposals(data));
   } else if (command === "companies") {
     if (args[0] === "add") {
-      if (args.length < 2) throw new UsageError('Usage: pilot companies add <board> [--source GREENHOUSE|LEVER|ASHBY|WORKABLE|RECRUITEE|TEAMTAILOR] [--name "Acme"]');
+      if (args.length < 2) throw new UsageError('Usage: pilot companies add <board> [--source GREENHOUSE|LEVER|ASHBY|WORKABLE|RECRUITEE|TEAMTAILOR|ATLASSIAN] [--name "Acme"]');
       const data = await call("/api/v1/companies", { method: "POST", body: { board: args[1], source: flags.source ? boardSource(flags.source) : undefined, name: flags.name || undefined } });
       show(data, data.created ? `Now watching ${data.name} (${data.source} ${data.slug}).` : `Already watching ${data.name}.`);
     } else if (args[0] === "scan") {

@@ -20,6 +20,7 @@ const SOURCES = [
   { value: "WORKABLE", label: "Workable" },
   { value: "RECRUITEE", label: "Recruitee" },
   { value: "TEAMTAILOR", label: "Teamtailor" },
+  { value: "ATLASSIAN", label: "Atlassian" },
 ] as const;
 const sourceName = (source: string) => SOURCES.find((entry) => entry.value === source)?.label ?? source;
 
@@ -35,7 +36,7 @@ function health(company: CompanyListItem): string {
 }
 
 /**
- * Settings → Watched companies (M4b.5): the employers whose own job boards (Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor) are read for
+ * Settings → Watched companies (M4b.5): the employers whose own job boards (Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor, Atlassian) are read for
  * you. What they list lands on the Review page. Assistants can add a board and scan too; only you can remove one.
  */
 export function CompaniesSection({ initial }: { initial: CompanyListItem[] }) {
@@ -92,7 +93,7 @@ export function CompaniesSection({ initial }: { initial: CompanyListItem[] }) {
   return (
     <>
       <SettingsSectionIntro title="Watched companies">
-        Employers whose own job boards on Greenhouse, Lever, Ashby, Workable, Recruitee or Teamtailor are read for you. Paste a company&apos;s careers link, or give the name of its board and where it is. What they list lands on the Review page, scored against your profile. Postings are read from the employer&apos;s public board, one company at a time.
+        Employers whose own job boards on Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor or Atlassian are read for you. Paste a company&apos;s careers link, or give the name of its board and where it is. What they list lands on the Review page, scored against your profile. Postings are read from the employer&apos;s public board, one company at a time.
       </SettingsSectionIntro>
 
       <form onSubmit={(event) => void add(event)} className="flex flex-wrap items-end gap-3">

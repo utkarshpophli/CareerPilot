@@ -13,9 +13,9 @@ import { boardAdapter, type BoardSource } from "./index";
 
 const live = new Set((process.env.BOARDS_LIVE ?? "").split(",").map((name) => name.trim().toUpperCase()));
 
-const DEFAULT_BOARD: Record<BoardSource, string> = { GREENHOUSE: "stripe", LEVER: "palantir", ASHBY: "openai", WORKABLE: "huggingface", RECRUITEE: "channable", TEAMTAILOR: "podimo" };
+const DEFAULT_BOARD: Record<BoardSource, string> = { GREENHOUSE: "stripe", LEVER: "palantir", ASHBY: "openai", WORKABLE: "huggingface", RECRUITEE: "channable", TEAMTAILOR: "podimo", ATLASSIAN: "atlassian" };
 
-describe.each(["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR"] as const)("%s (live)", (source) => {
+describe.each(["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR", "ATLASSIAN"] as const)("%s (live)", (source) => {
   it.skipIf(!live.has(source))("reads a real board into postings with a title, a link and an id", async () => {
     const slug = process.env[`BOARDS_LIVE_${source}`] || DEFAULT_BOARD[source];
     const postings = await boardAdapter(source).fetchBoard({ slug }, slug);

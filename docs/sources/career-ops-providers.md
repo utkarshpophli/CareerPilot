@@ -11,13 +11,13 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | adp-workforcenow | not sorted yet | queued: verdict file first | - |
 | agentic-jobs | not sorted yet | queued: verdict file first | - |
 | alibaba | deferred | deferred: no robots.txt, no terms found | [alibaba.md](alibaba.md) |
-| amazon | deferred | deferred: its legal page has not been read | [amazon.md](amazon.md) |
+| amazon | deferred | deferred: its terms are amazon.com's Conditions of Use, not yet read | [amazon.md](amazon.md) |
 | apple | dropped | dropped: its website terms forbid page-scraping and robots | [apple.md](apple.md) |
 | applitrack | not sorted yet | queued: verdict file first | - |
 | arbeitnow | not sorted yet | queued: verdict file first | - |
 | arbeitsagentur | done | ported earlier (owner accepts a note first) | n/a |
 | ashby | done | ported (allowed with limits) | docs/sources/ashby.md |
-| atlassian | 2 company pages | verdict written (allowed with limits); adapter next | [atlassian.md](atlassian.md) |
+| atlassian | done | ported (allowed with limits) | [atlassian.md](atlassian.md) |
 | avature | not sorted yet | queued: verdict file first | - |
 | bamboohr | deferred | deferred: no real tenant sampled and its terms not read | [bamboohr.md](bamboohr.md) |
 | beesite | not sorted yet | queued: verdict file first | - |
@@ -33,7 +33,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | consider | not sorted yet | queued: verdict file first | - |
 | cryptocurrencyjobs | not sorted yet | queued: verdict file first | - |
 | csod | not sorted yet | queued: verdict file first | - |
-| dassault | deferred | deferred: no terms found | [dassault.md](dassault.md) |
+| dassault | deferred | deferred: only the Fondation site's terms found, which forbid robots | [dassault.md](dassault.md) |
 | deel | not sorted yet | queued: verdict file first | - |
 | deutschebahn | not sorted yet | queued: verdict file first | - |
 | dover | not sorted yet | queued: verdict file first | - |
@@ -57,7 +57,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | himalayas | not sorted yet | queued: verdict file first | - |
 | hiringroom | not sorted yet | queued: verdict file first | - |
 | homerun | not sorted yet | queued: verdict file first | - |
-| ibm | deferred | deferred: no robots.txt, terms not read | [ibm.md](ibm.md) |
+| ibm | deferred | deferred: its terms allow crawlers only where robots.txt does, and the API host has none | [ibm.md](ibm.md) |
 | icims | not sorted yet | queued: verdict file first | - |
 | inrecruiting | not sorted yet | queued: verdict file first | - |
 | itviec | not sorted yet | queued: verdict file first | - |
@@ -133,4 +133,4 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | yourator | not sorted yet | queued: verdict file first | - |
 | zoho-recruit | not sorted yet | queued: verdict file first | - |
 
-Totals: 126 providers; 7 ported, 2 verdict written, 3 dropped, 6 deferred, 108 queued.
+Totals: 126 providers; 8 ported, 1 verdict written, 3 dropped, 6 deferred, 108 queued.

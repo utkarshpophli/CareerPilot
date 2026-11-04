@@ -1110,6 +1110,7 @@ enum BoardSource {
   WORKABLE
   RECRUITEE
   TEAMTAILOR
+  ATLASSIAN
 }
 
 /// An employer whose own job board the owner (or an assistant, as a draft-level

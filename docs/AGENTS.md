@@ -67,7 +67,7 @@ Every operation an assistant can do is one function in `apps/web/src/lib/service
 | Read a kept search again (uses no searches from the plan) | `readSearch` | `GET /api/v1/searches/{id}` | `pilot search show` | none | search_jobs and more_jobs already answer with the postings; a kept search is read in the dashboard. |
 | Show the next page of a kept search (uses one more search from the plan) | `moreJobs` | `POST /api/v1/searches/{id}/more` | `pilot search more` | `more_jobs` |  |
 | List the employers whose job boards are watched, with how each last scan went | `listCompanies` | `GET /api/v1/companies` | `pilot companies` | none | scan_companies reports how each board went, and the owner manages the list in Settings. |
-| Watch an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee or Teamtailor) | `addCompany` | `POST /api/v1/companies` | `pilot companies add` | `add_company` |  |
+| Watch an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor or Atlassian) | `addCompany` | `POST /api/v1/companies` | `pilot companies add` | `add_company` |  |
 | Read the watched boards and return the postings that match | `scanCompanies` | `POST /api/v1/companies/scan` | `pilot companies scan` | `scan_companies` |  |
 | List the postings kept from scans of watched boards, best score first, with the reasons | `listScannedPostings` | `GET /api/v1/postings/scanned` | `pilot postings` | `list_scanned_postings` |  |
 | List runs | `listRuns` | `GET /api/v1/runs` | `pilot runs` | none | Every MCP call is recorded as a run by the service it reaches; an MCP assistant has no run of its own to manage. |

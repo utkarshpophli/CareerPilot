@@ -54,7 +54,7 @@ export function formatApplication(a) {
   return lines.filter((line) => line !== "").join("\n");
 }
 
-export const BOARD_SOURCES = ["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR"];
+export const BOARD_SOURCES = ["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR", "ATLASSIAN"];
 
 /** A board source as typed (any case), or a usage error listing the choices. */
 export function boardSource(word) {

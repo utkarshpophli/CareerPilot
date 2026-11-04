@@ -18,7 +18,7 @@ const addBody = z.object({
 
 /**
  * POST /api/v1/companies { "board": "stripe" | "https://job-boards.greenhouse.io/stripe", "source"?, "name"? }
- * starts watching an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee or Teamtailor).
+ * starts watching an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor or Atlassian).
  * "source" can be left out when "board" is the company's careers address. It
  * only records a name; reading the board happens in a scan.
  */

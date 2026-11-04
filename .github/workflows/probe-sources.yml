@@ -26,7 +26,4 @@ jobs:
           node-version-file: .nvmrc
       - run: >-
           node scripts/probe-sources.mjs terms-urls
-          https://www.amazon.jobs/content/en/legal-disclosures-and-notices
-          https://www.ibm.com/legal/terms
-          https://www.3ds.com/terms-use
-          https://www.3ds.com/legal
+          https://www.amazon.com/gp/help/customer/display.html?nodeId=508088

@@ -22,10 +22,10 @@ A verdict reached from documentation alone says so. Nothing here was checked by 
 | BambooHR | board | deferred (no real tenant sampled, terms not read) | [bamboohr.md](bamboohr.md) |
 | Apple | company page | not allowed (website terms forbid scraping) | [apple.md](apple.md) |
 | Google | company page | allowed with limits, conditional on robots.txt (HTML; adapter later) | [google.md](google.md) |
-| Atlassian | company page | allowed with limits (adapter next) | [atlassian.md](atlassian.md) |
-| Amazon | company page | deferred (legal page not read) | [amazon.md](amazon.md) |
-| IBM | company page | deferred (terms not read) | [ibm.md](ibm.md) |
-| Dassault | company page | deferred (no terms found) | [dassault.md](dassault.md) |
+| Atlassian | board (one employer) | allowed with limits | [atlassian.md](atlassian.md) |
+| Amazon | company page | deferred (points to amazon.com's Conditions of Use, not yet read) | [amazon.md](amazon.md) |
+| IBM | company page | deferred, leaning not allowed (crawlers only where robots.txt allows; the API host has none) | [ibm.md](ibm.md) |
+| Dassault | company page | deferred (only the Fondation site's terms found; they forbid robots) | [dassault.md](dassault.md) |
 | Alibaba | company page | deferred (no robots.txt, no terms) | [alibaba.md](alibaba.md) |
 | Greenhouse | board | allowed (single-employer ATS) | [greenhouse.md](greenhouse.md) |
 | Lever | board | allowed (single-employer ATS) | [lever.md](lever.md) |

@@ -2,7 +2,7 @@
 // slug rather than searched by keyword. Ported from career-ops (MIT, Santiago
 // Fernández de Valderrama), providers/_types.js and the three ATS providers.
 
-export const BOARD_SOURCES = ["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR"] as const;
+export const BOARD_SOURCES = ["GREENHOUSE", "LEVER", "ASHBY", "WORKABLE", "RECRUITEE", "TEAMTAILOR", "ATLASSIAN"] as const;
 export type BoardSource = (typeof BOARD_SOURCES)[number];
 
 /** Which board: its slug on the source, and the EU region where the source has one (Lever). */

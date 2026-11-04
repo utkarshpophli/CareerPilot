@@ -124,7 +124,7 @@ export const OPERATIONS: readonly Operation[] = [
   },
   {
     id: "companies.add",
-    does: "Watch an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee or Teamtailor)",
+    does: "Watch an employer's own job board (Greenhouse, Lever, Ashby, Workable, Recruitee, Teamtailor or Atlassian)",
     service: "addCompany",
     rest: { method: "POST", path: "/api/v1/companies" },
     cli: { command: "companies add", calls: '"/api/v1/companies", { method: "POST"' },
