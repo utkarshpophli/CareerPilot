@@ -45,7 +45,7 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 
 - Owner's Windows pass on `DEV` at 1cf5df1 (2026-11-05): typecheck, lint, build clean; 2,485 app tests and 47 CLI tests pass; e2e 176 of 177. The one failure was a test problem in the cloud's new spec (`front-door.spec` "1 draft" also matched the link "1 draft from your assistant"; fixed with `exact: true`). Strict-mode locator errors that depend on demo data are the usual cause when a spec passes in CI and fails locally.
 
-- Owner's Windows pass on `DEV` at 9de1468 (2026-11-05): typecheck, lint, build clean; 2,520 app tests, 47 CLI tests and 180 of 180 e2e pass. Not exercised on Windows: the worker running as its own process with real traffic, and the production image with a worker.
+- Owner's Windows pass on `DEV` at 9de1468 (2026-11-05): typecheck, lint, build clean; 2,520 app tests, 47 CLI tests and 180 of 180 e2e pass. The bundled worker (`node .worker/worker.mjs`) was started by hand on Windows with the app's required settings: it said ready, created pg-boss's 13 tables in the `queue` schema and wrote its heartbeat; without `CAREERPILOT_PASSWORD` and `CAREERPILOT_SECRET` it refuses to start, like the web app. Not exercised on Windows: a scan actually running through the worker, and the production image with a worker.
 
 ## Next steps, in order
 
