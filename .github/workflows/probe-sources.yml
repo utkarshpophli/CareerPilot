@@ -24,4 +24,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - run: node scripts/probe-sources.mjs careers
+      - run: >-
+          node scripts/probe-sources.mjs terms-urls
+          https://www.amazon.jobs/en/privacy_page
+          https://www.amazon.jobs/en/landing_pages/legal
+          https://www.apple.com/legal/internet-services/terms/site.html
+          https://policies.google.com/terms
+          https://www.atlassian.com/legal/cloud-terms-of-service
+          https://www.atlassian.com/legal/website-terms-of-use
+          https://www.ibm.com/legal
+          https://www.3ds.com/terms/website-terms-use
