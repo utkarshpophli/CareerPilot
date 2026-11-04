@@ -44,9 +44,10 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 
 ## Next steps, in order
 
-1. M4b.4 (the Danish portals from ai-job-search), M4d.2 liveness, then M4c.
-2. M4c: port the rest of career-ops's sources in batches, each with a verdict file in `docs/sources/` first. Only the sources whose terms allow it.
-3. M5 onward (worker, queue, budgets, retention), M6 to M10. Keep going down `ROADMAP.md`.
+1. M4c: batch 1 is done (Workable, Recruitee, Teamtailor ported; SmartRecruiters dropped; Personio and BambooHR deferred). 115 providers remain in `docs/sources/career-ops-providers.md`. Method that works: add the vendors to `apps/web/scripts/probe-sources.mjs`, add the marker `.github/probe-sources` to the PR, read robots.txt and terms from the run log, write the verdict files, then record fixtures with `scripts/record-board-fixtures.mjs` (marker `.github/record-board-fixtures`) and write the adapter against them. Remove each marker afterwards.
+2. M4b.4 and M4d.2 are done (Jobdanmark shipped; Jobindex and Jobbank not allowed; Jobnet deferred; the "Check if it's still open" button and the Needs-you count of closed drafts).
+3. M5: the queue spike is done (ADR 0004). Next: the worker entrypoint and moving one job type onto it; token capture in the AI providers before the cost view; richer step data before run replay is more than a step list.
+4. M6 to M10. Keep going down `ROADMAP.md`.
 
 Update the status words and tick tasks in `ROADMAP.md` in the same commit as the code.
 
