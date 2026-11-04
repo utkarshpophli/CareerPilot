@@ -25,6 +25,16 @@ const GROUPS = {
     { name: "recruitee", origin: "https://channable.recruitee.com", front: "https://channable.recruitee.com", sample: { method: "GET", path: "/api/offers/", note: "per-tenant offers API, a real tenant" } },
     { name: "teamtailor", origin: "https://podimo.teamtailor.com", front: "https://podimo.teamtailor.com", sample: { method: "GET", path: "/jobs.rss", note: "per-tenant RSS feed, a real tenant" } },
   ],
+  // M4c batch 2: big employers' own careers sites. robots.txt of the host the data comes from, the front page's terms links, and one sample where the endpoint is a plain GET.
+  careers: [
+    { name: "amazon", origin: "https://www.amazon.jobs", sample: { method: "GET", path: "/en/search.json?result_limit=3&keywords=engineer", note: "the careers site's own search JSON" } },
+    { name: "atlassian", origin: "https://www.atlassian.com", sample: { method: "GET", path: "/endpoint/careers/listings", note: "careers listings endpoint" } },
+    { name: "apple", origin: "https://jobs.apple.com", sample: { method: "GET", path: "/en-us/search?search=engineer", note: "HTML search page" } },
+    { name: "google", origin: "https://www.google.com", front: "https://www.google.com/about/careers/applications/", sample: { method: "GET", path: "/about/careers/applications/jobs/results/?q=engineer", note: "HTML results page" } },
+    { name: "ibm", origin: "https://www-api.ibm.com", front: "https://www.ibm.com/careers", sample: { method: "GET", path: "/search/api/v2", note: "search API root; the real call is a POST, not made" } },
+    { name: "dassault", origin: "https://www.3ds.com", sample: { method: "GET", path: "/apisearch/card_search_api", note: "search API root; the real call needs parameters, not made" } },
+    { name: "alibaba", origin: "https://talent.alibaba.com", sample: { method: "GET", path: "/off-campus/position-list", note: "front page of the careers app" } },
+  ],
   danish: [
     {
       name: "jobindex",

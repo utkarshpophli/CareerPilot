@@ -65,7 +65,7 @@ test("counts the postings scans found that wait on the Review page, and links th
 test("counts the drafts whose job was found closed, and links to the draft when there is one", async ({ page }) => {
   await sql(`INSERT INTO "Application" (id, "updatedAt", title, "postingOpen", "postingCheckedAt", "postingCheckNote") VALUES ('fd-closed', now(), 'Designer at Closed Co', false, now(), 'Greenhouse no longer lists it on the employer''s board.')`);
   await page.goto("/");
-  const link = page.getByRole("region", { name: "Needs you" }).getByRole("link", { name: "1 draft" });
+  const link = page.getByRole("region", { name: "Needs you" }).getByRole("link", { name: "1 draft", exact: true });
   await expect(link).toHaveAttribute("href", "/applications/fd-closed");
   await sql(`DELETE FROM "Application" WHERE id = 'fd-closed'`);
 });
