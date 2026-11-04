@@ -26,8 +26,23 @@ describe("career-ops provider ledger", () => {
   });
 
   it("states totals that match the rows", () => {
-    const done = rows.filter((row) => row.split("|")[2].trim() === "done").length;
-    const dropped = rows.filter((row) => row.split("|")[2].trim() === "dropped").length;
-    expect(ledger).toContain(`Totals: ${rows.length} providers; ${done} ported, ${dropped} dropped, ${rows.length - done - dropped} queued.`);
+    const cells = rows.map((row) => row.split("|").map((cell) => cell.trim()));
+    const count = (test: (batch: string, status: string) => boolean) => cells.filter(([, , batch, status]) => test(batch, status)).length;
+    const ported = count((batch) => batch === "done");
+    const dropped = count((batch) => batch === "dropped");
+    const deferred = count((batch) => batch === "deferred");
+    const written = count((batch, status) => status.startsWith("verdict written"));
+    const queued = rows.length - ported - dropped - deferred - written;
+    expect(ledger).toContain(`Totals: ${rows.length} providers; ${ported} ported, ${written} verdict written, ${dropped} dropped, ${deferred} deferred, ${queued} queued.`);
+  });
+
+  it("has a verdict file for every provider with a verdict, dropped or deferred", () => {
+    for (const row of rows) {
+      const [, name, batch, status, verdict] = row.split("|").map((cell) => cell.trim());
+      if (!(batch === "dropped" || batch === "deferred" || status.startsWith("verdict written"))) continue;
+      const file = /\(([^)]+\.md)\)/.exec(verdict)?.[1];
+      expect(file, name).toBeTruthy();
+      expect(readFileSync(path.join(root, "docs/sources", file!), "utf8"), name).toMatch(/\*\*Verdict: /);
+    }
   });
 });

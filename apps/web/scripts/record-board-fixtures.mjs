@@ -13,7 +13,19 @@ const BOARDS = {
   "greenhouse-offices": { url: "https://boards-api.greenhouse.io/v1/boards/stripe/offices", pick: (json) => ({ offices: officesWithJobs(json.offices).slice(0, 3) }) },
   "lever-postings": { url: "https://api.lever.co/v0/postings/palantir", pick: (json) => json.slice(0, 3) },
   "ashby-board": { url: "https://api.ashbyhq.com/posting-api/job-board/openai?includeCompensation=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
+  // Batch 1 (M4c). Real tenants named in career-ops's own examples.
+  "workable-widget": { url: "https://apply.workable.com/api/v1/widget/accounts/huggingface?details=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
+  "recruitee-offers": { url: "https://channable.recruitee.com/api/offers/", pick: (json) => ({ ...json, offers: json.offers.slice(0, 3) }) },
+  // A feed, not JSON: the channel's start and its first three items, as text.
+  "teamtailor-feed": { url: "https://podimo.teamtailor.com/jobs.rss", accept: "application/rss+xml", text: (body) => firstItems(body, 3) },
 };
+
+/** An RSS feed cut down to its head and the first `count` items, with the rest of the markup untouched. */
+function firstItems(xml, count) {
+  const items = [...xml.matchAll(/<item>[\s\S]*?<\/item>/g)].slice(0, count).map((match) => match[0]);
+  const head = xml.slice(0, xml.indexOf("<item>"));
+  return `${head}${items.join("\n")}\n  </channel>\n</rss>\n`;
+}
 
 const MAX_STRING = 2000;
 
@@ -47,16 +59,16 @@ function shorten(value) {
 }
 
 let failed = 0;
-for (const [name, { url, pick }] of Object.entries(BOARDS)) {
+for (const [name, { url, pick, text: pickText, accept }] of Object.entries(BOARDS)) {
   try {
-    const response = await fetch(url, { headers: { accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(60_000) });
+    const response = await fetch(url, { headers: { accept: accept ?? "application/json", "user-agent": "CareerPilot-source-check/1.0 (+https://github.com/utkarshpophli/CareerPilot; one request per fixture)" }, redirect: "error", signal: AbortSignal.timeout(60_000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
-    const json = JSON.parse(text);
     console.log(`RECORDED ${name}: HTTP ${response.status}, ${text.length} bytes`);
     console.log(`BEGIN ${name}`);
     // One line each: a CI log is read from the end, and a long pretty-printed block can fall off the start of what is returned.
-    console.log(JSON.stringify(shorten(pick(json))));
+    // A feed is text: its line breaks are written as \n inside a JSON string, so it stays on one line too.
+    console.log(pickText ? JSON.stringify({ text: pickText(text) }) : JSON.stringify(shorten(pick(JSON.parse(text)))));
     console.log(`END ${name}`);
   } catch (error) {
     failed++;

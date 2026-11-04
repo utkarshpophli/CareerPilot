@@ -2,7 +2,7 @@
 
 career-ops ships 126 provider modules (`upstream/career-ops/providers/*.mjs`, helper files that start with `_` not counted). M4c ports, drops or defers every one, each with a verdict file in this folder before it ships. This table is checked by a test (`src/lib/job-search/providers-ledger.test.ts`): a provider missing here, listed twice, or listed without being in the upstream folder fails it, so the total cannot drift.
 
-Status words: **ported** (a verdict file exists and the adapter ships), **dropped** (with the reason), **queued** (not looked at yet: no verdict, nothing in the product calls it). Nothing is "deferred" yet; that word is for a source that was read and could not be decided.
+Status words: **ported** (a verdict file exists and the adapter ships), **verdict written** (allowed, adapter in progress), **dropped** (with the reason), **deferred** (read, but not enough to decide; with the reason), **queued** (not looked at yet: no verdict, nothing in the product calls it).
 
 | Provider | Batch | Status | Verdict |
 |---|---|---|---|
@@ -19,7 +19,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | ashby | done | ported (allowed with limits) | docs/sources/ashby.md |
 | atlassian | not sorted yet | queued: verdict file first | - |
 | avature | not sorted yet | queued: verdict file first | - |
-| bamboohr | 1 public ATS | queued: verdict file first | - |
+| bamboohr | deferred | deferred: no real tenant sampled and its terms not read | [bamboohr.md](bamboohr.md) |
 | beesite | not sorted yet | queued: verdict file first | - |
 | breezy | not sorted yet | queued: verdict file first | - |
 | builtin | not sorted yet | queued: verdict file first | - |
@@ -76,7 +76,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | landingjobs | not sorted yet | queued: verdict file first | - |
 | larajobs | not sorted yet | queued: verdict file first | - |
 | lever | done | ported | docs/sources/lever.md |
-| local-parser | dropped | dropped: runs a program named in a config file; no place in a self-hosted app that assistants can configure | n/a |
+| local-parser | dropped | dropped: runs a program named in a config file; no place in a self-hosted app that assistants can configure | [local-parser.md](local-parser.md) |
 | magneto | not sorted yet | queued: verdict file first | - |
 | manfred | not sorted yet | queued: verdict file first | - |
 | meituan | not sorted yet | queued: verdict file first | - |
@@ -91,7 +91,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | pageup | not sorted yet | queued: verdict file first | - |
 | paylocity | not sorted yet | queued: verdict file first | - |
 | peoplesoft | not sorted yet | queued: verdict file first | - |
-| personio | 1 public ATS | queued: verdict file first | - |
+| personio | deferred | deferred: its terms could not be read (security checkpoint) | [personio.md](personio.md) |
 | phenom | not sorted yet | queued: verdict file first | - |
 | pinpoint | not sorted yet | queued: verdict file first | - |
 | platsbanken | not sorted yet | queued: verdict file first | - |
@@ -99,7 +99,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | prevueaps | not sorted yet | queued: verdict file first | - |
 | pythonorg | not sorted yet | queued: verdict file first | - |
 | radancy | not sorted yet | queued: verdict file first | - |
-| recruitee | 1 public ATS | queued: verdict file first | - |
+| recruitee | 1 public ATS | verdict written (allowed with limits); adapter in progress | [recruitee.md](recruitee.md) |
 | redrover | not sorted yet | queued: verdict file first | - |
 | remoteok | not sorted yet | queued: verdict file first | - |
 | remotive | not sorted yet | queued: verdict file first | - |
@@ -108,13 +108,13 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | rippling | not sorted yet | queued: verdict file first | - |
 | schoolspring | not sorted yet | queued: verdict file first | - |
 | senjob | not sorted yet | queued: verdict file first | - |
-| smartrecruiters | 1 public ATS | queued: verdict file first | - |
+| smartrecruiters | dropped | dropped: its API host disallows every automated reader but LinkedIn in robots.txt | [smartrecruiters.md](smartrecruiters.md) |
 | softgarden | not sorted yet | queued: verdict file first | - |
 | solidjobs | not sorted yet | queued: verdict file first | - |
 | startup-jobs | not sorted yet | queued: verdict file first | - |
 | successfactors | not sorted yet | queued: verdict file first | - |
 | taleo | not sorted yet | queued: verdict file first | - |
-| teamtailor | 1 public ATS | queued: verdict file first | - |
+| teamtailor | 1 public ATS | verdict written (allowed with limits); adapter in progress | [teamtailor.md](teamtailor.md) |
 | techinasia | not sorted yet | queued: verdict file first | - |
 | telegram-channel | not sorted yet | queued: verdict file first | - |
 | tencent | not sorted yet | queued: verdict file first | - |
@@ -125,7 +125,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | ultipro | not sorted yet | queued: verdict file first | - |
 | vdab | not sorted yet | queued: verdict file first | - |
 | weworkremotely | not sorted yet | queued: verdict file first | - |
-| workable | 1 public ATS | queued: verdict file first | - |
+| workable | 1 public ATS | verdict written (allowed with limits); adapter in progress | [workable.md](workable.md) |
 | workday | not sorted yet | queued: verdict file first | - |
 | workingnomads | not sorted yet | queued: verdict file first | - |
 | wp-job-manager | not sorted yet | queued: verdict file first | - |
@@ -133,4 +133,4 @@ Status words: **ported** (a verdict file exists and the adapter ships), **droppe
 | yourator | not sorted yet | queued: verdict file first | - |
 | zoho-recruit | not sorted yet | queued: verdict file first | - |
 
-Totals: 126 providers; 4 ported, 1 dropped, 121 queued.
+Totals: 126 providers; 4 ported, 3 verdict written, 2 dropped, 2 deferred, 115 queued.
