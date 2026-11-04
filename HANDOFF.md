@@ -43,6 +43,8 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 5. Built since: the Review page (`/review`), Settings → Posting preferences and Settings → Watched companies. The dashboard's Needs-you card counts new postings. Not built: saved searches per source.
 6. Owner to-dos (cannot be done by an agent): enable branch protection and secret scanning on GitHub; make the repository public before any shared use; merge `DEV` into `main`.
 
+- Owner's Windows pass on `DEV` at 1cf5df1 (2026-11-05): typecheck, lint, build clean; 2,485 app tests and 47 CLI tests pass; e2e 176 of 177. The one failure was a test problem in the cloud's new spec (`front-door.spec` "1 draft" also matched the link "1 draft from your assistant"; fixed with `exact: true`). Strict-mode locator errors that depend on demo data are the usual cause when a spec passes in CI and fails locally.
+
 ## Next steps, in order
 
 1. M4c: batch 1 is done (Workable, Recruitee, Teamtailor ported; SmartRecruiters dropped; Personio and BambooHR deferred). 115 providers remain in `docs/sources/career-ops-providers.md`. Method that works: add the vendors to `apps/web/scripts/probe-sources.mjs`, add the marker `.github/probe-sources` to the PR, read robots.txt and terms from the run log, write the verdict files, then record fixtures with `scripts/record-board-fixtures.mjs` (marker `.github/record-board-fixtures`) and write the adapter against them. Remove each marker afterwards.
