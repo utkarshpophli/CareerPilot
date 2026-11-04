@@ -45,11 +45,13 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 
 - Owner's Windows pass on `DEV` at 1cf5df1 (2026-11-05): typecheck, lint, build clean; 2,485 app tests and 47 CLI tests pass; e2e 176 of 177. The one failure was a test problem in the cloud's new spec (`front-door.spec` "1 draft" also matched the link "1 draft from your assistant"; fixed with `exact: true`). Strict-mode locator errors that depend on demo data are the usual cause when a spec passes in CI and fails locally.
 
+- Owner's Windows pass on `DEV` at 9de1468 (2026-11-05): typecheck, lint, build clean; 2,520 app tests, 47 CLI tests and 180 of 180 e2e pass. Not exercised on Windows: the worker running as its own process with real traffic, and the production image with a worker.
+
 ## Next steps, in order
 
 1. M4c: batch 1 is done (Workable, Recruitee, Teamtailor ported; SmartRecruiters dropped; Personio and BambooHR deferred). 115 providers remain in `docs/sources/career-ops-providers.md`. Method that works: add the vendors to `apps/web/scripts/probe-sources.mjs`, add the marker `.github/probe-sources` to the PR, read robots.txt and terms from the run log, write the verdict files, then record fixtures with `scripts/record-board-fixtures.mjs` (marker `.github/record-board-fixtures`) and write the adapter against them. Remove each marker afterwards.
 2. M4b.4 and M4d.2 are done (Jobdanmark shipped; Jobindex and Jobbank not allowed; Jobnet deferred; the "Check if it's still open" button and the Needs-you count of closed drafts).
-3. M5: AI cost: tokens are counted per call (Usage page), the owner enters prices and monthly caps in Settings → Budget, and `createProvider` enforces them (stop or switch to a cheaper model). No hosted-model prices are built in on purpose (see ROADMAP 5.4). The worker exists (ADR 0004) and runs the board scan, the liveness check and the daily proposal prune; `yarn worker` runs it in development (its bundle is in `.worker/`, ignored by lint and git). Next: the worker entrypoint and moving one job type onto it; token capture in the AI providers before the cost view; richer step data before run replay is more than a step list.
+3. M5: AI cost is done (tokens per call, owner-entered prices, monthly caps with stop or cheaper-model fallback; no hosted prices built in on purpose, see ROADMAP 5.4). The worker (ADR 0004) runs the board scan, liveness checks and the daily proposal prune; `yarn worker` runs it in development (bundle in `.worker/`, ignored by git and lint). Run steps now record where, which prompt or scorer, and what was decided. Still open in M5: `owner_id` and `Principal` (5.1), the agent's daily run and backups on the worker, ledger retention (5.6).
 4. M6 to M10. Keep going down `ROADMAP.md`.
 
 Update the status words and tick tasks in `ROADMAP.md` in the same commit as the code.
