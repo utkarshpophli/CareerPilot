@@ -1,6 +1,6 @@
 # ADR 0004: A separate worker on a PostgreSQL queue (pg-boss)
 
-Status: accepted for the board scan once the image smoke test in CI passes (see "Built"); other job types follow. Date: 2026-11-04. Roadmap tasks 5.2 to 5.5.
+Status: accepted for the board scan. The image smoke test passed in CI on 2026-11-04 (run 38: web container and worker container started, `/api/health` reported the worker, a queued scan was read by the worker and recorded); other job types follow. Date: 2026-11-04. Roadmap tasks 5.2 to 5.5.
 
 ## Context
 
