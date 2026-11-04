@@ -129,6 +129,23 @@ const schema = z.object({
   CAREERPILOT_FREEHIRE_URL: optional(
     z.url({ protocol: /^https?$/, error: "CAREERPILOT_FREEHIRE_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
   ),
+  // On sends the owner's "Scan now" and the schedule to the worker process (docs/adr/0004) instead of running a scan in the
+  // web process. Off (or unset) keeps everything in the web process, with no worker needed.
+  CAREERPILOT_WORKER: optional(
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.enum(["on", "off"], { error: (issue) => `CAREERPILOT_WORKER must be on or off (got "${String(issue.input)}").` })),
+  ),
+  // A cron expression (five fields, in the server's time zone) for a scan of every watched board by the worker, for example
+  // "0 6 * * *" for six every morning. Unset means no scheduled scan. Only used by the worker.
+  CAREERPILOT_SCAN_SCHEDULE: optional(
+    z
+      .string()
+      .trim()
+      .regex(/^\S+(\s+\S+){4}$/, { error: "CAREERPILOT_SCAN_SCHEDULE must be a cron expression with five fields, for example 0 6 * * *." }),
+  ),
   // Off takes the Bundesagentur für Arbeit out everywhere (#223): it isn't an
   // official API, so a server can choose not to offer it. Unset means on.
   CAREERPILOT_JOBS_ARBEITSAGENTUR: optional(

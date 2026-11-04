@@ -131,6 +131,39 @@ function reasonFor(company: string, error: unknown): string {
   return "It failed unexpectedly; the server log has the details.";
 }
 
+export type BoardOutcome = ScanResult["companies"][number];
+
+/**
+ * Reads one watched board, keeps and (with preferences) scores what it lists, and records how it went on the company.
+ * Never throws for a board that cannot be read: that is its outcome. Null when the company is gone or paused, so a job
+ * queued for it earlier simply does nothing. The loop in scanCompanies and the worker's queued jobs both use this.
+ */
+export async function scanOneBoard(
+  db: PrismaClient,
+  id: string,
+  { preferences }: { preferences?: Preferences },
+  { adapters = boardAdapter, now: clock = Date.now }: { adapters?: Adapters; now?: () => number } = {},
+): Promise<BoardOutcome | null> {
+  const row = await db.trackedCompany.findFirst({ where: { id, enabled: true } });
+  return row ? readBoard(db, row, preferences, adapters, new Date(clock())) : null;
+}
+
+type CompanyRow = NonNullable<Awaited<ReturnType<PrismaClient["trackedCompany"]["findFirst"]>>>;
+
+async function readBoard(db: PrismaClient, row: CompanyRow, preferences: Preferences | undefined, adapters: Adapters, now: Date): Promise<BoardOutcome> {
+  try {
+    const postings = await adapters(row.source).fetchBoard({ slug: row.slug, ...(row.region === "eu" ? { region: "eu" as const } : {}) }, row.name);
+    const kept = await ingestBoardScan(db, row, postings, now);
+    if (preferences) await scoreOpenPostings(db, row.id, preferences, now);
+    await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastOkAt: now, lastError: "", lastFound: postings.length } });
+    return { id: row.id, name: row.name, found: postings.length, added: kept.added, closed: kept.closed };
+  } catch (error) {
+    const reason = reasonFor(row.name, error);
+    await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastError: reason } });
+    return { id: row.id, name: row.name, found: 0, error: reason };
+  }
+}
+
 /**
  * Reads the enabled boards one at a time (one request at a time to a host, as
  * the sources ask), records how each went, and returns the postings that match.
@@ -158,22 +191,15 @@ export const scanCompanies = (db: PrismaClient, options: ScanOptions = {}, { ada
           await step(`${row.name}: not reached, the time was up`);
           continue;
         }
-        const now = new Date(clock());
-        try {
-          const postings = await adapters(row.source).fetchBoard({ slug: row.slug, ...(row.region === "eu" ? { region: "eu" as const } : {}) }, row.name);
-          const kept = await ingestBoardScan(db, row, postings, now);
-          if (options.preferences) await scoreOpenPostings(db, row.id, options.preferences, now);
-          await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastOkAt: now, lastError: "", lastFound: postings.length } });
-          companies.push({ id: row.id, name: row.name, found: postings.length, added: kept.added, closed: kept.closed });
+        const outcome = await readBoard(db, row, options.preferences, adapters, new Date(clock()));
+        companies.push(outcome);
+        if (outcome.error) {
+          await step(`${row.name}: could not be read (${outcome.error})`);
+        } else {
           read.push(row.id);
-          added += kept.added;
-          closed += kept.closed;
-          await step(`${row.name}: ${plural(postings.length, "posting")} (${kept.added} new, ${kept.closed} closed)`, { found: postings.length, added: kept.added, closed: kept.closed });
-        } catch (error) {
-          const reason = reasonFor(row.name, error);
-          await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastError: reason } });
-          companies.push({ id: row.id, name: row.name, found: 0, error: reason });
-          await step(`${row.name}: could not be read (${reason})`);
+          added += outcome.added ?? 0;
+          closed += outcome.closed ?? 0;
+          await step(`${row.name}: ${plural(outcome.found, "posting")} (${outcome.added} new, ${outcome.closed} closed)`, { found: outcome.found, added: outcome.added ?? 0, closed: outcome.closed ?? 0 });
         }
       }
 

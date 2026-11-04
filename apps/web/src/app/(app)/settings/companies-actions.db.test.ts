@@ -23,6 +23,14 @@ vi.mock("@/lib/profile-data", async () => {
   profile.basics.city = "Berlin";
   return { loadProfile: async () => profile };
 });
+const queue = vi.hoisted(() => ({ on: false, sent: [] as { name: string; data: unknown; options: { singletonKey?: string } }[], refuse: new Set<string>(), down: false }));
+vi.mock("@/lib/queue/web", () => ({
+  workerEnabled: () => queue.on,
+  queueClient: async () => {
+    if (queue.down) throw new Error('relation "queue.version" does not exist');
+    return { send: async (name: string, data: object, options: { singletonKey?: string }) => (queue.refuse.has(options.singletonKey ?? "") ? null : (queue.sent.push({ name, data, options }), `job-${queue.sent.length}`)) };
+  },
+}));
 const board = vi.hoisted(() => ({ missing: false }));
 vi.mock("@/lib/job-search/boards/request", async (original) => {
   const real = await original<typeof import("@/lib/job-search/boards/request")>();
@@ -97,6 +105,38 @@ describe("scanNowAction", () => {
     expect((result as { toast: string }).toast).toMatch(/1 new/);
     expect(await prisma().scannedPosting.findFirstOrThrow()).toMatchObject({ title: "Product Designer", state: "NEW", score: expect.any(Number) });
     expect(await prisma().agentRun.count()).toBe(0); // the owner's own scan is not an assistant's run
+  });
+
+  describe("with a worker (CAREERPILOT_WORKER=on)", () => {
+    beforeEach(() => {
+      queue.on = true;
+      queue.sent = [];
+      queue.refuse.clear();
+      queue.down = false;
+    });
+    afterAll(() => {
+      queue.on = false;
+    });
+
+    it("queues one scan per enabled board for the worker and reads nothing itself", async () => {
+      const acme = await addCompanyAction({ board: "acme", source: "GREENHOUSE", name: "Acme" });
+      const gone = await addCompanyAction({ board: "gone", source: "GREENHOUSE", name: "Gone" });
+      const paused = await addCompanyAction({ board: "beta", source: "GREENHOUSE", name: "Beta" });
+      await setCompanyEnabledAction({ id: (paused as { data: { id: string } }).data.id, enabled: false });
+      const result = await scanNowAction({});
+      expect(result).toMatchObject({ ok: true, data: { scanned: 0, queued: 2, alreadyWaiting: 0 }, toast: "Queued 2 boards for the worker. The Review page fills as they finish." });
+      expect(queue.sent.map((job) => job.options.singletonKey).sort()).toEqual([(acme as { data: { id: string } }).data.id, (gone as { data: { id: string } }).data.id].sort());
+      // Nothing was read in the web process.
+      expect(await prisma().scannedPosting.count()).toBe(0);
+    });
+
+    it("says when a board already has a scan waiting, and when the queue is not there", async () => {
+      const acme = await addCompanyAction({ board: "acme", source: "GREENHOUSE", name: "Acme" });
+      queue.refuse.add((acme as { data: { id: string } }).data.id);
+      expect(await scanNowAction({})).toMatchObject({ ok: true, data: { queued: 0, alreadyWaiting: 1 }, toast: "Already waiting for the worker: 1 board. Nothing new to queue." });
+      queue.down = true;
+      expect(await scanNowAction({})).toMatchObject({ ok: false, error: expect.stringMatching(/worker isn't reachable/i) });
+    });
   });
 
   it("says plainly when nothing is watched, and does nothing for someone not signed in", async () => {

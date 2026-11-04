@@ -1200,3 +1200,15 @@ model ScannedPosting {
   @@index([urlKey])
   @@index([companyId, closedAt])
 }
+
+// ─── Worker (M5) ─────────────────────────────────────────────────────────────
+
+/// One row per worker process, rewritten every half minute while it runs. Lets the health check and Settings say whether a
+/// worker is there, without a second service to ask. The queue itself lives in its own schema (pg-boss), not here.
+model WorkerHeartbeat {
+  /// The worker's name, for example "worker-1"; one row per name.
+  id        String   @id
+  startedAt DateTime
+  beatAt    DateTime
+  version   String   @default("")
+}

@@ -109,6 +109,13 @@ describe("CompaniesSection", () => {
     expect(screen.getByText(/20 postings/)).toBeInTheDocument();
   });
 
+  it("says the scans were queued for the worker, and that the Review page fills as they finish", async () => {
+    vi.mocked(scanNowAction).mockResolvedValueOnce({ ok: true, data: { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: 3, alreadyWaiting: 1, companies: [company()] }, toast: "Queued 3 boards for the worker. The Review page fills as they finish." });
+    render(<CompaniesSection initial={[company()]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Scan now" }));
+    expect(await screen.findByText("Queued 3 boards for the worker (1 already waiting). The Review page fills as they finish.")).toBeInTheDocument();
+  });
+
   it("shows the reason when a scan cannot run", async () => {
     vi.mocked(scanNowAction).mockResolvedValueOnce({ ok: false, error: "Something went wrong." });
     render(<CompaniesSection initial={[company()]} />);

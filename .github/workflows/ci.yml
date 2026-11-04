@@ -190,6 +190,6 @@ jobs:
         run: |
           yarn install --immutable
           yarn playwright install --with-deps chromium
-      - name: Start the image against Postgres, check /api/health, sign in
+      - name: Start the image and a worker against Postgres, check /api/health, sign in, queue a scan
         working-directory: apps/web
-        run: node scripts/smoke-image.mjs --image careerpilot:ci --database-url postgresql://postgres:postgres@localhost:5432/careerpilot
+        run: node scripts/smoke-image.mjs --image careerpilot:ci --database-url postgresql://postgres:postgres@localhost:5432/careerpilot --worker

@@ -7,7 +7,7 @@ import { createTestClient, resetDatabase } from "@/test/db";
 
 import type { Preferences } from "@/lib/job-scoring";
 
-import { addCompany, listCompanies, MAX_COMPANIES, removeCompany, scanCompanies, setCompanyEnabled } from "./companies";
+import { addCompany, listCompanies, MAX_COMPANIES, removeCompany, scanCompanies, scanOneBoard, setCompanyEnabled } from "./companies";
 
 const db = createTestClient();
 beforeEach(() => resetDatabase(db));
@@ -282,5 +282,33 @@ describe("setCompanyEnabled and removeCompany (the owner's, from Settings)", () 
   it("says plainly when the company is gone", async () => {
     await expect(removeCompany(db, "nope")).rejects.toMatchObject({ code: "not_found" });
     await expect(setCompanyEnabled(db, "nope", true)).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+describe("scanOneBoard", () => {
+  it("reads one board, keeps and records what it found, and says how it went", async () => {
+    const acme = await addCompany(db, { source: "GREENHOUSE", board: "acme", name: "Acme" });
+    const other = await addCompany(db, { source: "GREENHOUSE", board: "beta", name: "Beta" });
+    const adapters = fake({ acme: [posting("acme", "1", "Designer"), posting("acme", "2", "Cook")], beta: [posting("beta", "1", "Never read")] });
+    const outcome = await scanOneBoard(db, acme.id, {}, { adapters });
+    expect(outcome).toEqual({ id: acme.id, name: "Acme", found: 2, added: 2, closed: 0 });
+    expect(await db.scannedPosting.count({ where: { companyId: acme.id } })).toBe(2);
+    expect(await db.trackedCompany.findUniqueOrThrow({ where: { id: acme.id } })).toMatchObject({ lastFound: 2, lastError: "" });
+    // The other board was not touched.
+    expect(await db.trackedCompany.findUniqueOrThrow({ where: { id: other.id } })).toMatchObject({ lastScanAt: null });
+  });
+
+  it("records a board that failed, with words safe to show, and does not throw", async () => {
+    const gone = await addCompany(db, { source: "GREENHOUSE", board: "gone", name: "Gone" });
+    const adapters = fake({ gone: new BoardError("not-found", "The source has no such board. Check the name.", "HTTP 404") });
+    expect(await scanOneBoard(db, gone.id, {}, { adapters })).toEqual({ id: gone.id, name: "Gone", found: 0, error: "The source has no such board. Check the name." });
+    expect((await db.trackedCompany.findUniqueOrThrow({ where: { id: gone.id } })).lastError).toBe("The source has no such board. Check the name.");
+  });
+
+  it("returns null for a company that is gone or paused, so a queued job for it does nothing", async () => {
+    const paused = await addCompany(db, { source: "GREENHOUSE", board: "paused", name: "Paused" });
+    await db.trackedCompany.update({ where: { id: paused.id }, data: { enabled: false } });
+    expect(await scanOneBoard(db, paused.id, {}, { adapters: fake({}) })).toBeNull();
+    expect(await scanOneBoard(db, "missing", {}, { adapters: fake({}) })).toBeNull();
   });
 });

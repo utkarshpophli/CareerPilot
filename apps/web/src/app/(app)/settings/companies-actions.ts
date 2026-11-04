@@ -5,7 +5,10 @@ import { z } from "zod";
 
 import { action, ActionError } from "@/lib/action";
 import { BOARD_SOURCES } from "@/lib/job-search/boards";
+import { logServerError } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
+import { enqueueBoardScans } from "@/lib/queue/enqueue";
+import { queueClient, workerEnabled } from "@/lib/queue/web";
 import { loadProfile } from "@/lib/profile-data";
 import { ServiceError } from "@/lib/service-error";
 import { addCompany, listCompanies, removeCompany, scanCompanies, setCompanyEnabled, toCompanyListItem } from "@/lib/services/companies";
@@ -54,6 +57,27 @@ export const removeCompanyAction = action(z.object({ id: z.string().min(1).max(6
  * and answers with how each board went. The postings themselves are on the Review page.
  */
 export const scanNowAction = action(z.object({}), async (_input, { toast }) => {
+  // With a worker (CAREERPILOT_WORKER=on) the boards are queued for it and read there, so a restart cannot lose the scan.
+  if (workerEnabled()) {
+    const enabled = await prisma.trackedCompany.findMany({ where: { enabled: true }, select: { id: true }, orderBy: { id: "asc" } });
+    let queued;
+    try {
+      queued = await enqueueBoardScans(await queueClient(), enabled.map((company) => company.id));
+    } catch (error) {
+      logServerError("queue", error);
+      throw new ActionError("The worker isn't reachable, so nothing was queued. Check that it is running, then try again.");
+    }
+    const waiting = queued.alreadyWaiting;
+    toast(
+      queued.queued === 0 && waiting === 0
+        ? "Nothing to scan. Add a company first, or turn one back on."
+        : queued.queued === 0
+          ? `Already waiting for the worker: ${waiting} board${waiting === 1 ? "" : "s"}. Nothing new to queue.`
+          : `Queued ${queued.queued} board${queued.queued === 1 ? "" : "s"} for the worker. The Review page fills as they finish.`,
+    );
+    revalidatePath("/settings");
+    return { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: queued.queued, alreadyWaiting: waiting, companies: (await listCompanies(prisma)).map(toCompanyListItem) };
+  }
   const preferences = preferencesFor(await loadProfile(), (await loadSettings()).scanPreferences);
   const result = await scanCompanies(prisma, { preferences, limit: 1 });
   const failed = result.companies.filter((company) => company.error).length;

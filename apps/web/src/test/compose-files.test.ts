@@ -72,3 +72,24 @@ describe("the production image's start script", () => {
     expect(read("Dockerfile")).toMatch(/^CMD \["\.\/start\.sh"\]$/m);
   });
 });
+
+describe("the worker service (docs/adr/0004)", () => {
+  const compose = read("compose.production.yml").replace(/\r\n/g, "\n");
+  const worker = compose.slice(compose.indexOf("\n  worker:"), compose.indexOf("\n  ollama:") > 0 ? compose.indexOf("\n  # A local model") : undefined);
+
+  it("runs the same image with the same settings as the app, and publishes nothing", () => {
+    expect(worker).toContain("image: ${CAREERPILOT_IMAGE:?");
+    expect(worker).toContain('command: ["node", "/app/tools/worker.mjs"]');
+    expect(worker).toContain("environment: *careerpilot-env");
+    expect(worker).not.toContain("ports:");
+  });
+
+  it("turns the web process's use of the worker on in the same settings block the worker reads", () => {
+    expect(compose).toContain("environment: &careerpilot-env");
+    expect(compose).toMatch(/CAREERPILOT_WORKER: \$\{CAREERPILOT_WORKER:-on\}/);
+  });
+
+  it("does not inherit the image's web health check, which would mark it unhealthy", () => {
+    expect(worker).toMatch(/healthcheck:\s*\n\s+disable: true/);
+  });
+});

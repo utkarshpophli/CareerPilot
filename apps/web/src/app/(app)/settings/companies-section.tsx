@@ -77,6 +77,11 @@ export function CompaniesSection({ initial }: { initial: CompanyListItem[] }) {
     setScanning(false);
     if (!result.ok) return;
     setCompanies([...result.data.companies].sort(byName));
+    if (result.data.queued !== undefined) {
+      const { queued, alreadyWaiting = 0 } = result.data;
+      setScanned(queued === 0 ? "Nothing new to queue." : `Queued ${plural(queued, "board")} for the worker${alreadyWaiting ? ` (${alreadyWaiting} already waiting)` : ""}. The Review page fills as they finish.`);
+      return;
+    }
     setScanned(
       result.data.scanned === 0
         ? "Nothing was scanned."
