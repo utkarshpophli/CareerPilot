@@ -21,7 +21,8 @@ describe("career-ops provider ledger", () => {
       const [, name, batch, , verdict] = row.split("|").map((cell) => cell.trim());
       if (batch !== "done") continue;
       if (verdict === "n/a") continue;
-      expect(readFileSync(path.join(root, verdict), "utf8"), name).toContain("Verdict");
+      const linked = /\(([^)]+\.md)\)/.exec(verdict)?.[1];
+      expect(readFileSync(path.join(root, linked ? `docs/sources/${linked}` : verdict), "utf8"), name).toMatch(/Verdict/i);
     }
   });
 

@@ -237,7 +237,7 @@ test("companies add without a board, or an unknown source, is a usage error and 
   assert.equal(seen.length, 0);
   const result = await pilot(["companies", "add", "stripe", "--source", "workday"]);
   assert.equal(result.code, 2);
-  assert.match(result.err, /GREENHOUSE, LEVER or ASHBY/);
+  assert.match(result.err, /GREENHOUSE, LEVER, ASHBY, WORKABLE, RECRUITEE or TEAMTAILOR/);
   assert.equal(seen.length, 0);
   assert.equal((await pilot(["companies", "remove", "c1"])).code, 2);
 });

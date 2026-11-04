@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { requestBoardJson, validSlug } from "./request";
+import { requestBoardJson, requestBoardText, tenantHost, validSlug } from "./request";
 import { BoardError } from "./types";
 
 const HOSTS = ["api.example.test"] as const;
@@ -67,5 +67,23 @@ describe("requestBoardJson", () => {
   it("times out", async () => {
     const hang = (_url: unknown, init?: RequestInit) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))));
     await expect(requestBoardJson("https://api.example.test/x", { hosts: HOSTS, fetchImpl: hang as typeof fetch, timeoutMs: 20, sleep: noSleep })).rejects.toMatchObject({ problem: "unavailable" });
+  });
+});
+
+describe("tenantHost", () => {
+  it("puts a tenant name into a host only when it is one plain label", () => {
+    expect(tenantHost("acme-corp", "recruitee.com")).toBe("acme-corp.recruitee.com");
+    expect(tenantHost("a1", "teamtailor.com")).toBe("a1.teamtailor.com");
+    for (const bad of ["", "-a", "a-", "A.B", "a.b", "a/b", "a b", "a@evil", "a_b", "x".repeat(64), "é", "evil.test#", "a:443"]) expect(tenantHost(bad, "recruitee.com"), bad).toBeNull();
+  });
+});
+
+describe("requestBoardText", () => {
+  it("reads text with the same host list, redirect and size rules", async () => {
+    const fetchImpl = vi.fn(async () => new Response("<rss></rss>", { status: 200 }));
+    expect(await requestBoardText("https://api.example.test/feed", { hosts: HOSTS, fetchImpl, sleep: noSleep, accept: "application/rss+xml" })).toBe("<rss></rss>");
+    expect(fetchImpl).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ redirect: "error", headers: expect.objectContaining({ accept: "application/rss+xml" }) }));
+    await expect(requestBoardText("https://evil.test/feed", { hosts: HOSTS, fetchImpl, sleep: noSleep })).rejects.toMatchObject({ problem: "refused" });
+    await expect(requestBoardText("https://api.example.test/feed", { hosts: HOSTS, fetchImpl: async () => new Response("x".repeat(2000)), maxBytes: 1000, sleep: noSleep })).rejects.toMatchObject({ problem: "changed" });
   });
 });

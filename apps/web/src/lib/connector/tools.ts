@@ -481,10 +481,10 @@ export function createDossierServer(origin: string): McpServer {
     {
       title: "Watch a company's job board",
       description:
-        "Starts watching an employer's own job board on Greenhouse, Lever or Ashby, so scan_companies can read its open postings. Give the board's name (for example 'stripe') and its source, or paste the company's careers address and leave the source out. It only records a name; nothing is sent.",
+        "Starts watching an employer's own job board on Greenhouse, Lever, Ashby, Workable, Recruitee or Teamtailor, so scan_companies can read its open postings. Give the board's name (for example 'stripe') and its source, or paste the company's careers address and leave the source out. It only records a name; nothing is sent.",
       inputSchema: z.object({
         board: z.string().min(1).max(500).describe("The board's name on the source, or the company's careers address"),
-        source: z.enum(BOARD_SOURCES).optional().describe("GREENHOUSE, LEVER or ASHBY; leave out when board is a careers address"),
+        source: z.enum(BOARD_SOURCES).optional().describe("GREENHOUSE, LEVER, ASHBY, WORKABLE, RECRUITEE or TEAMTAILOR; leave out when board is a careers address"),
         name: z.string().max(200).optional().describe("What to call the company"),
       }),
       annotations: { readOnlyHint: false, idempotentHint: true },

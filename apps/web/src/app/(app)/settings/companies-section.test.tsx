@@ -69,7 +69,7 @@ describe("CompaniesSection", () => {
   });
 
   it("sends the source and name when they are given, and shows the server's reason when it refuses", async () => {
-    vi.mocked(addCompanyAction).mockResolvedValueOnce({ ok: false, error: "Say which source it is on (GREENHOUSE, LEVER, ASHBY), or paste the company's own careers address." });
+    vi.mocked(addCompanyAction).mockResolvedValueOnce({ ok: false, error: "Say which source it is on (GREENHOUSE, LEVER, ASHBY, WORKABLE, RECRUITEE, TEAMTAILOR), or paste the company's own careers address." });
     render(<CompaniesSection initial={[]} />);
     await userEvent.type(screen.getByLabelText("Job board name or careers link"), "stripe");
     await userEvent.click(screen.getByRole("button", { name: "Watch" }));

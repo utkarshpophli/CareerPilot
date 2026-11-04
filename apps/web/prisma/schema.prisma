@@ -1107,6 +1107,9 @@ enum BoardSource {
   GREENHOUSE
   LEVER
   ASHBY
+  WORKABLE
+  RECRUITEE
+  TEAMTAILOR
 }
 
 /// An employer whose own job board the owner (or an assistant, as a draft-level

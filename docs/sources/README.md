@@ -14,9 +14,9 @@ A verdict reached from documentation alone says so. Nothing here was checked by 
 | Jobbank | search | not allowed (terms) | [jobbank.md](jobbank.md) |
 | Jobnet | search | deferred (no published interface, no terms found) | [jobnet.md](jobnet.md) |
 | Jobdanmark | search | allowed with limits (listing data only, opt-in) | [jobdanmark.md](jobdanmark.md) |
-| Workable | board | allowed with limits (verdict written; adapter in progress) | [workable.md](workable.md) |
-| Recruitee | board | allowed with limits (verdict written; adapter in progress) | [recruitee.md](recruitee.md) |
-| Teamtailor | board | allowed with limits (verdict written; adapter in progress) | [teamtailor.md](teamtailor.md) |
+| Workable | board | allowed with limits | [workable.md](workable.md) |
+| Recruitee | board | allowed with limits | [recruitee.md](recruitee.md) |
+| Teamtailor | board | allowed with limits | [teamtailor.md](teamtailor.md) |
 | SmartRecruiters | board | not allowed (robots.txt) | [smartrecruiters.md](smartrecruiters.md) |
 | Personio | board | deferred (terms unreadable) | [personio.md](personio.md) |
 | BambooHR | board | deferred (no real tenant sampled, terms not read) | [bamboohr.md](bamboohr.md) |

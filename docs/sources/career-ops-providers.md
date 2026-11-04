@@ -99,7 +99,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | prevueaps | not sorted yet | queued: verdict file first | - |
 | pythonorg | not sorted yet | queued: verdict file first | - |
 | radancy | not sorted yet | queued: verdict file first | - |
-| recruitee | 1 public ATS | verdict written (allowed with limits); adapter in progress | [recruitee.md](recruitee.md) |
+| recruitee | done | ported (allowed with limits) | [recruitee.md](recruitee.md) |
 | redrover | not sorted yet | queued: verdict file first | - |
 | remoteok | not sorted yet | queued: verdict file first | - |
 | remotive | not sorted yet | queued: verdict file first | - |
@@ -114,7 +114,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | startup-jobs | not sorted yet | queued: verdict file first | - |
 | successfactors | not sorted yet | queued: verdict file first | - |
 | taleo | not sorted yet | queued: verdict file first | - |
-| teamtailor | 1 public ATS | verdict written (allowed with limits); adapter in progress | [teamtailor.md](teamtailor.md) |
+| teamtailor | done | ported (allowed with limits) | [teamtailor.md](teamtailor.md) |
 | techinasia | not sorted yet | queued: verdict file first | - |
 | telegram-channel | not sorted yet | queued: verdict file first | - |
 | tencent | not sorted yet | queued: verdict file first | - |
@@ -125,7 +125,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | ultipro | not sorted yet | queued: verdict file first | - |
 | vdab | not sorted yet | queued: verdict file first | - |
 | weworkremotely | not sorted yet | queued: verdict file first | - |
-| workable | 1 public ATS | verdict written (allowed with limits); adapter in progress | [workable.md](workable.md) |
+| workable | done | ported (allowed with limits) | [workable.md](workable.md) |
 | workday | not sorted yet | queued: verdict file first | - |
 | workingnomads | not sorted yet | queued: verdict file first | - |
 | wp-job-manager | not sorted yet | queued: verdict file first | - |
@@ -133,4 +133,4 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | yourator | not sorted yet | queued: verdict file first | - |
 | zoho-recruit | not sorted yet | queued: verdict file first | - |
 
-Totals: 126 providers; 4 ported, 3 verdict written, 2 dropped, 2 deferred, 115 queued.
+Totals: 126 providers; 7 ported, 0 verdict written, 2 dropped, 2 deferred, 115 queued.

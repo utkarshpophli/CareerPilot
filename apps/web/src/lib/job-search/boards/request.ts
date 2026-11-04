@@ -13,7 +13,14 @@ const MAX_RETRY_WAIT_MS = 10_000;
 /** A board slug: letters, digits, dot, underscore and hyphen, starting with a letter or digit. */
 export const validSlug = (slug: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(slug);
 
+/** `{tenant}.{domain}` when the tenant is a single plain DNS label (lower-case letters, digits, hyphen inside); else null, so a name can never add a dot, port, path or user to a host. */
+export function tenantHost(tenant: string, domain: string): string | null {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(tenant) ? `${tenant}.${domain}` : null;
+}
+
 export type BoardRequest = {
+  /** What to ask for; JSON by default. */
+  accept?: string;
   /** The only hosts that may be requested. */
   hosts: readonly string[];
   timeoutMs?: number;
@@ -62,6 +69,20 @@ async function readLimited(response: Response, limit: number): Promise<string | 
 
 /** GETs JSON from an allowed host. Every failure is a BoardError whose message is safe to show. */
 export async function requestBoardJson(address: string, options: BoardRequest): Promise<unknown> {
+  const { text, url } = await requestBoard(address, options);
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new BoardError("changed", "The source answered with something that is not a job list.", `${url.pathname}: not JSON`);
+  }
+}
+
+/** The same request for a feed that is text (an RSS feed); same rules, same errors. */
+export async function requestBoardText(address: string, options: BoardRequest): Promise<string> {
+  return (await requestBoard(address, options)).text;
+}
+
+async function requestBoard(address: string, options: BoardRequest): Promise<{ text: string; url: URL }> {
   const url = allowed(address, options.hosts);
   const { timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES, retries = 0, backoffMs = 500, signal, fetchImpl = fetch, sleep = wait } = options;
 
@@ -71,7 +92,7 @@ export async function requestBoardJson(address: string, options: BoardRequest): 
     let failure: BoardError | undefined;
     let retryAfterMs: number | undefined;
     try {
-      response = await fetchImpl(url, { headers: { accept: "application/json" }, redirect: "error", cache: "no-store", signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
+      response = await fetchImpl(url, { headers: { accept: options.accept ?? "application/json" }, redirect: "error", cache: "no-store", signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
     } catch (error) {
       const reason = timeout.aborted ? "timed out" : ((error as { cause?: { code?: string } }).cause?.code ?? "request failed");
       failure = new BoardError("unavailable", "The source did not answer. Try again later.", `${url.pathname}: ${reason}`);
@@ -92,11 +113,7 @@ export async function requestBoardJson(address: string, options: BoardRequest): 
       } else {
         const text = await readLimited(response, maxBytes);
         if (text === null) throw new BoardError("changed", "The board is larger than this version reads.", `${url.pathname}: over ${maxBytes} bytes`);
-        try {
-          return JSON.parse(text) as unknown;
-        } catch {
-          throw new BoardError("changed", "The source answered with something that is not a job list.", `${url.pathname}: not JSON`);
-        }
+        return { text, url };
       }
     }
 
