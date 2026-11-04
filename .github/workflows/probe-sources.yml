@@ -24,5 +24,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - run: node scripts/probe-sources.mjs ats
-      - run: node scripts/probe-sources.mjs ats-terms
+      - run: node scripts/probe-sources.mjs ats2
+      - run: >-
+          node scripts/probe-sources.mjs terms-urls
+          https://recruitee.com/terms
+          https://www.teamtailor.com/en/terms-and-conditions/
+          https://www.teamtailor.com/da/terms-and-conditions/
+          https://www.bamboohr.com/legal/
+          https://www.workable.com/terms
+          https://www.smartrecruiters.com/legal/terms-of-use/

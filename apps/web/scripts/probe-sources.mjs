@@ -19,6 +19,12 @@ const GROUPS = {
     { name: "teamtailor", origin: "https://career.teamtailor.com", front: "https://www.teamtailor.com", sample: { method: "GET", path: "/jobs.rss", note: "per-tenant RSS feed" } },
     { name: "bamboohr", origin: "https://bamboohr.bamboohr.com", front: "https://www.bamboohr.com", sample: { method: "GET", path: "/careers/list", note: "per-tenant careers list" } },
   ],
+  // Round two: real tenants (named in career-ops's own examples), for the vendors whose first sample was not a tenant.
+  ats2: [
+    { name: "workable", origin: "https://apply.workable.com", front: "https://apply.workable.com/huggingface/", sample: { method: "GET", path: "/api/v1/widget/accounts/huggingface?details=true", note: "public account widget, a real tenant" } },
+    { name: "recruitee", origin: "https://channable.recruitee.com", front: "https://channable.recruitee.com", sample: { method: "GET", path: "/api/offers/", note: "per-tenant offers API, a real tenant" } },
+    { name: "teamtailor", origin: "https://podimo.teamtailor.com", front: "https://podimo.teamtailor.com", sample: { method: "GET", path: "/jobs.rss", note: "per-tenant RSS feed, a real tenant" } },
+  ],
   danish: [
     {
       name: "jobindex",
@@ -109,6 +115,25 @@ const group = process.argv[2] ?? "danish";
 if (group === "jobdanmark-full-terms") {
   const response = await get("https://jobdanmark.dk/brugerbetingelser");
   emit("jobdanmark-brugerbetingelser", { status: response.status, text: textOf(await response.text()).slice(0, 12000) });
+  process.exit(0);
+}
+if (group === "terms-urls") {
+  // Reads the pages named on the command line: the start of each, every link that looks like terms, and the sentences around the words that would matter.
+  const STRICT = /scrap|crawl|spider|harvest|robot|automat(ed|ic)|bots?\b|data ?mining|machine[- ]readable|public(ly)? (available|accessible)|career(s)? (site|page)|job (posting|listing|board)s?|aggregat|third[- ]part(y|ies) (site|service|platform)/i;
+  for (const url of process.argv.slice(3)) {
+    try {
+      const response = await get(url);
+      const html = await response.text();
+      const text = textOf(html);
+      const windows = [...text.matchAll(new RegExp(STRICT, "gi"))].slice(0, 14).map((match) => text.slice(Math.max(0, match.index - 260), match.index + 300));
+      const links = [...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+        .map(([, href, label]) => ({ href, label: label.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() }))
+        .filter(({ href, label }) => /terms|tos\b|conditions|legal|agreement|acceptable|api/i.test(`${href} ${label}`));
+      emit(`terms-url ${url}`, { url, status: response.status, chars: text.length, start: text.slice(0, 300), links: links.slice(0, 20), windows });
+    } catch (error) {
+      emit(`terms-url ${url}`, { url, error: String(error.message ?? error) });
+    }
+  }
   process.exit(0);
 }
 if (group === "danish-terms" || group === "ats-terms") {
