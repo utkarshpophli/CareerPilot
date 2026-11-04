@@ -9,6 +9,16 @@
 
 const USER_AGENT = "CareerPilot-source-check/1.0 (+https://github.com/utkarshpophli/CareerPilot; one request per site)";
 const GROUPS = {
+  // The next batch of single-employer ATS vendors (M4c batch 1): robots.txt of the host the API is on, the vendor's front page
+  // for terms links, and one sample of the public answer for a tenant that is the vendor itself.
+  ats: [
+    { name: "workable", origin: "https://apply.workable.com", front: "https://www.workable.com", sample: { method: "GET", path: "/api/v1/widget/accounts/workable?details=true", note: "public account widget" } },
+    { name: "smartrecruiters", origin: "https://api.smartrecruiters.com", front: "https://www.smartrecruiters.com", sample: { method: "GET", path: "/v1/companies/smartrecruiters/postings?limit=5", note: "public postings API" } },
+    { name: "recruitee", origin: "https://recruitee.recruitee.com", front: "https://recruitee.com", sample: { method: "GET", path: "/api/offers/", note: "per-tenant offers API" } },
+    { name: "personio", origin: "https://personio.jobs.personio.de", front: "https://www.personio.com", sample: { method: "GET", path: "/xml", note: "per-tenant XML feed" } },
+    { name: "teamtailor", origin: "https://career.teamtailor.com", front: "https://www.teamtailor.com", sample: { method: "GET", path: "/jobs.rss", note: "per-tenant RSS feed" } },
+    { name: "bamboohr", origin: "https://bamboohr.bamboohr.com", front: "https://www.bamboohr.com", sample: { method: "GET", path: "/careers/list", note: "per-tenant careers list" } },
+  ],
   danish: [
     {
       name: "jobindex",
@@ -82,7 +92,15 @@ const TERMS = {
   jobdanmark: ["https://jobdanmark.dk/privatlivspolitik", "https://jobdanmark.dk/vilkaar", "https://jobdanmark.dk/betingelser", "https://jobdanmark.dk/brugerbetingelser"],
   jobnet: ["https://jobnet.dk/vilkaar", "https://jobnet.dk/betingelser", "https://jobnet.dk/cookies", "https://jobnet.dk/om-jobnet", "https://jobnet.dk/persondata"],
 };
-const KEYWORDS = /automat|robot|scrap|crawl|indsaml|systematisk|kopier|data ?mining|maskinel|API\b|genanvend|videreanvend|tekst- og data|ophavsret/i;
+Object.assign(TERMS, {
+  workable: ["https://www.workable.com/terms", "https://www.workable.com/terms-of-service", "https://www.workable.com/legal/terms", "https://www.workable.com/privacy"],
+  smartrecruiters: ["https://www.smartrecruiters.com/legal/terms-of-use/", "https://www.smartrecruiters.com/legal/", "https://www.smartrecruiters.com/legal/website-terms-of-use/"],
+  recruitee: ["https://recruitee.com/terms", "https://recruitee.com/legal/terms-of-service", "https://recruitee.com/terms-of-use"],
+  personio: ["https://www.personio.com/legal/terms-of-use/", "https://www.personio.com/terms-of-use/", "https://www.personio.com/legal-notice/"],
+  teamtailor: ["https://www.teamtailor.com/en/terms-of-service/", "https://www.teamtailor.com/en/legal/", "https://www.teamtailor.com/en/terms/"],
+  bamboohr: ["https://www.bamboohr.com/legal/terms-of-service/", "https://www.bamboohr.com/legal/", "https://www.bamboohr.com/legal/website-terms-of-use/"],
+});
+const KEYWORDS = /automat|robot|scrap|crawl|spider|harvest|bot\b|careers? (site|page)|public(ly)? (available|posting)|indsaml|systematisk|kopier|data ?mining|maskinel|API\b|genanvend|videreanvend|tekst- og data|ophavsret/i;
 
 /** The readable text of a page, without scripts, styles and tags. */
 const textOf = (html) => html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
@@ -93,8 +111,9 @@ if (group === "jobdanmark-full-terms") {
   emit("jobdanmark-brugerbetingelser", { status: response.status, text: textOf(await response.text()).slice(0, 12000) });
   process.exit(0);
 }
-if (group === "danish-terms") {
-  for (const [name, urls] of Object.entries(TERMS)) {
+if (group === "danish-terms" || group === "ats-terms") {
+  const wanted = group === "ats-terms" ? new Set(["workable", "smartrecruiters", "recruitee", "personio", "teamtailor", "bamboohr"]) : new Set(["jobindex", "jobdanmark", "jobnet"]);
+  for (const [name, urls] of Object.entries(TERMS).filter(([name]) => wanted.has(name))) {
     const pages = [];
     for (const url of urls) {
       try {
@@ -126,7 +145,7 @@ for (const site of GROUPS[group] ?? []) {
     result.sampleAllowedByRobots = false;
   }
   try {
-    const front = await get(site.origin);
+    const front = await get(site.front ?? site.origin);
     const html = await front.text();
     result.front = { status: front.status, server: front.headers.get("server"), cloudflare: /cloudflare|just a moment|cf-chl/i.test(html) || /cloudflare/i.test(front.headers.get("server") ?? "") };
     const links = [...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
