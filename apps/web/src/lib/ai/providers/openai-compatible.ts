@@ -5,6 +5,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import type { ReasoningEffort } from "openai/resources/shared";
 
 import { BaseProvider, SCHEMA_REFUSED, withJsonSchema, type ChatAnswer, type ChatCall } from "../provider";
+import { usageOf } from "../usage";
 import { keyGuardedFetch } from "./guarded-fetch";
 import { apiAddress, ignoresSchemas, serverAt, type Server } from "./servers";
 
@@ -188,7 +189,7 @@ export class OpenAICompatibleProvider extends BaseProvider {
     // Mistral says `model_length` when the context ran out instead.
     const finish: string | undefined = choice?.finish_reason;
     return {
-      answer: { text: answerText(choice?.message?.content), cutOff: finish === "length" || finish === "model_length" },
+      answer: { text: answerText(choice?.message?.content), cutOff: finish === "length" || finish === "model_length", usage: usageOf(completion.usage?.prompt_tokens, completion.usage?.completion_tokens) },
       reasoned: hasReasoning(completion),
     };
   }

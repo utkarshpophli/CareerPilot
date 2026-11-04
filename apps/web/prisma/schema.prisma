@@ -1212,3 +1212,25 @@ model WorkerHeartbeat {
   beatAt    DateTime
   version   String   @default("")
 }
+
+// ─── AI usage (M5.4) ─────────────────────────────────────────────────────────
+
+/// One AI call that answered: which model, which task, and the tokens the server said it used. Kept so the Usage page can
+/// total them. Never holds a prompt or an answer. `inputTokens` and `outputTokens` are null when the server gave no numbers
+/// (nothing is estimated). No foreign keys: the record outlives what it was for.
+model AiCall {
+  id           String        @id @default(cuid())
+  at           DateTime      @default(now())
+  /// The provider kind: LOCAL, OPENAI, ANTHROPIC, MISTRAL, LMSTUDIO.
+  provider     String
+  model        String
+  /// The schema's name for a structured call (for example "extracted_posting"), "text" for a plain one.
+  task         String
+  inputTokens  Int?
+  outputTokens Int?
+  actorKind    ActivityActor @default(USER)
+  actorName    String        @default("")
+
+  @@index([at])
+  @@index([model, at])
+}

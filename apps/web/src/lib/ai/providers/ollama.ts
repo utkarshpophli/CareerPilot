@@ -4,6 +4,7 @@ import { Ollama } from "ollama";
 import { z } from "zod";
 
 import { BaseProvider, withJsonSchema, type ChatAnswer, type ChatCall } from "../provider";
+import { usageOf } from "../usage";
 
 /**
  * Ollama wants the whole prompt to fit its context window and silently drops
@@ -45,7 +46,7 @@ export class OllamaProvider extends BaseProvider {
       format: call.json ? z.toJSONSchema(call.json.schema) : undefined,
       options: { temperature: call.temperature, num_predict: call.maxTokens, num_ctx: CONTEXT_TOKENS },
     });
-    return { text: response.message.content, cutOff: response.done_reason === "length" };
+    return { text: response.message.content, cutOff: response.done_reason === "length", usage: usageOf(response.prompt_eval_count, response.eval_count) };
   }
 
   protected async fetchModels(signal: AbortSignal): Promise<string[]> {
