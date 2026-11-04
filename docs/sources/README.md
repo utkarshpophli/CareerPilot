@@ -20,6 +20,13 @@ A verdict reached from documentation alone says so. Nothing here was checked by 
 | SmartRecruiters | board | not allowed (robots.txt) | [smartrecruiters.md](smartrecruiters.md) |
 | Personio | board | deferred (terms unreadable) | [personio.md](personio.md) |
 | BambooHR | board | deferred (no real tenant sampled, terms not read) | [bamboohr.md](bamboohr.md) |
+| Apple | company page | not allowed (website terms forbid scraping) | [apple.md](apple.md) |
+| Google | company page | allowed with limits, conditional on robots.txt (HTML; adapter later) | [google.md](google.md) |
+| Atlassian | company page | allowed with limits (adapter next) | [atlassian.md](atlassian.md) |
+| Amazon | company page | deferred (legal page not read) | [amazon.md](amazon.md) |
+| IBM | company page | deferred (terms not read) | [ibm.md](ibm.md) |
+| Dassault | company page | deferred (no terms found) | [dassault.md](dassault.md) |
+| Alibaba | company page | deferred (no robots.txt, no terms) | [alibaba.md](alibaba.md) |
 | Greenhouse | board | allowed (single-employer ATS) | [greenhouse.md](greenhouse.md) |
 | Lever | board | allowed (single-employer ATS) | [lever.md](lever.md) |
 | Ashby | board | allowed with limits (slow, rate limited) | [ashby.md](ashby.md) |

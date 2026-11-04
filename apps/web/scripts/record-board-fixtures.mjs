@@ -14,6 +14,8 @@ const BOARDS = {
   "lever-postings": { url: "https://api.lever.co/v0/postings/palantir", pick: (json) => json.slice(0, 3) },
   "ashby-board": { url: "https://api.ashbyhq.com/posting-api/job-board/openai?includeCompensation=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
   // Batch 1 (M4c). Real tenants named in career-ops's own examples.
+  // Batch 2 (M4c): a single employer's own careers JSON. First three postings of about 2.5 MB.
+  "atlassian-listings": { url: "https://www.atlassian.com/endpoint/careers/listings", pick: (json) => json.slice(0, 3) },
   "workable-widget": { url: "https://apply.workable.com/api/v1/widget/accounts/huggingface?details=true", pick: (json) => ({ ...json, jobs: json.jobs.slice(0, 3) }) },
   "recruitee-offers": { url: "https://channable.recruitee.com/api/offers/", pick: (json) => ({ ...json, offers: json.offers.slice(0, 3) }) },
   // A feed, not JSON: the channel's start and its first three items, as text.
