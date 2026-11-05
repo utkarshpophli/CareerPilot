@@ -27,6 +27,7 @@ import { createApplication, fetchPostingText, handOffToClaude, startReadingPosti
 import { DetailsCard } from "./details-card";
 import { createDraftStore } from "./draft-store";
 import { MatchCard } from "./match-card";
+import { SimilarApplications } from "./similar-applications";
 import { TailoringCard } from "./tailoring-card";
 import { JobProgress, jobStep } from "./job-progress";
 
@@ -441,6 +442,7 @@ export function NewApplication({ aiReady, writeInClaude = false, samplePosting, 
 
           {draft.step === "review" && draft.read && (
             <>
+              <SimilarApplications details={draft.details} postingUrl={draft.postingUrl} />
               <DetailsCard details={draft.details} onChange={(details) => update({ details })} />
               <MatchCard match={draft.read.match} requirements={draft.read.extracted.requirements} onAddSkill={(index, skill) => void addToProfile(index, skill)} />
               <TailoringCard tone={draft.tone} note={draft.note} onTone={(tone) => update({ tone })} onNote={(note) => update({ note })} />

@@ -7,6 +7,7 @@ import { ApplicationStatus } from "@/generated/prisma/enums";
 import { ActionError } from "@/lib/action";
 import { isAiUsable } from "@/lib/ai/config";
 import { profileForPrompt } from "@/lib/ai/tasks/prompt-parts";
+import { describeDuplicates } from "@/lib/duplicate-guard";
 import { countryName } from "@/lib/job-search/countries";
 import { fullText } from "@/lib/job-search/find";
 import { BOARD_SOURCES } from "@/lib/job-search/boards";
@@ -387,6 +388,7 @@ export function createDossierServer(origin: string): McpServer {
         status: "Draft",
         link: linkTo(`/applications/${saved.applicationId}`),
         check_these: saved.unverified.length > 0 ? saved.unverified : undefined,
+        already_applied: saved.duplicates.length > 0 ? describeDuplicates(saved.duplicates) : undefined,
         next: saved.unverified.length > 0 ? "CareerPilot marked names or numbers it couldn't find in the profile or posting; tell the user to check them." : undefined,
       });
     },

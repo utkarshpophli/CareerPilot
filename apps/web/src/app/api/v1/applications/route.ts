@@ -1,6 +1,7 @@
 import { ApiScope, ApplicationStatus } from "@/generated/prisma/enums";
 import { optionalString, withServiceErrors } from "@/lib/api-runs";
 import { api, ApiError, intParam, jsonBody } from "@/lib/api-v1";
+import { describeDuplicates } from "@/lib/duplicate-guard";
 import { listApplications, trackApplication } from "@/lib/services/applications";
 import { prisma } from "@/lib/prisma";
 
@@ -18,19 +19,22 @@ export const GET = (request: Request) =>
  * POST /api/v1/applications { "company"?, "role"?, "title"?, "location"?, "postingUrl"?, "postingText"? }
  * tracks an application as a Draft (at least a company or a role). A posting
  * link already tracked gives back that application with "created": false.
+ * "duplicates" lists other applications for the same company, role and place
+ * (with "notes" saying so in words); the draft is still made, the owner decides.
  * Posting text goes through the posting guard. Nothing is written or sent.
  */
 export const POST = (request: Request) =>
   api(request, ApiScope.WRITE, async () => {
     const body = await jsonBody(request);
-    return withServiceErrors(() =>
-      trackApplication(prisma, {
+    return withServiceErrors(async () => {
+      const result = await trackApplication(prisma, {
         company: optionalString(body, "company"),
         role: optionalString(body, "role"),
         title: optionalString(body, "title"),
         location: optionalString(body, "location"),
         postingUrl: optionalString(body, "postingUrl"),
         postingText: optionalString(body, "postingText"),
-      }),
-    );
+      });
+      return { ...result, notes: describeDuplicates(result.duplicates) };
+    });
   });

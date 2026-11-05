@@ -77,6 +77,9 @@ test("apps add and apps status", async () => {
   assert.deepEqual(seen[0].body, { company: "Acme", role: "Engineer", postingUrl: "https://x.example/1" });
   const again = await pilot(["apps", "add", "--company", "Acme"], { answer: { data: { id: "app1", created: false } } });
   assert.equal(again.out, "app1 (already tracked)");
+  const repeat = await pilot(["apps", "add", "--company", "Acme"], { answer: { data: { id: "app2", created: true, duplicates: [{}], notes: ["Engineer · Acme: the same company, role and place, sent 3 days ago (inside the 90-day wait) [app1]"] } } });
+  assert.equal(repeat.out, "app2");
+  assert.match(repeat.err, /^Heads up, you already have: Engineer · Acme: .*sent 3 days ago/);
   const moved = await pilot(["apps", "status", "app1", "sent"], { answer: { data: { id: "app1", status: "SENT", changed: true } } });
   assert.equal(moved.out, "app1 is now SENT");
   assert.equal(seen[0].method, "PATCH");

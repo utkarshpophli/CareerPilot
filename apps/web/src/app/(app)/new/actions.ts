@@ -7,6 +7,7 @@ import { action, ActionError } from "@/lib/action";
 import { createApplicationFromDocuments } from "@/lib/application-create";
 import { matchSchema } from "@/lib/application-data";
 import { handOffPastedPosting } from "@/lib/connector/handoff";
+import { loadDuplicates } from "@/lib/duplicate-guard-data";
 import { readPostingJob } from "@/lib/jobs/read-posting";
 import { startJob } from "@/lib/jobs/runner";
 import { writeDocumentsJob } from "@/lib/jobs/write-documents";
@@ -148,4 +149,10 @@ export const createApplication = action(
       claim: { kind: "manual", writeJobId, readJobId: input.readJobId, postingId: postingId ?? null, startupId: startupId ?? null },
     });
   },
+);
+
+/** The applications that already cover the opening being checked (the duplicate guard, M7.8); only ever informs. */
+export const findSimilarApplications = action(
+  z.object({ company: z.string().max(200), role: z.string().max(200), location: z.string().max(200), postingUrl: z.string().max(2000) }),
+  async (candidate) => loadDuplicates(prisma, candidate),
 );

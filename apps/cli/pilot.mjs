@@ -166,6 +166,8 @@ async function main(argv, env) {
         body: { company: flags.company, role: flags.role, title: flags.title, location: flags.location, postingUrl: flags.url, postingText },
       });
       show(data, data.created ? data.id : `${data.id} (already tracked)`);
+      for (const note of data.notes ?? []) process.stderr.write(`Heads up, you already have: ${note}
+`);
     } else if (args[0] === "show") {
       need(args, 2, "apps show <id>");
       const data = await call(`/api/v1/applications/${encodeURIComponent(args[1])}`);

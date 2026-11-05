@@ -18,6 +18,7 @@ vi.mock("./actions", () => ({
   createApplication: vi.fn(),
   fetchPostingText: vi.fn(),
   handOffToClaude: vi.fn(),
+  findSimilarApplications: vi.fn(async () => ({ ok: true, data: [] })),
 }));
 vi.mock("../profile/actions", () => ({ addSkill: vi.fn(async ({ name }: { name: string }) => ({ ok: true, data: { skill: { id: "s9", name }, added: true } })) }));
 vi.mock("@/lib/jobs/actions", () => ({ retry: vi.fn(async () => ({ ok: true, data: null })), cancel: vi.fn(async () => ({ ok: true, data: null })) }));

@@ -5,6 +5,8 @@ import { ApplicationStatus, DocumentKind } from "@/generated/prisma/enums";
 import { ActionError } from "@/lib/action";
 import { assertAgentMayMove } from "@/lib/agent-status-policy";
 import { unitsSchema } from "@/lib/application-data";
+import type { Duplicate } from "@/lib/duplicate-guard";
+import { loadDuplicates } from "@/lib/duplicate-guard-data";
 import { ACTIONS, recordActivity } from "@/lib/ledger";
 import { withoutPrivateParts } from "@/lib/letter-frame";
 import { platformFromUrl, platformOfApplication } from "@/lib/platform";
@@ -35,7 +37,13 @@ export type TrackInput = {
   postingText?: string;
 };
 
-export type TrackResult = { id: string; created: boolean; status: ApplicationStatus };
+export type TrackResult = {
+  id: string;
+  created: boolean;
+  status: ApplicationStatus;
+  /** Other applications that cover the same opening (same address is returned instead of made; same company, role and place is reported). */
+  duplicates: Duplicate[];
+};
 
 const clean = (value: string | undefined, max: number) => (value ?? "").trim().slice(0, max);
 
@@ -62,10 +70,12 @@ async function track(db: PrismaClient, input: TrackInput): Promise<TrackResult> 
   const postingUrl = checkedUrl(clean(input.postingUrl, LIMITS.url));
   const title = clean(input.title, LIMITS.title) || [role, company].filter(Boolean).join(" · ");
 
-  if (postingUrl) {
-    const existing = await db.application.findFirst({ where: { postingUrl }, select: { id: true, status: true }, orderBy: { createdAt: "asc" } });
-    if (existing) return { id: existing.id, created: false, status: existing.status };
-  }
+  // The same posting address (tracking parameters, "www." and a trailing slash ignored) is the same application: a
+  // retry or a second assistant gets the first one back. The same company, role and place on another board is made,
+  // as a copy can be a different team's opening, and reported so the caller can tell the owner.
+  const duplicates = await loadDuplicates(db, { company, role, location: clean(input.location, LIMITS.location), postingUrl });
+  const sameAddress = duplicates.find((entry) => entry.relation === "same-url");
+  if (sameAddress) return { id: sameAddress.id, created: false, status: sameAddress.status, duplicates: duplicates.filter((entry) => entry !== sameAddress) };
 
   let postingText = "";
   if (input.postingText !== undefined && input.postingText.trim()) {
@@ -92,7 +102,7 @@ async function track(db: PrismaClient, input: TrackInput): Promise<TrackResult> 
       platform: platformFromUrl(postingUrl),
       data: { origin: "API" },
     });
-    return { id: application.id, created: true, status: application.status };
+    return { id: application.id, created: true, status: application.status, duplicates };
   });
 }
 

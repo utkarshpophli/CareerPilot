@@ -229,6 +229,22 @@ describe("the Claude connector's tools (#221)", () => {
     });
   });
 
+  it("tells the assistant when an application it saves repeats one the owner already has", async () => {
+    const sent = await prisma().application.create({
+      data: { title: "Product Designer · Acme", company: "Acme GmbH", role: "Product Designer (m/f/d)", location: "Berlin", status: "SENT", sentAt: new Date(Date.now() - 4 * 86_400_000) },
+    });
+    const saved = await tool("save_application", {
+      details: { company: "Acme", role: "Product Designer", location: "Berlin" },
+      posting_text: "Product Designer at Acme in Berlin",
+      resume: { summary: "Designer who ships calm products.", roles: [], skills: ["Figma"] },
+      cover_letter: { paragraphs: [{ text: "I'd like to help Acme." }] },
+      match: [{ requirement: "Figma", result: "covered" }],
+    });
+    expect(saved.json).toMatchObject({ status: "Draft", already_applied: [expect.stringContaining(`sent 4 days ago (inside the 90-day wait) [${sent.id}]`)] });
+    // Reported, not refused: the owner reviews the draft and decides.
+    expect(await prisma().application.count({ where: { company: { startsWith: "Acme" } } })).toBe(2);
+  });
+
   it("has CareerPilot's own model draft one only when there is one, and says how it's coming along", async () => {
     expect((await tool("draft_application", { posting_text: "Designer at Acme" })).text).toContain("save_application");
     fake.aiUsable = true;

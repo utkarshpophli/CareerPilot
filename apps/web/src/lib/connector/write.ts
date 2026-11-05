@@ -8,7 +8,10 @@ import { withoutFrame } from "@/lib/ai/tasks/write-cover-letter";
 import { createApplicationFromDocuments } from "@/lib/application-create";
 import { SIGN_OFF_UNIT, unitsSchema, type Extracted, type Match, type Unit } from "@/lib/application-data";
 import { documentLabels } from "@/lib/document-labels";
+import type { Duplicate } from "@/lib/duplicate-guard";
+import { loadDuplicates } from "@/lib/duplicate-guard-data";
 import { FRAME_LABELS, isFrameUnit } from "@/lib/letter-frame";
+import { prisma } from "@/lib/prisma";
 import { loadProfile } from "@/lib/profile-data";
 import { loadSettings } from "@/lib/settings-data";
 import { TONES } from "@/lib/tones";
@@ -97,8 +100,8 @@ export function letterUnits(letter: z.output<typeof writtenLetterSchema>, signOf
   ]);
 }
 
-/** Saves an application Claude wrote; returns its id and the parts marked "check this". */
-export async function saveWrittenApplication(input: WrittenApplication): Promise<{ applicationId: string; unverified: { part: string; items: string[] }[] }> {
+/** Saves an application Claude wrote; returns its id, the parts marked "check this" and the applications it repeats. */
+export async function saveWrittenApplication(input: WrittenApplication): Promise<{ applicationId: string; unverified: { part: string; items: string[] }[]; duplicates: Duplicate[] }> {
   const [profile, settings] = await Promise.all([loadProfile(), loadSettings()]);
   const { details } = input;
   const extracted: Extracted = {
@@ -128,6 +131,8 @@ export async function saveWrittenApplication(input: WrittenApplication): Promise
     letter = guardUnits(letter, sources).map((unit) => (isFrameUnit(unit.id) ? letter.find((entry) => entry.id === unit.id)! : unit));
   }
 
+  // Reported, not refused: the draft is for the owner to review, and the owner decides whether it is a repeat.
+  const duplicates = await loadDuplicates(prisma, { company: details.company.trim(), role: details.role.trim(), location: details.location.trim(), postingUrl: input.postingUrl });
   const applicationId = await createApplicationFromDocuments({
     reading: { posting: input.posting, extracted, extractedWith: WRITTEN_IN_CLAUDE, matchedWith: WRITTEN_IN_CLAUDE },
     documents: { resume, resumeWith: WRITTEN_IN_CLAUDE, letter, letterWith: WRITTEN_IN_CLAUDE },
@@ -147,5 +152,5 @@ export async function saveWrittenApplication(input: WrittenApplication): Promise
     claim: { kind: "connector", postingId: input.postingId },
   });
   const unverified = [...resume, ...letter].filter((unit) => unit.unverified?.length).map((unit) => ({ part: unit.label, items: unit.unverified! }));
-  return { applicationId, unverified };
+  return { applicationId, unverified, duplicates };
 }

@@ -219,7 +219,7 @@ The part that makes "how many times did my resume change, which template" rich, 
 | 7.5 | **One fact gate** for generated documents: career-ops's hard gate plus dossier's heuristics, flagged postings and emails not trusted as sources |
 | 7.6 | A reviewer pass (ai-job-search's drafter and reviewer pattern) |
 | 7.7 | **Resume A/B and platform scorecards:** tag each application with resume version and template; show which gets more replies; per job board applications, replies, interviews, time to first response |
-| 7.8 | Duplicate-application guard across platforms (first form exists: same posting link) extended with company+role and a cooldown window |
+| 7.8 | Duplicate-application guard across platforms (first form exists: same posting link) extended with company+role and a cooldown window | **DONE 2026-11-05.** `lib/duplicate-guard.ts` (pure, 8 tests) compares through `job-identity`'s rules: the same posting address (tracking parameters, `www.` and a trailing slash ignored) or the same company, role and place under another address; archived applications are left out; one sent inside 90 days is flagged `withinCooldown`. `trackApplication` returns the application for the same address and, for the other kind, still makes the draft and lists `duplicates` (a copy can be a different team's opening, so it is reported, not merged); REST adds `notes`, the CLI prints "Heads up", MCP `save_application` returns `already_applied`. The New application screen shows "You applied for this lately" / "You may already have this" with links, as the details are checked (debounced; it only tells). Tests: unit, database (3), REST/CLI/MCP, component (4) and a browser spec |
 
 ### M8. The application lifecycle: LATER (about 2 to 3 weeks)
 
