@@ -47,6 +47,8 @@ Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never
 
 - Owner's Windows pass on `DEV` at 9de1468 (2026-11-05): typecheck, lint, build clean; 2,520 app tests, 47 CLI tests and 180 of 180 e2e pass. The bundled worker (`node .worker/worker.mjs`) was started by hand on Windows with the app's required settings: it said ready, created pg-boss's 13 tables in the `queue` schema and wrote its heartbeat; without `CAREERPILOT_PASSWORD` and `CAREERPILOT_SECRET` it refuses to start, like the web app. Not exercised on Windows: a scan actually running through the worker, and the production image with a worker.
 
+- Owner's Windows pass on `DEV` at 3539064 (2026-11-05): typecheck, lint, build clean; 2,525 app tests, 47 CLI tests and 180 of 180 e2e pass. Found and fixed: `yarn lint` scanned the git-ignored `.worker/worker.mjs` bundle that `yarn worker` builds and failed on it (now in the ESLint ignores). If a database-dependent step fails everywhere at once on the owner's machine, Docker Desktop has usually stopped after a restart (start it, then `docker start careerpilot-dev-pg`); do not run two test chains at once, they share one database.
+
 ## Next steps, in order
 
 1. M4c: batch 1 is done (Workable, Recruitee, Teamtailor ported; SmartRecruiters dropped; Personio and BambooHR deferred). 115 providers remain in `docs/sources/career-ops-providers.md`. Method that works: add the vendors to `apps/web/scripts/probe-sources.mjs`, add the marker `.github/probe-sources` to the PR, read robots.txt and terms from the run log, write the verdict files, then record fixtures with `scripts/record-board-fixtures.mjs` (marker `.github/record-board-fixtures`) and write the adapter against them. Remove each marker afterwards.
