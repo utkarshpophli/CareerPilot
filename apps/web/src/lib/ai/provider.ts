@@ -5,6 +5,7 @@ import type { AiProvider as AiProviderKind, Creativity } from "@/generated/prism
 import { logServerWarning } from "@/lib/log";
 
 import { AiError, toAiError } from "./errors";
+import { emitAiCall, type TokenUsage } from "./usage";
 
 // One interface for every AI provider (E6-1): a local model through Ollama or
 // llama.cpp, LM Studio, any OpenAI-compatible server, Anthropic or Mistral.
@@ -62,7 +63,7 @@ export type ChatCall = {
 };
 
 /** What one chat call got back; `cutOff` when the model hit its token limit mid-answer. */
-export type ChatAnswer = { text: string; cutOff: boolean };
+export type ChatAnswer = { text: string; cutOff: boolean; /** What the call used, when the server said. */ usage?: TokenUsage | null };
 
 /** SET-3 creativity as a sampling temperature. */
 export const TEMPERATURES: Record<Creativity, number> = {
@@ -102,8 +103,8 @@ export abstract class BaseProvider implements AIProvider {
     const model = this.requireModel();
     const schema = "schema" in request ? request.schema : undefined;
     const schemaName = ("schemaName" in request && request.schemaName) || "result";
-    const call = (messages: ChatMessage[]) =>
-      this.guard(model, request.signal, (signal) =>
+    const call = async (messages: ChatMessage[]) => {
+      const answer = await this.guard(model, request.signal, (signal) =>
         this.chat({
           model,
           system: request.system,
@@ -115,6 +116,10 @@ export abstract class BaseProvider implements AIProvider {
           signal,
         }),
       );
+      // Every call that answered is counted, the second try of a malformed JSON answer included.
+      emitAiCall({ provider: this.kind, model, task: schema ? schemaName : "text", usage: answer.usage ?? null, at: new Date() });
+      return answer;
+    };
 
     const answer = await call(request.messages);
     if (!schema) return answer.text;

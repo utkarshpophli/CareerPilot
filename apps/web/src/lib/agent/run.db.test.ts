@@ -38,7 +38,7 @@ vi.mock("@/lib/profile-data", async () => {
 const fake = vi.hoisted(() => ({
   postings: [] as FoundPosting[],
   searches: 0,
-  source: "JSEARCH" as "JSEARCH" | "ADZUNA" | "ARBEITSAGENTUR" | null,
+  source: "JSEARCH" as "JSEARCH" | "ADZUNA" | "ARBEITSAGENTUR" | "JOBDANMARK" | null,
   ai: true,
   failOn: null as string | null,
   onScore: (() => {}) as (title: string) => void,
@@ -214,6 +214,9 @@ describe("runAgentScan (E16-3)", () => {
     // It never searches the Bundesagentur für Arbeit on its own (#223).
     fake.source = "ARBEITSAGENTUR";
     expect(await stop()).toBe("The job agent doesn't search the Bundesagentur für Arbeit. Choose JSearch, Adzuna or FreeHire in Settings → Job search for it.");
+    // Nor Jobdanmark: its limits are one search per click (docs/sources/jobdanmark.md).
+    fake.source = "JOBDANMARK";
+    expect(await stop()).toBe("The job agent doesn't search Jobdanmark. Choose JSearch, Adzuna or FreeHire in Settings → Job search for it.");
     fake.source = "JSEARCH";
     expect(fake.searches).toBe(0);
     expect((await loadSettings()).agentRuns).toEqual([]);

@@ -10,6 +10,7 @@ import { searchPostings } from "@/lib/job-search";
 import { credentialsFor, loadJobSearchConfig, requestContext } from "@/lib/job-search/config";
 import { JobSearchError } from "@/lib/job-search/errors";
 import { postingKey, type FoundPosting, type SearchQuery } from "@/lib/job-search/search";
+import { SOURCE_INFO } from "@/lib/job-search/sources";
 import { startJob, type JobContext } from "@/lib/jobs/runner";
 import { logServerError } from "@/lib/log";
 import { saveScore } from "@/lib/posting-scores";
@@ -56,7 +57,7 @@ export async function agentSetupProblem(query: SearchQuery): Promise<string | nu
   const config = await loadJobSearchConfig();
   if (!config.source) return "Choose a job source in Settings → Job search first.";
   // It searches on its own, which the BA's terms forbid most clearly (#223).
-  if (config.source === "ARBEITSAGENTUR") return "The job agent doesn't search the Bundesagentur für Arbeit. Choose JSearch, Adzuna or FreeHire in Settings → Job search for it.";
+  if (config.source === "ARBEITSAGENTUR" || config.source === "JOBDANMARK") return `The job agent doesn't search ${config.source === "ARBEITSAGENTUR" ? "the " : ""}${SOURCE_INFO[config.source].name}. Choose JSearch, Adzuna or FreeHire in Settings → Job search for it.`;
   try {
     credentialsFor(config, config.source);
   } catch (error) {

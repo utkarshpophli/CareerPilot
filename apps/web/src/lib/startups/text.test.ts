@@ -15,6 +15,21 @@ import {
   withoutAddresses,
 } from "./text";
 
+/** How many times longer `work` takes for four times the size: the best of three runs each, so one slow run does not decide it. */
+function growth(work: (size: number) => unknown, size: number): number {
+  const best = (n: number) => {
+    let fastest = Infinity;
+    for (let run = 0; run < 3; run++) {
+      const started = performance.now();
+      work(n);
+      fastest = Math.min(fastest, performance.now() - started);
+    }
+    return fastest;
+  };
+  work(size / 4); // warm up, so compiling is not counted
+  return best(size * 4) / Math.max(best(size), 0.05);
+}
+
 describe("reading startups' text (#222)", () => {
   it("turns HTML into text with its links and entities", () => {
     expect(decodeEntities("A &amp; B &#x2F; C &#39;D&#39; &bogus;")).toBe("A & B / C 'D' &bogus;");
@@ -68,13 +83,32 @@ describe("reading startups' text (#222)", () => {
     expect(clean).toContain("Ask about our stack at the meetup.");
   });
 
-  it("reads long, broken pages quickly", () => {
-    const page = `${"<".repeat(50_000)}${"a.".repeat(50_000)}`;
-    const started = performance.now();
-    htmlToText(page);
-    findEmails(page);
-    withoutAddresses(page);
-    expect(performance.now() - started).toBeLessThan(500);
+  // Not a stopwatch against a fixed limit (that fails on a slow or busy machine for no reason): how much longer
+  // does the work take when the page is four times as long? About 4 times if it reads the page once, about
+  // 16 if some pattern rescans the text from every opener (audit B-05).
+  it("reads long, broken pages in a time that grows with their length, not with its square", () => {
+    const read = (size: number) => {
+      const page = `${"<".repeat(size)}${"a.".repeat(size)}`;
+      htmlToText(page);
+      findEmails(page);
+      withoutAddresses(page);
+    };
+    expect(growth(read, 10_000)).toBeLessThan(10);
+  });
+
+  it("the growth measure itself tells linear work from quadratic work", () => {
+    const linear = (size: number) => {
+      let sum = 0;
+      for (let index = 0; index < size * 200; index++) sum += index;
+      return sum;
+    };
+    const quadratic = (size: number) => {
+      let sum = 0;
+      for (let outer = 0; outer < size; outer++) for (let inner = 0; inner < size * 4; inner++) sum += inner;
+      return sum;
+    };
+    expect(growth(linear, 20_000)).toBeLessThan(10);
+    expect(growth(quadratic, 400)).toBeGreaterThan(10);
   });
 
   it("notices a page that takes no unsolicited applications, but not one about recruiters", () => {

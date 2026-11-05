@@ -1,8 +1,11 @@
 /** The settings sections, in order (PRD §6.8). */
 export const SETTINGS_SECTIONS = [
   { id: "ai", label: "AI provider" },
+  { id: "budget", label: "Budget" },
   { id: "jobs", label: "Job search" },
   { id: "scoring", label: "Scoring" },
+  { id: "companies", label: "Watched companies" },
+  { id: "matching", label: "Posting preferences" },
   { id: "agent", label: "Job agent" },
   { id: "documents", label: "Documents" },
   { id: "google", label: "Google" },

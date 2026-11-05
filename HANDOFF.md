@@ -27,31 +27,43 @@ Layout of the thinking: `ROADMAP.md` (all stages, tasks, risks, open decisions),
 
 ## Where things stand
 
-Done and committed on local `main` (nothing is pushed; `origin` is behind): Sprints 1 and 2 (Runs, REST write API, MCP connector, `pilot` CLI, audits and about 25 security fixes, licence and source notice, CI), and the start of M1 (commit `893ef40`).
+Work happens on the `DEV` branch only; the owner merges `DEV` into `main`. Never commit to or push `main`, and open no pull requests to it. (The existing pull request #8 from `DEV` is what runs CI.)
 
-Verified: about 2,000 app tests and 24 CLI tests pass; typecheck, lint, production build clean; the dashboard, Runs page and sign-in were exercised live in a browser.
+**Done and pushed to `DEV` (see `ROADMAP.md` for the status of every row):** Sprints 1 and 2; M1 (first run; the Windows email failures were a test problem and are fixed, see below); M2 (Connect screen, OpenCode); M3 (dashboard cards); M4a (service layer, operation-to-door table with a parity test, proposal queue, assistant work reported as runs); M4b so far (ADR 0003, Greenhouse/Lever/Ashby adapters, tracked companies and board scans from REST, CLI and MCP); M4d so far (identity and dedup, kept and closed postings, the posting guard at ingestion, deterministic scoring with reasons, a read door for kept postings).
+
+**CI (GitHub Actions, PR #8):** run 18 and run 19 on `DEV`: **all six jobs pass** (`check`, `e2e`, `windows`, `audit`, `docker`, `pilot` CLI). The production image is built and started for real in the `docker` job (health check and a browser sign-in). Read a run with the GitHub MCP tools (`actions_list`, `get_job_logs`); the sandbox cannot reach Docker Hub, job-board APIs or most other hosts, so anything that needs the internet is run in CI (see `.github/workflows/record-board-fixtures.yml`, which runs only while `.github/record-board-fixtures` is in the PR).
 
 **Not verified / known open:**
 
-1. **Full e2e run on Windows, 2026-11-02: 141 passed, 6 failed (of 147).**
-   - `calendar.spec.ts:25` and `dashboard.spec.ts:55`: time zone. The machine is UTC+5:30; the calendar value is off by exactly 19,800,000 ms and the dashboard says "Interview today at 17:30" where the spec expects "tomorrow". Fix the specs (and any fixture date maths) to pin the browser time zone, for example `timezoneId` in the Playwright config, and to build "tomorrow" in that zone.
-   - `email.spec.ts` lines 18, 44, 54, 64: time out waiting for `getByRole('group', { name: 'Subject' })`. **Not diagnosed.** Could be a real bug or an environment issue. Open the traces in `apps/web/test-results/*/trace.zip` (`yarn playwright show-trace`) and the page snapshot in each `error-context.md`.
-2. The new `e2e` CI job has never run on Linux. The Docker image has never been built here. Both are task 1.5 and 1.6 in `ROADMAP.md`.
-3. A stray folder `career-ops/examples/...` appeared at the repo root (untracked, only a `cv.md`). It is not part of the project and was left out of the commit. Check what created it (probably a skill or tool run in the wrong directory) and delete it.
-4. Owner to-dos (cannot be done by an agent): enable branch protection and secret scanning on GitHub; make the repository public before any shared use; push `main`.
+1. **`email.spec.ts` on Windows: explained and fixed.** The four failures were a test problem (Chromium on Windows returns the clipboard with CRLF; the other three specs depend on the email the first creates). The owner's Windows machine is the only place this shows, so re-run `email` there after any change to those specs.
+2. Claude Code's OAuth sign-in has not been completed by hand (`/mcp`), and no real task has been run through each assistant (`run start/step/finish`, `apps add`, `companies scan`). OpenCode was verified live.
+3. `jobs/runner.db.test.ts` "runs a job in the background" was flaky on the owner's Windows machine (failed about 1 run in 2 alone and once in the full suite). Cause found and fixed: the test waited for the database row to say DONE, then read `seen`, which the subscriber fills a moment later; it now waits for the last notification too (6 of 6 runs pass). Raising the wait ceiling, as done earlier, did not address it.
+   - Owner's Windows pass on `DEV` at the Danish-portals and liveness commits (2026-11-04): typecheck, lint and build clean; 2,469 app tests and 47 CLI tests pass; e2e 175 of 176, the one failure (`watched-companies.spec`, axe `document-title`: Next drops the `<title>` for a moment after a server action) is fixed by waiting for the title before axe runs (15 of 15 pass). About 16 other specs run axe the same way; if one shows `document-title`, apply the same wait to its helper.
+4. The Greenhouse real fixture is still to be saved from the CI recording; Lever and Ashby are saved under `boards/fixtures/real/`.
+5. Built since: the Review page (`/review`), Settings → Posting preferences and Settings → Watched companies. The dashboard's Needs-you card counts new postings. Not built: saved searches per source.
+6. Owner to-dos (cannot be done by an agent): enable branch protection and secret scanning on GitHub; make the repository public before any shared use; merge `DEV` into `main`.
+
+- Owner's Windows pass on `DEV` at 1cf5df1 (2026-11-05): typecheck, lint, build clean; 2,485 app tests and 47 CLI tests pass; e2e 176 of 177. The one failure was a test problem in the cloud's new spec (`front-door.spec` "1 draft" also matched the link "1 draft from your assistant"; fixed with `exact: true`). Strict-mode locator errors that depend on demo data are the usual cause when a spec passes in CI and fails locally.
+
+- Owner's Windows pass on `DEV` at 9de1468 (2026-11-05): typecheck, lint, build clean; 2,520 app tests, 47 CLI tests and 180 of 180 e2e pass. The bundled worker (`node .worker/worker.mjs`) was started by hand on Windows with the app's required settings: it said ready, created pg-boss's 13 tables in the `queue` schema and wrote its heartbeat; without `CAREERPILOT_PASSWORD` and `CAREERPILOT_SECRET` it refuses to start, like the web app. Not exercised on Windows: a scan actually running through the worker, and the production image with a worker.
+
+- Owner's Windows pass on `DEV` at 3539064 (2026-11-05): typecheck, lint, build clean; 2,525 app tests, 47 CLI tests and 180 of 180 e2e pass. Found and fixed: `yarn lint` scanned the git-ignored `.worker/worker.mjs` bundle that `yarn worker` builds and failed on it (now in the ESLint ignores). If a database-dependent step fails everywhere at once on the owner's machine, Docker Desktop has usually stopped after a restart (start it, then `docker start careerpilot-dev-pg`); do not run two test chains at once, they share one database.
+
+- Owner's Windows pass on `DEV` at M7 (2026-11-05, this session continues the work; the cloud session is retired): typecheck, lint, build clean; 2,632 app tests, 47 CLI tests; e2e 185 (the one failure, `publications.spec`, was a test looking for any note when a second, correct, ATS note was present; scoped to the note's name). Built this session: duplicate-application guard (7.8), ATS check with undoable fix (7.3), version actors, hand-edit versions and word diffs (7.2), median reply time and a few-sent marker (7.7). New migrations: `version_cleaned`, `version_actor`. Notes that share a screen need accessible names, because specs and tests that ask for "the note" break when a second one appears.
 
 ## Next steps, in order
 
-1. Finish M1: fix the six e2e failures (diagnose the email ones first), get `yarn test:e2e` green locally, push a branch and confirm the CI jobs (`check`, `cli`, `windows`, `audit`, `docker`, `e2e`) pass on a clean Linux runner. Smoke-test the production image against Postgres (`/api/health`, sign in).
-2. M2: the **Connect** screen at `/connect` (make a token, pick Claude Code or OpenCode or other, copy the commands, "Test connection", list of connected assistants), plus the OpenCode export target. Details and tasks are in `ROADMAP.md` M2. Verify the OpenCode config against `https://opencode.ai/config.json` and the real `opencode mcp add`.
-3. M3: dashboard cards. Then M4a to M4d. Keep going down `ROADMAP.md`.
+1. M4c: batch 1 is done (Workable, Recruitee, Teamtailor ported; SmartRecruiters dropped; Personio and BambooHR deferred). 115 providers remain in `docs/sources/career-ops-providers.md`. Method that works: add the vendors to `apps/web/scripts/probe-sources.mjs`, add the marker `.github/probe-sources` to the PR, read robots.txt and terms from the run log, write the verdict files, then record fixtures with `scripts/record-board-fixtures.mjs` (marker `.github/record-board-fixtures`) and write the adapter against them. Remove each marker afterwards.
+2. M4b.4 and M4d.2 are done (Jobdanmark shipped; Jobindex and Jobbank not allowed; Jobnet deferred; the "Check if it's still open" button and the Needs-you count of closed drafts).
+3. M5: AI cost is done (tokens per call, owner-entered prices, monthly caps with stop or cheaper-model fallback; no hosted prices built in on purpose, see ROADMAP 5.4). The worker (ADR 0004) runs the board scan, liveness checks and the daily proposal prune; `yarn worker` runs it in development (bundle in `.worker/`, ignored by git and lint). Run steps now record where, which prompt or scorer, and what was decided. Still open in M5: `owner_id` and `Principal` (5.1), the agent's daily run and backups on the worker, ledger retention (5.6).
+4. M6 to M10. Keep going down `ROADMAP.md`.
 
 Update the status words and tick tasks in `ROADMAP.md` in the same commit as the code.
 
 ## How to work in this repo (read before running anything)
 
 - Windows dev machine, but CI is Linux and Windows. Do not write Unix-only commands into scripts or tests.
-- Run everything from `apps/web`. `yarn` may not be on PATH: use `corepack yarn ...`. Node 24 (`.nvmrc`), Yarn 4.
+- Run everything from `apps/web`. `yarn` may not be on PATH: use `corepack yarn ...`. Node 24 (`.nvmrc`), Yarn 4. In the cloud sandbox corepack cannot download Yarn: put `/opt/node24/bin` on `PATH` and call `node_modules/.bin/vitest`, `tsc`, `eslint` and `playwright` directly (with `node_modules/.bin` on `PATH` too, for `tsx`); start Postgres with `pg_ctlcluster 16 main start` when it is down.
 - Postgres: the dev database `dossier` runs on port **55432** in the owner's setup (port 5432 is often taken). Put `DATABASE_URL` in the environment. Missing `DATABASE_URL` shows up as a vitest "No test files found" or a `code.charCodeAt` error.
 - Tests: `corepack yarn vitest run --project node --project dom` needs no database; the `db` project needs one. E2E: `corepack yarn build` then `corepack yarn test:e2e`. The e2e suite uses its own database named `<your database>_e2e`, a fake AI, fake job sources and a fake Google, and refuses any other database name.
 - CLI tests: `node --test` in `apps/cli`.

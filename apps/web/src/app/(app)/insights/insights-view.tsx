@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import type { VersionCause } from "@/generated/prisma/enums";
-import type { InsightRow, Insights } from "@/lib/insights";
+import { SMALL_SAMPLE, type InsightRow, type Insights } from "@/lib/insights";
 
 const card = "flex flex-col gap-4 rounded-panel border border-line-card bg-card p-6";
 const th = "py-2 pr-4 text-left text-meta font-medium text-muted";
@@ -16,6 +16,8 @@ const CAUSES: Record<VersionCause, string> = {
   UNDONE: "Change undone",
   BEFORE_RESTORE: "Saved before a restore",
   RESTORED: "Earlier version restored",
+  CLEANED: "Made ATS-safe",
+  EDITED: "Edited by hand",
 };
 
 const percent = (value: number | null) => (value === null ? "–" : `${Math.round(value * 100)}%`);
@@ -39,11 +41,15 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
         <h2 id={`${keyLabel}-heading`} className="font-serif text-section">
           {title}
         </h2>
-        <p className="text-meta text-muted">{caption}</p>
+        <p className="text-meta text-muted">
+          {caption} “Few sent” means under {SMALL_SAMPLE} sent: too few to compare with the other rows.
+        </p>
       </div>
       {rows.length === 0 ? (
         <p className="text-muted">Nothing here yet.</p>
       ) : (
+        // The table scrolls sideways inside its card on a narrow screen instead of widening the page.
+        <div className="overflow-x-auto">
         <table className="w-full text-field">
           <caption className="sr-only">{title}</caption>
           <thead>
@@ -69,6 +75,9 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
               <th scope="col" className={th}>
                 Reply rate
               </th>
+              <th scope="col" className={th}>
+                Median reply
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -76,6 +85,7 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
               <tr key={row.key} className="border-t border-line-card">
                 <th scope="row" className="py-2 pr-4 text-left font-medium">
                   {row.key}
+                  {row.fewSent && <span className="font-normal text-muted"> · few sent</span>}
                 </th>
                 <td className={td}>{row.applications}</td>
                 <td className={td}>{row.sent}</td>
@@ -83,10 +93,12 @@ function BreakdownTable({ title, caption, keyLabel, rows }: { title: string; cap
                 <td className={td}>{row.interviews}</td>
                 <td className={td}>{row.offers}</td>
                 <td className={td}>{percent(row.replyRate)}</td>
+                <td className={td}>{row.medianDaysToReply === null ? "–" : plural(row.medianDaysToReply, "day", "days")}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );

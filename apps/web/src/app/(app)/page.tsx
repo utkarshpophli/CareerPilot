@@ -7,12 +7,14 @@ import { loadDashboard } from "@/lib/dashboard-data";
 import { listActivity } from "@/lib/ledger";
 import { prisma } from "@/lib/prisma";
 import { loadRunsSnapshot } from "@/lib/runs";
+import { loadFrontDoor } from "@/lib/front-door-data";
 import { dayPeriod, hourIn } from "@/lib/greeting";
 import { loadProfileName } from "@/lib/profile-data";
 import { loadSettings } from "@/lib/settings-data";
-import { userTimeZone } from "@/lib/time-zone";
+import { lastKnownTimeZone, userTimeZone } from "@/lib/time-zone";
 
 import { Dashboard } from "./dashboard";
+import { FrontDoorCards } from "./front-door";
 import { RecentActivity } from "./recent-activity";
 import { RunningNow } from "./runs/running-now";
 import { CalendarSkeleton, DashboardCalendar } from "./dashboard-calendar";
@@ -37,6 +39,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
     listActivity(prisma, {}, { limit: 5 }),
     loadRunsSnapshot(prisma, 10),
   ]);
+  const door = await loadFrontDoor({ runs, attention: figures.attention.length, timeZone: timeZone ?? (await lastKnownTimeZone()), now });
   return (
     <Dashboard
       figures={figures}
@@ -45,6 +48,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
       range={range}
       quietDays={settings.quietDays}
       empty={figures.total === 0}
+      frontDoor={<FrontDoorCards door={door} timeZone={timeZone} />}
       recent={
         <>
           <RunningNow initial={runs} timeZone={timeZone} />

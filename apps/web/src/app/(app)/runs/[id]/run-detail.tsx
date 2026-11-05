@@ -1,13 +1,22 @@
 import Link from "next/link";
 
 import type { ActivityEvent } from "@/generated/prisma/client";
+import { readStep, type StepField } from "@/lib/run-step";
 import type { RunView } from "@/lib/runs-view";
 
 import { actorLabel, statusLabel, when } from "../run-format";
 
 const DATA_MAX = 300;
 
-const details = (data: ActivityEvent["data"]) => {
+/** The labels for the fields a step can say why with. */
+const DETAIL_LABELS: [StepField, string][] = [
+  ["source", "Source"],
+  ["promptVersion", "Prompt"],
+  ["scorerVersion", "Scorer"],
+  ["decision", "Decision"],
+];
+
+const details = (data: unknown) => {
   if (data === null || data === undefined) return "";
   const text = JSON.stringify(data);
   return text.length > DATA_MAX ? `${text.slice(0, DATA_MAX)}...` : text;
@@ -50,7 +59,10 @@ export function RunDetail({ run, events, timeZone }: { run: RunView; events: Act
       {run.stalled && <p className="text-danger">No step for a long time. The assistant may have stopped without finishing this run.</p>}
 
       <ol className="flex flex-col divide-y divide-line-card rounded-panel border border-line-card bg-card">
-        {events.map((event) => (
+        {events.map((event) => {
+          const { detail, rest } = readStep(event.data);
+          const shown = DETAIL_LABELS.filter(([field]) => detail[field]);
+          return (
           <li key={event.id} className="flex flex-col gap-0.5 px-5 py-3">
             <div className="flex flex-wrap items-baseline gap-x-3">
               <time dateTime={event.at.toISOString()} className="text-meta text-muted tabular-nums">
@@ -61,9 +73,20 @@ export function RunDetail({ run, events, timeZone }: { run: RunView; events: Act
                 {event.summary}
               </span>
             </div>
-            {details(event.data) && <code className="text-meta break-all text-muted">{details(event.data)}</code>}
+            {shown.length > 0 && (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 pt-1 text-meta">
+                {shown.map(([field, label]) => (
+                  <div key={field} className="contents">
+                    <dt className="text-muted">{label}</dt>
+                    <dd className="break-words">{detail[field]}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {details(rest) && <code className="text-meta break-all text-muted">{details(rest)}</code>}
           </li>
-        ))}
+          );
+        })}
       </ol>
       <Link href="/runs" className="self-start text-meta underline">
         All runs

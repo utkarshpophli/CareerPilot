@@ -34,7 +34,7 @@ beforeEach(async () => {
   await prisma().note.create({ data: { applicationId: ledgerly.id, body: "Called John." } });
   // A version, so the round trip covers document history (E8-10).
   const resume = await prisma().document.findFirstOrThrow({ where: { applicationId: ledgerly.id, kind: "RESUME" } });
-  await prisma().documentVersion.create({ data: { documentId: resume.id, units: resume.units ?? [], cause: "WRITTEN", createdAt: now } });
+  await prisma().documentVersion.create({ data: { documentId: resume.id, units: resume.units ?? [], cause: "EDITED", actor: "ASSISTANT", createdAt: now } });
   await prisma().setting.create({ data: { key: "apiKeyEnc", value: encryptApiKey("sk-current", secret) } });
 });
 afterAll(() => prisma().$disconnect());
@@ -56,6 +56,8 @@ describe("importExport (E10-6)", () => {
     await importExport(prisma(), file);
     expect(await snapshot()).toBe(before);
     expect(await prisma().documentVersion.count()).toBe(1);
+    // …who made a version survives the trip, and an older file without it reads as the AI's.
+    expect(await prisma().documentVersion.findFirstOrThrow({ select: { cause: true, actor: true } })).toEqual({ cause: "EDITED", actor: "ASSISTANT" });
     expect(await prisma().theme.count({ where: { builtIn: true } })).toBe(12);
     expect(await prisma().projectSkill.count()).toBe(3);
     expect(await prisma().fact.count()).toBe(3);

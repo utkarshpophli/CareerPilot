@@ -2,7 +2,7 @@ import { ApiScope, RunStatus } from "@/generated/prisma/enums";
 import { optionalString, requiredString, runJson, withServiceErrors } from "@/lib/api-runs";
 import { api, ApiError, jsonBody } from "@/lib/api-v1";
 import { prisma } from "@/lib/prisma";
-import { finishRun } from "@/lib/runs";
+import { finishRun } from "@/lib/services/runs";
 
 const FINAL = [RunStatus.OK, RunStatus.FAILED, RunStatus.CANCELLED] as const;
 

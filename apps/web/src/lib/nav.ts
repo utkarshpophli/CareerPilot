@@ -1,4 +1,4 @@
-import { Activity, Bot, BriefcaseBusiness, ChartColumn, FileText, House, Inbox, Rocket, Search, Settings, UserRound, Workflow, type LucideIcon } from "lucide-react";
+import { Activity, Bot, BriefcaseBusiness, ChartColumn, Coins, FileText, House, Inbox, ListChecks, Plug, Rocket, Search, Settings, UserRound, Workflow, type LucideIcon } from "lucide-react";
 
 // The app's sections, shared by the sidebar and the page bar so they always agree.
 
@@ -27,6 +27,7 @@ export const NAV: { label?: string; items: NavItem[] }[] = [
     label: "Job search",
     items: [
       { href: "/jobs", label: "Find jobs", icon: Search },
+      { href: "/review", label: "Review", icon: ListChecks },
       { href: "/startups", label: "Startups", icon: Rocket },
       { href: "/agent", label: "Agent", icon: Bot },
       {
@@ -45,9 +46,15 @@ export const NAV: { label?: string; items: NavItem[] }[] = [
       { href: "/runs", label: "Runs", icon: Workflow },
       { href: "/activity", label: "Activity", icon: Activity },
       { href: "/insights", label: "Insights", icon: ChartColumn },
+      { href: "/usage", label: "Usage", icon: Coins },
     ],
   },
-  { items: [{ href: "/settings", label: "Settings", icon: Settings }] },
+  {
+    items: [
+      { href: "/connect", label: "Connect", icon: Plug },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export const isCurrent = ({ href, isActive = (path) => within(path, href) }: NavItem, pathname: string) => isActive(pathname);

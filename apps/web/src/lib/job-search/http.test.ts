@@ -74,3 +74,14 @@ describe("requestJson", () => {
     });
   });
 });
+
+describe("requestJson with a body", () => {
+  it("posts the body as JSON", async () => {
+    const requests = stubFetch(() => json({ ok: true }));
+    await requestJson("JOBDANMARK", url, { method: "POST", body: { filters: [] }, headers: { "user-agent": "CareerPilot/test" } });
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].body).toEqual({ filters: [] });
+    expect(requests[0].headers.get("content-type")).toBe("application/json");
+    expect(requests[0].headers.get("user-agent")).toBe("CareerPilot/test");
+  });
+});

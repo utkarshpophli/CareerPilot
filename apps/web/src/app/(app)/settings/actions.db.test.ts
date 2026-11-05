@@ -23,6 +23,8 @@ import {
   saveJobSearchDetails,
   saveJobSource,
   saveJobSourceKey,
+  saveBudget,
+  saveScanPreferences,
   saveScorer,
   saveTypesafeKey,
   setConnector,
@@ -43,6 +45,7 @@ vi.mock("@/lib/auth/session", () => ({
   getSession: async () => ({ persistent: false, issuedAt: new Date(), expiresAt: new Date(Date.now() + 60_000) }),
 }));
 vi.mock("@/lib/env", () => ({ env: { CAREERPILOT_SECRET: "a".repeat(32) } }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // The real config and key handling, with a mock model behind them.
 const provider = vi.hoisted(() => ({ current: undefined as unknown }));
 vi.mock("@/lib/ai", async (importOriginal) => ({
@@ -296,5 +299,78 @@ describe("the MCP connector (#221, #281)", () => {
     expect(await addConnectorRedirect({ uri: "http://localhost:5678/callback" })).toMatchObject({ ok: true, data: { redirects: [n8n, "http://localhost:5678/callback"] } });
     expect((await settings()).connectorRedirects).toEqual([n8n, "http://localhost:5678/callback"]);
     expect(await removeConnectorRedirect({ uri: n8n })).toEqual({ ok: true, data: { redirects: ["http://localhost:5678/callback"] } });
+  });
+});
+
+
+describe("saveScanPreferences", () => {
+  const wants = { remote: "yes" as const, minSalary: { amount: 60000, currency: "eur" }, excludeKeywords: ["commission only", "Commission Only", " unpaid "], excludeCompanies: ["Evil Corp"] };
+
+  it("saves what the owner set (tidied: currency in capitals, no repeats), and says how many postings were scored again", async () => {
+    await db.client!.scannedPosting.create({
+      data: { source: "GREENHOUSE", externalId: "acme:1", companyName: "Acme", title: "Designer", description: "Commission only.", url: "https://example.test/1", canonicalKey: "acme_designer", fingerprint: "a", firstSeenAt: new Date(), lastSeenAt: new Date(), remote: true, score: 33, scoreBand: "poor" },
+    });
+    const result = await saveScanPreferences(wants);
+    expect(result).toMatchObject({ ok: true, data: { excludeKeywords: ["commission only", "unpaid"], minSalary: { amount: 60000, currency: "EUR" }, remote: "yes" }, toast: expect.stringMatching(/1 posting.*again/i) });
+    expect((await loadSettings()).scanPreferences).toEqual({ remote: "yes", minSalary: { amount: 60000, currency: "EUR" }, excludeKeywords: ["commission only", "unpaid"], excludeCompanies: ["Evil Corp"] });
+    // The new veto applies to what is already kept, at once.
+    expect(await db.client!.scannedPosting.findFirstOrThrow()).toMatchObject({ score: 0, scoreBand: "poor" });
+  });
+
+  it("clears the lowest pay and the lists when they are emptied", async () => {
+    await saveScanPreferences(wants);
+    const cleared = await saveScanPreferences({ remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] });
+    expect(cleared).toMatchObject({ ok: true });
+    expect((await loadSettings()).scanPreferences).toEqual({ remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] });
+  });
+
+  it("refuses values that make no sense, and saves nothing", async () => {
+    for (const bad of [
+      { ...wants, minSalary: { amount: -5, currency: "EUR" } },
+      { ...wants, minSalary: { amount: 5.5, currency: "EUR" } },
+      { ...wants, minSalary: { amount: 5, currency: "EURO" } },
+      { ...wants, remote: "maybe" },
+      { ...wants, excludeKeywords: Array.from({ length: 31 }, (_, index) => `word ${index}`) },
+      { ...wants, excludeCompanies: ["x".repeat(81)] },
+    ]) {
+      expect(await saveScanPreferences(bad as never), JSON.stringify(bad)).toMatchObject({ ok: false });
+    }
+    expect((await loadSettings()).scanPreferences).toEqual({ remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] });
+  });
+});
+
+describe("saveBudget", () => {
+  const prices = [{ model: "claude-sonnet-5", currency: "eur", inputPerMillion: 3, outputPerMillion: 15 }];
+  const budget = { monthlyLimit: { amount: 5, currency: "eur" }, monthlyTokens: 2_000_000, warnPercent: 80, atLimit: "fallback" as const, fallbackModel: " claude-haiku-5 " };
+
+  it("saves the prices and the caps, tidied (currency in capitals, a model named once)", async () => {
+    const result = await saveBudget({ prices: [...prices, { ...prices[0], inputPerMillion: 99 }], budget });
+    expect(result).toMatchObject({ ok: true });
+    const saved = await loadSettings();
+    expect(saved.modelPrices).toEqual([{ model: "claude-sonnet-5", currency: "EUR", inputPerMillion: 3, outputPerMillion: 15 }]);
+    expect(saved.aiBudget).toEqual({ monthlyLimit: { amount: 5, currency: "EUR" }, monthlyTokens: 2_000_000, warnPercent: 80, atLimit: "fallback", fallbackModel: "claude-haiku-5" });
+  });
+
+  it("clears the caps when they are emptied", async () => {
+    await saveBudget({ prices, budget });
+    await saveBudget({ prices: [], budget: { monthlyLimit: null, monthlyTokens: null, warnPercent: 80, atLimit: "stop", fallbackModel: null } });
+    const saved = await loadSettings();
+    expect(saved.modelPrices).toEqual([]);
+    expect(saved.aiBudget).toMatchObject({ monthlyLimit: null, monthlyTokens: null, atLimit: "stop" });
+  });
+
+  it("refuses a switch to a model it was not told, and values that make no sense", async () => {
+    for (const bad of [
+      { prices, budget: { ...budget, fallbackModel: null } },
+      { prices, budget: { ...budget, monthlyLimit: { amount: -1, currency: "EUR" } } },
+      { prices, budget: { ...budget, monthlyLimit: { amount: 5, currency: "EURO" } } },
+      { prices, budget: { ...budget, monthlyTokens: 1.5 } },
+      { prices, budget: { ...budget, warnPercent: 100 } },
+      { prices: [{ ...prices[0], inputPerMillion: -1 }], budget },
+      { prices: Array.from({ length: 51 }, (_, index) => ({ ...prices[0], model: `m${index}` })), budget },
+    ]) {
+      expect(await saveBudget(bad as never), JSON.stringify(bad)).toMatchObject({ ok: false });
+    }
+    expect((await loadSettings()).aiBudget.monthlyLimit).toBeNull();
   });
 });

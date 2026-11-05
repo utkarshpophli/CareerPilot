@@ -226,3 +226,80 @@ export const freehireLastPage = {
   ],
   meta: { total: 21, limit: 20, offset: 20 },
 };
+
+/**
+ * Jobdanmark's search answer. The items are real ones from the site's own search call (recorded 2026-11-02 by the source probe, presentation fields
+ * such as logos and cover images left out); the paging fields are as the upstream CLI documents them, because the recording was cut before them.
+ * Note the two real addresses with a postcode and no city ("4100 ").
+ */
+export const jobdanmarkPage = {
+  items: [
+    {
+      "title": "Udviklingsorienteret og relationel uddannelsesleder til fremtidens sygeplejerskeuddannelse i Horsens",
+      "companyName": "VIA University College",
+      "companyAddress": "Banegårdsgade 2, 8700 Horsens",
+      "jobTypes": [
+        "fuldtid"
+      ],
+      "boostJob": true,
+      "publishedDate": "16-10-2026",
+      "applicationDeadline": "15-11-2026",
+      "url": "/job/udviklingsorienteret-og-relationel-uddannelsesleder-til-fremtidens-sygeplejerskeuddannelse-i-horsens"
+    },
+    {
+      "title": "VIA-kantinen på Campus Aarhus N søger en faglært kok, cater eller ernæringsassistent til et barselsvikariat fra 1. januar til 31. december 2027",
+      "companyName": "VIA University College",
+      "companyAddress": "Hedeager 2, 8200 Aarhus N",
+      "jobTypes": [
+        "fuldtid"
+      ],
+      "boostJob": false,
+      "publishedDate": "30-10-2026",
+      "applicationDeadline": "15-11-2026",
+      "url": "/job/via-kantinen-paa-campus-aarhus-n-soeger-en-faglaert-kok-cater-eller-ernaeringsassistent-til-et-barselsvikariat-fra-1-januar-til-31-december-2027"
+    },
+    {
+      "title": "Kantinen ved VIA Campus Randers søger en opvasker",
+      "companyName": "VIA University College",
+      "companyAddress": "Jens Otto Krags Plads 3, 8900 Randers C",
+      "jobTypes": [
+        "deltid"
+      ],
+      "boostJob": false,
+      "publishedDate": "30-10-2026",
+      "applicationDeadline": "20-11-2026",
+      "url": "/job/kantinen-ved-via-campus-randers-soeger-en-opvasker"
+    },
+    {
+      "title": "Senior Automation Engineer",
+      "companyName": "Semco Maritime",
+      "companyAddress": "Esbjerg Brygge, 30, 6700 Esbjerg",
+      "jobTypes": [
+        "fuldtid"
+      ],
+      "boostJob": false,
+      "publishedDate": "30-10-2026",
+      "applicationDeadline": "13-11-2026",
+      "url": "/job/senior-automation-engineer"
+    },
+    {
+      "title": "Truckfører søges til produktion og lager i bundsolid virksomhed som producerer gavepapir (Ringsted)",
+      "companyName": "Job Team Vestsjælland v/ Bo Bødker",
+      "companyAddress": "4100 ",
+      "jobTypes": [
+        "fuldtid"
+      ],
+      "boostJob": false,
+      "publishedDate": "30-10-2026",
+      "applicationDeadline": "12-11-2026",
+      "url": "/job/truckfoerer-soeges-til-produktion-og-lager-i-bundsolid-virksomhed-som-producerer-gavepapir-ringsted-3"
+    }
+  ],
+  currentPage: 1,
+  totalItems: 95,
+  itemsPrPage: 30,
+  totalPages: 4,
+};
+
+/** Jobdanmark's last page. */
+export const jobdanmarkLastPage = { ...jobdanmarkPage, items: jobdanmarkPage.items.slice(0, 1), currentPage: 4 };

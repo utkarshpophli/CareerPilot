@@ -14,7 +14,7 @@ const GENERATE_SECRET = "for example the output of `openssl rand -base64 32`";
 const HASH_PASSWORD = "Make one with `yarn hash-password` (in apps/web), or `docker compose run --rm app yarn hash-password`";
 
 export const AI_PROVIDERS = ["local", "openai", "anthropic", "mistral", "lmstudio"] as const;
-export const JOB_SOURCE_NAMES = ["jsearch", "adzuna", "arbeitsagentur", "freehire", "off"] as const;
+export const JOB_SOURCE_NAMES = ["jsearch", "adzuna", "arbeitsagentur", "freehire", "jobdanmark", "off"] as const;
 export const SCORER_NAMES = ["ai", "jev"] as const;
 
 // An empty value (`CAREERPILOT_AI_KEY=` in .env) counts as unset.
@@ -128,6 +128,31 @@ const schema = z.object({
   // FreeHire, or leave unset for the public catalogue.
   CAREERPILOT_FREEHIRE_URL: optional(
     z.url({ protocol: /^https?$/, error: "CAREERPILOT_FREEHIRE_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
+  ),
+  // On sends the owner's "Scan now" and the schedule to the worker process (docs/adr/0004) instead of running a scan in the
+  // web process. Off (or unset) keeps everything in the web process, with no worker needed.
+  CAREERPILOT_WORKER: optional(
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.enum(["on", "off"], { error: (issue) => `CAREERPILOT_WORKER must be on or off (got "${String(issue.input)}").` })),
+  ),
+  // A cron expression (five fields, in the server's time zone) for a scan of every watched board by the worker, for example
+  // "0 6 * * *" for six every morning. Unset means no scheduled scan. Only used by the worker.
+  CAREERPILOT_SCAN_SCHEDULE: optional(
+    z
+      .string()
+      .trim()
+      .regex(/^\S+(\s+\S+){4}$/, { error: "CAREERPILOT_SCAN_SCHEDULE must be a cron expression with five fields, for example 0 6 * * *." }),
+  ),
+  // A cron expression (five fields) for the worker to check whether the jobs your drafts are for are still open, once a day at most
+  // per draft. Unset means no scheduled checks; the button on the Job posting tab always works.
+  CAREERPILOT_LIVENESS_SCHEDULE: optional(
+    z
+      .string()
+      .trim()
+      .regex(/^\S+(\s+\S+){4}$/, { error: "CAREERPILOT_LIVENESS_SCHEDULE must be a cron expression with five fields, for example 30 5 * * *." }),
   ),
   // Off takes the Bundesagentur für Arbeit out everywhere (#223): it isn't an
   // official API, so a server can choose not to offer it. Unset means on.

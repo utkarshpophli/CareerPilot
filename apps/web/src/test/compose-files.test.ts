@@ -54,3 +54,42 @@ describe("publishedPorts", () => {
     expect(publishedPorts(sample)).toEqual(["5432:5432", "127.0.0.1:5433:5432"]);
   });
 });
+
+// The production image runs ./start.sh as its command. The node base image's entrypoint runs any command that is
+// a file without the executable bit as `node ./start.sh`, which reads the shell script as JavaScript and stops with
+// a SyntaxError on its first comment line. The first real CI run of the image found this: git had the file as 100644
+// and a Windows checkout cannot be relied on to keep the bit, so the Dockerfile sets it itself.
+describe("the production image's start script", () => {
+  it("is copied in executable, whatever mode the checkout gave it", () => {
+    const copy = read("Dockerfile")
+      .split(/\r?\n/)
+      .find((line) => /^COPY\b.*docker\/start\.sh/.test(line));
+    expect(copy, "the Dockerfile copies docker/start.sh").toBeDefined();
+    expect(copy).toMatch(/--chmod=0?7[0-7][0-7]/);
+  });
+
+  it("is the command, as a path the entrypoint can run", () => {
+    expect(read("Dockerfile")).toMatch(/^CMD \["\.\/start\.sh"\]$/m);
+  });
+});
+
+describe("the worker service (docs/adr/0004)", () => {
+  const compose = read("compose.production.yml").replace(/\r\n/g, "\n");
+  const worker = compose.slice(compose.indexOf("\n  worker:"), compose.indexOf("\n  ollama:") > 0 ? compose.indexOf("\n  # A local model") : undefined);
+
+  it("runs the same image with the same settings as the app, and publishes nothing", () => {
+    expect(worker).toContain("image: ${CAREERPILOT_IMAGE:?");
+    expect(worker).toContain('command: ["node", "/app/tools/worker.mjs"]');
+    expect(worker).toContain("environment: *careerpilot-env");
+    expect(worker).not.toContain("ports:");
+  });
+
+  it("turns the web process's use of the worker on in the same settings block the worker reads", () => {
+    expect(compose).toContain("environment: &careerpilot-env");
+    expect(compose).toMatch(/CAREERPILOT_WORKER: \$\{CAREERPILOT_WORKER:-on\}/);
+  });
+
+  it("does not inherit the image's web health check, which would mark it unhealthy", () => {
+    expect(worker).toMatch(/healthcheck:\s*\n\s+disable: true/);
+  });
+});

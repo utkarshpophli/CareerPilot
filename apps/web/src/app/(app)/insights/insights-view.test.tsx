@@ -21,6 +21,7 @@ const applications: InsightApplication[] = [
     postingUrl: "https://jobs.lever.co/acme/1",
     postingSource: null,
     documents: [{ kind: "RESUME", themeName: "Ledger", versionCauses: ["WRITTEN", "REFINED", "REFINED"] }],
+    firstReplyAt: null,
   },
 ];
 
@@ -31,12 +32,22 @@ describe("InsightsView", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
+  it("shows how long replies take, and marks rows with too few sent to compare", () => {
+    const replied: InsightApplication = { ...applications[0]!, id: "r", sentAt: new Date("2026-11-01T10:00:00Z"), firstReplyAt: new Date("2026-11-04T10:00:00Z") };
+    render(<InsightsView insights={computeInsights([replied], now)} />);
+    const platform = screen.getByRole("table", { name: "By platform" });
+    const lever = within(platform).getByRole("row", { name: /lever/ });
+    expect(within(lever).getAllByRole("cell").at(-1)).toHaveTextContent("3 days");
+    expect(within(lever).getByRole("rowheader")).toHaveTextContent("few sent");
+    expect(screen.getAllByText(/“Few sent” means under 5 sent/).length).toBeGreaterThan(0);
+  });
+
   it("shows platforms, templates and resume revisions", () => {
     render(<InsightsView insights={computeInsights(applications, now)} />);
 
     const platform = screen.getByRole("table", { name: "By platform" });
     const lever = within(platform).getByRole("row", { name: /lever/ });
-    expect(within(lever).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["1", "1", "1", "1", "0", "100%"]);
+    expect(within(lever).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["1", "1", "1", "1", "0", "100%", "–"]);
 
     const template = screen.getByRole("table", { name: "By resume template" });
     expect(within(template).getByRole("row", { name: /Ledger/ })).toBeInTheDocument();

@@ -8,7 +8,7 @@ Model: local-only, open source, people self-host. We run nothing for anyone, but
 
 | Question | Decision | Closes |
 |---|---|---|
-| What may agents do to application status? | Agents propose, the owner confirms. Free for agents: DRAFT, REJECTED, DECLINED. Statuses that claim progress (SENT, SCREENING, INTERVIEW, OFFER, ACCEPTED) are refused for tokens and the connector until the proposal queue ships (Sprint 3), then become a one-click confirmation. | A-05, A-09, B-01 (part) |
+| What may agents do to application status? | Agents propose, the owner confirms. Free for agents: DRAFT, REJECTED, DECLINED. Statuses that claim progress (SENT, SCREENING, INTERVIEW, OFFER, ACCEPTED) are refused for tokens and the connector, which can propose them instead (the proposal queue, built); the owner confirms with one click. | A-05, A-09, B-01 (part) |
 | Usage ping and update check | Delete the ping. Update check stays, off until the owner turns it on. | C-05, C-15 |
 | Environment variable names | Rename to `CAREERPILOT_*`; read the old `DOSSIER_*` names as a fallback with a one-line warning. Image and repository references point at this project. | C-01, C-25 |
 | Copyright holder | Utkarsh Pophli, for CareerPilot's changes, alongside the upstream notices that stay. | C-04 |
@@ -46,7 +46,7 @@ Status: DONE, ACCEPTED, LATER (with the sprint it moves to). Updated 2026-11-01 
 | Session epoch: "Sign out everywhere" in Settings → Security makes every cookie stale at once; kept by Delete everything, never exported or imported | A-04 | DONE |
 | Password required to create an API token, through the same throttled check as signing in (one shared function) | A-20 | DONE |
 | Best-effort redaction of credentials (API tokens, provider keys, bearer tokens, JWTs, private keys, `name=value` secrets) in run titles, steps and every ledger summary and data field | (plan) | DONE |
-| Proposal queue for progress statuses (one-click confirm) | A-05 | LATER, Sprint 3 |
+| Proposal queue for progress statuses (one-click confirm) | A-05 | DONE 2026-11-02 (`lib/proposals.ts`; REST, MCP and CLI propose, only the signed-in owner confirms) |
 | OAuth grants stored in the database: single-use codes, rotating refresh tokens, per-client revoke | A-07 | LATER, Sprint 3 |
 | Pairing window for connector client registration; consent name from the redirect host | A-08, A-19 | LATER, Sprint 3 |
 

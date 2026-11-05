@@ -28,6 +28,7 @@ export function Dashboard({
   empty,
   calendar,
   recent,
+  frontDoor,
 }: {
   figures: DashboardFigures;
   firstName: string;
@@ -42,6 +43,8 @@ export function Dashboard({
   calendar?: ReactNode;
   /** Recent activity: the last few things done by you or an assistant. */
   recent?: ReactNode;
+  /** The front-door cards: how many, where, resume, assistants, what needs you. Not scoped by the time filter. */
+  frontDoor?: ReactNode;
 }) {
   const { sent, heardBack } = figures;
   // The summary follows the time filter, so it says which period it covers.
@@ -69,17 +72,20 @@ export function Dashboard({
           <Welcome />
         </Columns>
       ) : (
-        <PeriodFilter period={range}>
-          <Columns calendar={calendar}>
-            <PeriodScoped className="grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-start gap-5">
-              <Funnel figures={figures} />
-              <ActivityChart weeks={figures.weeks} />
-              <WhereThingsStand byStatus={figures.byStatus} />
-              <WorthALook items={figures.attention} quietDays={quietDays} />
-              {recent}
-            </PeriodScoped>
-          </Columns>
-        </PeriodFilter>
+        <>
+          {frontDoor && <div className="max-w-[1240px] px-10 pb-5">{frontDoor}</div>}
+          <PeriodFilter period={range}>
+            <Columns calendar={calendar}>
+              <PeriodScoped className="grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-start gap-5">
+                <Funnel figures={figures} />
+                <ActivityChart weeks={figures.weeks} />
+                <WhereThingsStand byStatus={figures.byStatus} />
+                <WorthALook items={figures.attention} quietDays={quietDays} />
+                {recent}
+              </PeriodScoped>
+            </Columns>
+          </PeriodFilter>
+        </>
       )}
     </>
   );
@@ -222,7 +228,7 @@ function Welcome() {
           <span className="text-muted">Paste a job posting or its link, and get a tailored resume and letter to review.</span>
         </li>
         <li className="flex flex-col gap-0.5">
-          <Link href="/settings?section=tokens" className="font-medium underline underline-offset-2">
+          <Link href="/connect" className="font-medium underline underline-offset-2">
             Connect an assistant
           </Link>
           <span className="text-muted">Let Claude Code or OpenCode work for you, and watch every step here. It never sends anything without your click.</span>

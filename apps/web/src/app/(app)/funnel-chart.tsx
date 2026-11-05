@@ -166,7 +166,7 @@ export function FunnelChart({ funnel }: { funnel: readonly FunnelStep[] }) {
 
   if (sent === 0) {
     return (
-      <div className="relative overflow-x-auto">
+      <div role="region" aria-label="Funnel chart" tabIndex={0} className="relative overflow-x-auto">
         <div className="min-w-[760px]">{labels}</div>
       </div>
     );
@@ -218,7 +218,7 @@ export function FunnelChart({ funnel }: { funnel: readonly FunnelStep[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="relative overflow-x-auto">
+      <div role="region" aria-label="Funnel chart" tabIndex={0} className="relative overflow-x-auto">
         <div className="min-w-[760px] pb-1">
           {labels}
           {/* The picture; the labels above and the table below have the same numbers for screen readers and keyboards. */}
@@ -307,7 +307,7 @@ export function FunnelChart({ funnel }: { funnel: readonly FunnelStep[] }) {
 
       <details className="text-meta text-muted">
         <summary className="w-fit cursor-pointer hover:text-ink">Show the numbers</summary>
-        <div className="relative overflow-x-auto">
+        <div role="region" aria-label="Funnel numbers" tabIndex={0} className="relative overflow-x-auto">
           <table className="mt-3 w-full max-w-[640px] text-left tabular-nums">
             <caption className="sr-only">How far your sent applications got, and where the ones that stopped at each stage are now</caption>
             <thead>

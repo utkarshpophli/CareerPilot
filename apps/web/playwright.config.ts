@@ -17,6 +17,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: `http://localhost:${APP_PORT}`,
+    // The browser's zone, pinned with the server's (e2e/support.ts) so "today" means the same day to both.
+    timezoneId: "UTC",
     trace: "retain-on-failure",
     viewport: { width: 1400, height: 900 },
   },

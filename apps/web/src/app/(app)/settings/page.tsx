@@ -9,6 +9,7 @@ import { providerOption } from "@/lib/ai/provider-options";
 import { lastNightlyBackup } from "@/lib/backup-schedule";
 import { backupsDir } from "@/lib/backups";
 import { apiTokenRows } from "@/lib/api-tokens";
+import { requestOrigin, serverAddress } from "@/lib/request-origin";
 import { mcpUrl } from "@/lib/connector/oauth";
 import { exportFileName } from "@/lib/data-export";
 import { formatShortDate } from "@/lib/dates";
@@ -18,6 +19,7 @@ import { loadGoogleClientConfig, redirectUri } from "@/lib/google/oauth";
 import { lastKnownTimeZone, userTimeZone } from "@/lib/time-zone";
 import { appVersion } from "@/lib/version";
 import { prisma } from "@/lib/prisma";
+import { listCompanies, toCompanyListItem } from "@/lib/services/companies";
 import { loadProfileName } from "@/lib/profile-data";
 import { scoringProblem } from "@/lib/scoring";
 import { loadScoringConfig, scoringView } from "@/lib/scoring/config";
@@ -25,13 +27,18 @@ import { loadSettings } from "@/lib/settings-data";
 import { availableUpdate } from "@/lib/update-check";
 
 import { AgentSection } from "./agent-section";
+import { loadBudget } from "@/lib/ai/budget-data";
+
 import { AiBehaviour } from "./ai-behaviour";
+import { BudgetSection } from "./budget-section";
 import { AiProviderSection } from "./ai-provider-section";
 import { DataSection } from "./data-section";
 import { DocumentsSection } from "./documents-section";
 import { GoogleSection } from "./google-section";
 import { GoogleNotice } from "./google-notice";
 import { JobSearchSection } from "./job-search-section";
+import { CompaniesSection } from "./companies-section";
+import { PostingPreferencesSection } from "./posting-preferences-section";
 import { ScoringSection } from "./scoring-section";
 import { AboutSection, type AboutFacts } from "./about-section";
 import { ApiTokensSection } from "./api-tokens-section";
@@ -57,10 +64,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <AiProviderSection initial={await loadAiSettingsView()} />
           <AiBehaviour initial={{ creativity: settings.creativity, strict: settings.strict, showDiff: settings.showDiff }} />
         </>
+      ) : section === "budget" ? (
+        <BudgetSection initial={await loadBudget()} />
       ) : section === "jobs" ? (
         <JobSearchSection initial={jobSearchView(await loadJobSearchConfig())} />
       ) : section === "scoring" ? (
         <ScoringSection initial={scoringView(await loadScoringConfig())} />
+      ) : section === "companies" ? (
+        <CompaniesSection initial={(await listCompanies(prisma)).map(toCompanyListItem)} />
+      ) : section === "matching" ? (
+        <PostingPreferencesSection initial={settings.scanPreferences} />
       ) : section === "agent" ? (
         <AgentSection
           initial={{
@@ -105,10 +118,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       ) : section === "connector" ? (
         <ConnectorSection
           initial={{ on: settings.connectorEnabledAt !== null, redirects: settings.connectorRedirects }}
-          address={mcpUrl(env.CAREERPILOT_PUBLIC_URL ?? (await requestOrigin()))}
+          address={mcpUrl(await serverAddress())}
         />
       ) : section === "tokens" ? (
-        <ApiTokensSection initial={await apiTokenRows()} address={env.CAREERPILOT_PUBLIC_URL ?? (await requestOrigin())} />
+        <ApiTokensSection initial={await apiTokenRows()} address={await serverAddress()} />
       ) : section === "security" ? (
         <SecuritySection />
       ) : section === "data" ? (
@@ -169,14 +182,6 @@ async function googleView() {
 async function googleClientView() {
   const { id, idState, secretState } = await loadGoogleClientConfig();
   return { id, idState, secretState };
-}
-
-/** The address this page was reached at, for the redirect URI to register. */
-async function requestOrigin(): Promise<string> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host")?.split(",")[0]?.trim() || requestHeaders.get("host") || "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim() || (host.startsWith("localhost") ? "http" : "https");
-  return `${protocol}://${host}`;
 }
 
 /** The file name preview uses your name and your latest application, or sample values (SET-8). */

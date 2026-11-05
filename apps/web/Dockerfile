@@ -62,6 +62,12 @@ RUN node_modules/.bin/esbuild scripts/hash-password.ts --bundle --platform=node 
   --outfile=/tools/hash-password.mjs --banner:js='#!/usr/bin/env node' \
   && chmod 755 /tools/hash-password.mjs
 
+# The worker (docs/adr/0004) as one file as well: `node /app/tools/worker.mjs`, started as a second container from this image.
+# `server-only` is a guard for the web bundle and has nothing to guard here.
+RUN node_modules/.bin/esbuild src/worker/main.ts --bundle --platform=node --format=esm --target=node24 \
+  --external:pg-native --alias:@=./src --alias:server-only=./src/test/empty-module.ts --outfile=/tools/worker.mjs \
+  --banner:js='import { createRequire } from "node:module"; const require = createRequire(import.meta.url);'
+
 FROM base AS production
 # The commit this image was built from, shown with the source link (AGPL source offer).
 # Build with: --build-arg GIT_SHA=$(git rev-parse HEAD)
@@ -89,6 +95,6 @@ USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
-COPY docker/start.sh ./start.sh
+COPY --chmod=755 docker/start.sh ./start.sh
 # Migrations, the seed, then the server (E12-3).
 CMD ["./start.sh"]

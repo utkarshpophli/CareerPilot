@@ -18,8 +18,12 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 
 const prisma = () => db.client!;
 
-/** Waits until `check` passes, for work that runs in the background. */
-async function eventually(check: () => Promise<void>, timeout = 3000) {
+/**
+ * Waits until `check` passes, for work that runs in the background. The limit is only how long to wait before
+ * calling it a failure: a passing test never waits for it, and a slow or busy machine (a CI runner) can take
+ * well over the few seconds that used to be allowed here.
+ */
+async function eventually(check: () => Promise<void>, timeout = 20_000) {
   const started = Date.now();
   for (;;) {
     try {
@@ -73,10 +77,11 @@ describe("the job runner", () => {
     await eventually(async () => (await status(id)).toBe("RUNNING"));
     await release("Jane");
     await eventually(async () => (await status(id)).toBe("DONE"));
+    // The row says DONE before the subscriber has been told, so wait for the last notification too.
+    await eventually(async () => expect(seen.at(-1)).toBe("DONE · Greeting"));
     stop();
     expect(await getJob(id)).toMatchObject({ step: "Greeting", error: null, result: { greeting: "Hello, Jane" } });
     expect(seen).toContain("RUNNING · Waiting");
-    expect(seen.at(-1)).toBe("DONE · Greeting");
     const row = await prisma().job.findUniqueOrThrow({ where: { id } });
     expect(row).toMatchObject({ type: "test-gated", key: "application:1", input: { name: "Jane", fail: "no" } });
     expect(row.startedAt).not.toBeNull();

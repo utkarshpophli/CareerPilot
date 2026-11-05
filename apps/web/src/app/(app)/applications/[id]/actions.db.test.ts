@@ -5,10 +5,13 @@ import { createTestClient, resetDatabase } from "@/test/db";
 import {
   addMatchSkill,
   addNote,
+  checkPostingOpen,
   deleteNote,
   leaveOutUnit,
   listVersions,
+  compareVersion,
   loadVersion,
+  makeAtsSafe,
   putBackTrimmed,
   restoreNote,
   restoreUnit,
@@ -37,6 +40,11 @@ vi.mock("@/lib/auth/session", () => ({
   getSession: async () => ({ persistent: false, issuedAt: new Date(), expiresAt: new Date(Date.now() + 60_000) }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const queue = vi.hoisted(() => ({ on: false, sent: [] as { name: string; data: unknown; options: { singletonKey?: string } }[], refuse: false }));
+vi.mock("@/lib/queue/web", () => ({
+  workerEnabled: () => queue.on,
+  queueClient: async () => ({ send: async (name: string, data: object, options: { singletonKey?: string }) => (queue.refuse ? null : (queue.sent.push({ name, data, options }), "job-1")) }),
+}));
 // The calendar's side is tested in src/lib/google; here it's off unless a test says otherwise.
 const calendar = vi.hoisted(() => ({
   sync: vi.fn<(id: string) => Promise<{ inCalendar: boolean; eventLink: string | null }>>(async () => ({ inCalendar: false, eventLink: null })),
@@ -138,6 +146,46 @@ describe("setShowPhoto (#224)", () => {
 
   it("says so when the application is gone", async () => {
     expect(await setShowPhoto({ id: "gone", show: true })).toEqual({ ok: false, error: "That application no longer exists." });
+  });
+});
+
+describe("checkPostingOpen (M4d.2)", () => {
+  it("says what was found and keeps it on the application", async () => {
+    // No link was saved in the fixture application, so there is nothing to ask the network.
+    const result = await checkPostingOpen({ id: "app-1" });
+    expect(result).toMatchObject({ ok: true, data: { state: "unknown" } });
+    expect((await prisma().application.findUniqueOrThrow({ where: { id: "app-1" } })).postingCheckedAt).toBeInstanceOf(Date);
+  });
+
+  it("says so when the application is gone", async () => {
+    expect(await checkPostingOpen({ id: "gone" })).toEqual({ ok: false, error: "That application no longer exists." });
+  });
+
+  describe("with a worker (CAREERPILOT_WORKER=on)", () => {
+    beforeEach(() => {
+      queue.on = true;
+      queue.sent = [];
+      queue.refuse = false;
+    });
+    afterAll(() => {
+      queue.on = false;
+    });
+
+    it("queues the check instead of making it, and says whether a worker is there to take it", async () => {
+      const waiting = await checkPostingOpen({ id: "app-1" });
+      expect(waiting).toMatchObject({ ok: true, data: { state: "queued", note: "Queued, but no worker is running right now. The check waits until one starts." } });
+      expect(queue.sent).toMatchObject([{ name: "liveness-check", data: { applicationId: "app-1" }, options: { singletonKey: "app-1" } }]);
+      // Nothing was asked of the network or written to the application.
+      expect((await prisma().application.findUniqueOrThrow({ where: { id: "app-1" } })).postingCheckedAt).toBeNull();
+      await prisma().workerHeartbeat.create({ data: { id: "w1", startedAt: new Date(), beatAt: new Date() } });
+      expect(await checkPostingOpen({ id: "app-1" })).toMatchObject({ data: { state: "queued", note: "Queued for the worker. Reload in a moment to see what it found." } });
+    });
+
+    it("says when a check for it is already waiting, and when the application is gone", async () => {
+      queue.refuse = true;
+      expect(await checkPostingOpen({ id: "app-1" })).toMatchObject({ ok: true, data: { state: "queued", note: expect.stringMatching(/already waiting/i) } });
+      expect(await checkPostingOpen({ id: "gone" })).toEqual({ ok: false, error: "That application no longer exists." });
+    });
   });
 });
 
@@ -478,6 +526,38 @@ describe("putBackTrimmed (E10-10)", () => {
   });
 });
 
+describe("makeAtsSafe (M7.3)", () => {
+  const document = () => prisma().document.findUniqueOrThrow({ where: { applicationId_kind: { applicationId: "app-1", kind: "RESUME" } }, include: { versions: { orderBy: { createdAt: "asc" } } } });
+
+  it("cleans the resume's text, keeps the resume as it was as a version, and Undo brings it back", async () => {
+    await prisma().document.update({
+      where: { applicationId_kind: { applicationId: "app-1", kind: "RESUME" } },
+      data: { units: [{ id: "summary", label: "Summary", text: "Designer — “quietly” good" }, { id: "skills", label: "Skills", text: "Figma" }] },
+    });
+    const done = await makeAtsSafe({ id: "app-1" });
+    expect(done).toMatchObject({ ok: true, data: { changed: 1, beforeVersionId: expect.any(String) } });
+    const saved = await document();
+    expect((saved.units as { id: string; text: string }[]).map((unit) => unit.text)).toEqual(['Designer - "quietly" good', "Figma"]);
+    expect(saved.versions.map((version) => [version.cause, version.detail])).toEqual([["CLEANED", "before"], ["CLEANED", "after"]]);
+    expect((saved.versions[0]!.units as { text: string }[])[0]!.text).toBe("Designer — “quietly” good");
+
+    const undone = await restoreVersion({ id: "app-1", versionId: (done as { data: { beforeVersionId: string } }).data.beforeVersionId });
+    expect(undone.ok).toBe(true);
+    expect(((await document()).units as { text: string }[])[0]!.text).toBe("Designer — “quietly” good");
+  });
+
+  it("says so, and saves nothing, when the resume is already safe", async () => {
+    const before = (await document()).versions.length;
+    expect(await makeAtsSafe({ id: "app-1" })).toMatchObject({ ok: false, error: expect.stringMatching(/^There's nothing to fix/) });
+    expect((await document()).versions.length).toBe(before);
+  });
+
+  it("says so when the application has no resume", async () => {
+    await prisma().document.deleteMany({ where: { applicationId: "app-1", kind: "RESUME" } });
+    expect(await makeAtsSafe({ id: "app-1" })).toMatchObject({ ok: false, error: "This application has no resume." });
+  });
+});
+
 describe("leaveOutUnit (#217)", () => {
   const document = () => prisma().document.findUniqueOrThrow({ where: { applicationId_kind: { applicationId: "app-1", kind: "RESUME" } } });
 
@@ -514,11 +594,36 @@ describe("versions (E8-10)", () => {
     return result.data;
   };
 
-  it("makes a version for an AI change, but not for an edit by hand", async () => {
+  it("makes a version for an edit by hand and for an undone AI change, each saying who made it", async () => {
     await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "By hand.", expected: resume[0].text });
-    expect(await versions()).toEqual([]);
+    expect(await versions()).toEqual([{ id: expect.any(String), cause: "EDITED", actor: "YOU", detail: "", createdAt: expect.any(String) }]);
     await restoreUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "The AI's text.", expected: "By hand." });
-    expect(await versions()).toEqual([{ id: expect.any(String), cause: "UNDONE", detail: "", createdAt: expect.any(String) }]);
+    expect((await versions()).map((version) => [version.cause, version.actor])).toEqual([["UNDONE", "YOU"], ["EDITED", "YOU"]]);
+  });
+
+  it("lets edits made close together share one version, and starts another once enough time has passed", async () => {
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "First.", expected: resume[0].text });
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "Second.", expected: "First." });
+    const [only] = await versions();
+    expect(await versions()).toHaveLength(1);
+    const kept = await loadVersion({ id: "app-1", versionId: only.id });
+    expect(kept.ok && kept.data.units[0].text).toBe("Second.");
+
+    await prisma().documentVersion.update({ where: { id: only.id }, data: { createdAt: new Date(Date.now() - 30 * 60_000) } });
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "Third.", expected: "Second." });
+    expect((await versions()).map((version) => version.cause)).toEqual(["EDITED", "EDITED"]);
+  });
+
+  it("compares a version with the one before it, and says when there is none", async () => {
+    const { id: documentId } = await document();
+    const first = await prisma().documentVersion.create({ data: { documentId, units: resume, cause: "WRITTEN", createdAt: new Date("2026-09-29T08:00:00Z") } });
+    const second = await prisma().documentVersion.create({
+      data: { documentId, units: [{ ...resume[0], text: resume[0].text + " More." }, resume[1]], cause: "REFINED", actor: "APP_AI", detail: "Longer", createdAt: new Date("2026-09-29T09:00:00Z") },
+    });
+    expect(await compareVersion({ id: "app-1", versionId: first.id })).toEqual({ ok: true, data: { first: true, changes: [] } });
+    const result = await compareVersion({ id: "app-1", versionId: second.id });
+    expect(result).toMatchObject({ ok: true, data: { first: false, changes: [{ id: resume[0].id, kind: "changed", parts: expect.arrayContaining([{ type: "add", text: " More." }]) }] } });
+    expect(await compareVersion({ id: "app-1", versionId: "gone" })).toMatchObject({ ok: false, error: expect.stringMatching(/no longer exists/) });
   });
 
   it("restores a version, saving what was there first, and marks the restored one", async () => {
@@ -533,7 +638,8 @@ describe("versions (E8-10)", () => {
     expect(restored).toMatchObject({ ok: true, toast: "Restored the resume as it was then. The version you had is in the history too." });
     expect((await units())[0].text).toBe(resume[0].text);
     const list = await versions();
-    expect(list.map((version) => version.cause)).toEqual(["RESTORED", "BEFORE_RESTORE", "WRITTEN"]);
+    // The edit by hand was a version already, so it is not saved a second time before the restore.
+    expect(list.map((version) => version.cause)).toEqual(["RESTORED", "EDITED", "WRITTEN"]);
     expect(list[0].detail).toBe("2026-09-29T08:00:00.000Z");
     const before = await loadVersion({ id: "app-1", versionId: list[1].id });
     expect(before.ok && before.data.units[0].text).toBe("Rewritten by hand.");

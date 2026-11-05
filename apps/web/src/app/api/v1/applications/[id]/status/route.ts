@@ -1,7 +1,7 @@
 import { ApiScope, ApplicationStatus } from "@/generated/prisma/enums";
 import { requiredString, withServiceErrors } from "@/lib/api-runs";
 import { api, ApiError, jsonBody } from "@/lib/api-v1";
-import { moveApplication } from "@/lib/application-track";
+import { moveApplication } from "@/lib/services/applications";
 import { prisma } from "@/lib/prisma";
 
 /**

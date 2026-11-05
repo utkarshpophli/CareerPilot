@@ -163,5 +163,25 @@ createServer((request, response) => {
     });
   }
 
+  if (url.pathname === "/jobdanmark/api/jobsearch/search/1" && request.method === "POST") {
+    return send(response, 200, {
+      items: [
+        {
+          title: "Produktdesigner",
+          companyName: "Havnen Design",
+          companyAddress: "Havnegade 1, 8000 Aarhus C",
+          jobTypes: ["fuldtid"],
+          publishedDate: "30-10-2026",
+          applicationDeadline: "15-11-2026",
+          url: "/job/e2e-produktdesigner",
+        },
+      ],
+      currentPage: 1,
+      totalItems: 1,
+      itemsPrPage: 30,
+      totalPages: 1,
+    });
+  }
+
   send(response, 404, { error: "not found" });
 }).listen(port, "127.0.0.1", () => console.log(`Fake job sources on http://localhost:${port}`));

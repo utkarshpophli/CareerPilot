@@ -154,12 +154,42 @@ jobs:
       - run: yarn playwright install --with-deps chromium
       - run: yarn test:e2e
 
-  # The image people actually run must build (audit C-08).
+  # The image people actually run must build (audit C-08), and start: against a real database it answers
+  # /api/health and the owner can sign in (roadmap 1.5). The browser is only for the sign-in.
   docker:
-    name: Production image builds
+    name: Production image builds and starts
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: careerpilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d careerpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
     steps:
       - uses: actions/checkout@v7
       - name: Build the production image (no push)
         run: docker build --file apps/web/Dockerfile --target production --build-arg GIT_SHA=${{ github.sha }} --tag careerpilot:ci apps/web
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: corepack enable
+      - name: Install the smoke test's browser
+        working-directory: apps/web
+        run: |
+          yarn install --immutable
+          yarn playwright install --with-deps chromium
+      - name: Start the image and a worker against Postgres, check /api/health, sign in, queue a scan
+        working-directory: apps/web
+        run: node scripts/smoke-image.mjs --image careerpilot:ci --database-url postgresql://postgres:postgres@localhost:5432/careerpilot --worker

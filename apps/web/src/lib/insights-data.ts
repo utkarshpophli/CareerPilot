@@ -18,6 +18,8 @@ export async function loadInsights(now = new Date()): Promise<Insights> {
       postingUrl: true,
       posting: { select: { source: true } },
       documents: { select: { kind: true, theme: { select: { name: true } }, versions: { select: { cause: true } } } },
+      // The first time it moved on from sent: a reply of some kind (screening, interview or offer).
+      events: { where: { to: { in: ["SCREENING", "INTERVIEW", "OFFER", "ACCEPTED"] } }, orderBy: { at: "asc" }, take: 1, select: { at: true } },
     },
   });
   const applications: InsightApplication[] = rows.map((row) => ({
@@ -30,6 +32,7 @@ export async function loadInsights(now = new Date()): Promise<Insights> {
     origin: row.origin,
     postingUrl: row.postingUrl,
     postingSource: row.posting?.source ?? null,
+    firstReplyAt: row.events[0]?.at ?? null,
     documents: row.documents.map((document) => ({
       kind: document.kind,
       themeName: document.theme?.name ?? null,

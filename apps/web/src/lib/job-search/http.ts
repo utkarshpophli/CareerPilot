@@ -10,17 +10,25 @@ import type { JobSource } from "./search";
 export const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_BYTES = 5 * 1024 * 1024;
 
-/** GETs JSON from a source, turning every failure into a JobSearchError; `timeoutMs` for a source that needs longer. */
+/** GETs (or POSTs a JSON body to) a source for JSON, turning every failure into a JobSearchError; `timeoutMs` for a source that needs longer. */
 export async function requestJson(
   source: JobSource,
   url: URL,
-  { headers = {}, signal, timeoutMs = REQUEST_TIMEOUT_MS }: { headers?: Record<string, string>; signal?: AbortSignal; timeoutMs?: number } = {},
+  {
+    headers = {},
+    signal,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    method = "GET",
+    body,
+  }: { headers?: Record<string, string>; signal?: AbortSignal; timeoutMs?: number; method?: "GET" | "POST"; body?: unknown } = {},
 ): Promise<unknown> {
   const timeout = AbortSignal.timeout(timeoutMs);
   let response: Response;
   try {
     response = await fetch(url, {
-      headers: { accept: "application/json", ...headers },
+      method,
+      headers: { accept: "application/json", ...(body === undefined ? {} : { "content-type": "application/json" }), ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       cache: "no-store",
     });

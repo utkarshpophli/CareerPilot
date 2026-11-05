@@ -1,0 +1,3 @@
+# local-parser (career-ops provider)
+
+**Verdict: not allowed.** Dropped. Not a job source: it is a hook that runs a program named in career-ops's `portals.yml` (`parser.command` and `parser.script`) and reads what it prints. career-ops limits it to known interpreters and files inside its project, but CareerPilot is a self-hosted server whose settings and tracked companies can be changed through assistants (REST, MCP, the `pilot` CLI). A setting that makes the server run a program is the opposite of the rule that nothing runs unless the owner clicks. Nothing in CareerPilot executes a configured command.

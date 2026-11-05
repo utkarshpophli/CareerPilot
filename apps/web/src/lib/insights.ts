@@ -18,6 +18,8 @@ export type InsightApplication = {
   postingUrl: string;
   postingSource: string | null;
   documents: { kind: DocumentKind; themeName: string | null; versionCauses: VersionCause[] }[];
+  /** When the first reply (screening or later) was recorded; null while there was none. */
+  firstReplyAt?: Date | null;
 };
 
 export type OutcomeCounts = {
@@ -28,7 +30,16 @@ export type OutcomeCounts = {
   offers: number;
   /** Replies per application sent, 0 to 1; null while none was sent. */
   replyRate: number | null;
+  /** The middle time from sending to the first reply, in days; null while none replied. */
+  medianDaysToReply: number | null;
+  /** Fewer sent than SMALL_SAMPLE: too few to compare with other rows. */
+  fewSent: boolean;
 };
+
+/** A row with fewer applications sent than this says too little to compare. */
+export const SMALL_SAMPLE = 5;
+
+type Counts = Omit<OutcomeCounts, "replyRate" | "medianDaysToReply" | "fewSent"> & { replyDays: number[] };
 
 export type InsightRow = OutcomeCounts & { key: string };
 
@@ -38,6 +49,10 @@ export type Insights = {
   /** Resume templates (themes), by how many resumes used each. */
   byTemplate: InsightRow[];
   resume: {
+    /** How many resumes there are (one per application at most). */
+    resumes: number;
+    /** Every saved resume version, first drafts included. */
+    versions: number;
     /** Versions saved after the first draft: regenerated, refined, restored, trimmed… */
     revisions: number;
     perApplication: number;
@@ -58,25 +73,40 @@ const MOST_REVISED = 5;
 const rank = (stage: FunnelStage | null) => (stage === null ? -1 : FUNNEL_STAGES.indexOf(stage));
 const reached = (application: InsightApplication, stage: FunnelStage) => rank(application.furthestStage) >= rank(stage);
 
-function empty(): OutcomeCounts {
-  return { applications: 0, sent: 0, heardBack: 0, interviews: 0, offers: 0, replyRate: null };
+function empty(): Counts {
+  return { applications: 0, sent: 0, heardBack: 0, interviews: 0, offers: 0, replyDays: [] };
 }
 
-function add(counts: OutcomeCounts, application: InsightApplication): void {
+const DAY = 86_400_000;
+
+/** The middle value, or the mean of the two in the middle; null for none. Rounded to a tenth of a day. */
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const value = sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
+  return Math.round(value * 10) / 10;
+}
+
+function add(counts: Counts, application: InsightApplication): void {
   counts.applications += 1;
   if (application.sentAt) counts.sent += 1;
   if (reached(application, "SCREENING")) counts.heardBack += 1;
   if (reached(application, "INTERVIEW")) counts.interviews += 1;
   if (reached(application, "OFFER")) counts.offers += 1;
+  // A reply dated before the application was sent is a mistake in the data, not a very fast reply.
+  if (application.sentAt && application.firstReplyAt && application.firstReplyAt >= application.sentAt) {
+    counts.replyDays.push((application.firstReplyAt.getTime() - application.sentAt.getTime()) / DAY);
+  }
 }
 
-function finish(counts: OutcomeCounts): OutcomeCounts {
-  return { ...counts, replyRate: counts.sent > 0 ? counts.heardBack / counts.sent : null };
+function finish({ replyDays, ...counts }: Counts): OutcomeCounts {
+  return { ...counts, replyRate: counts.sent > 0 ? counts.heardBack / counts.sent : null, medianDaysToReply: median(replyDays), fewSent: counts.sent < SMALL_SAMPLE };
 }
 
 /** Groups into rows, busiest first, then by name so the order is stable. */
 function group(applications: InsightApplication[], keys: (application: InsightApplication) => string[]): InsightRow[] {
-  const rows = new Map<string, OutcomeCounts>();
+  const rows = new Map<string, Counts>();
   for (const application of applications) {
     for (const key of new Set(keys(application))) {
       const counts = rows.get(key) ?? empty();
@@ -118,10 +148,14 @@ export function computeInsights(applications: InsightApplication[], now: Date): 
   const causes: Partial<Record<VersionCause, number>> = {};
   const revised: { applicationId: string; title: string; revisions: number }[] = [];
   let revisions = 0;
+  let resumes = 0;
+  let versions = 0;
   for (const application of applications) {
     let own = 0;
     for (const document of application.documents) {
       if (document.kind !== "RESUME") continue;
+      resumes += 1;
+      versions += document.versionCauses.length;
       for (const cause of document.versionCauses) {
         if (cause === "WRITTEN") continue;
         causes[cause] = (causes[cause] ?? 0) + 1;
@@ -151,6 +185,8 @@ export function computeInsights(applications: InsightApplication[], now: Date): 
       return resumes.length > 0 ? resumes.map((resume) => resume.themeName ?? BASE_TEMPLATE) : [];
     }),
     resume: {
+      resumes,
+      versions,
       revisions,
       perApplication: applications.length > 0 ? revisions / applications.length : 0,
       byCause: causes,

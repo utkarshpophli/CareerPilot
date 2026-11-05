@@ -20,6 +20,7 @@ import {
   type Tone,
 } from "@/generated/prisma/enums";
 import { type Match, type Requirement, type Unit } from "@/lib/application-data";
+import { lintUnits } from "@/lib/ats-lint";
 import { EMAIL_UNITS, WRITTEN_EMAIL_UNITS } from "@/lib/application-email";
 import { documentLabels } from "@/lib/document-labels";
 import { defaultFrame, isFrameUnit, isParagraph, withFrame, WRITTEN_FRAME_UNITS } from "@/lib/letter-frame";
@@ -38,6 +39,7 @@ import { cleanUnitText, isPublicationUnit, unitName } from "@/lib/unit-text";
 import {
   addMatchSkill,
   leaveOutUnit,
+  makeAtsSafe,
   putBackTrimmed,
   restoreUnit,
   restoreVersion,
@@ -63,7 +65,9 @@ import { PostingTab, type PostingData } from "./posting-tab";
 import { RefinePanel, type ChatEntry } from "./refine-panel";
 import { StatusControl } from "./status-control";
 import { ThemeMenu } from "./theme-menu";
+import { AtsNotice } from "./ats-notice";
 import { byPageLimit, TrimmedNotice } from "./trimmed-notice";
+import { ProposalPill } from "../../proposal-list";
 
 import { aboutWords, type Tab } from "./tabs";
 import { UnitFrame } from "./unit-frame";
@@ -159,6 +163,8 @@ export type ApplicationViewProps = {
   /** A reply still being written, e.g. since before a reload. */
   refining: string | null;
   suggestions: RefineSuggestions;
+  /** What an assistant proposed for this application, waiting for the owner's yes or no. */
+  proposal?: { id: string; status: ApplicationStatus; reason: string; actorName: string } | null;
 };
 
 /**
@@ -168,6 +174,7 @@ export type ApplicationViewProps = {
  */
 export function ApplicationView({
   application,
+  proposal = null,
   timeZone,
   meta,
   posting,
@@ -474,6 +481,27 @@ export function ApplicationView({
       toast(pageLimit ? "Put back. The resume may run over its page limit now." : "Put back.");
     });
 
+  /** "Make ATS-safe" (M7.3): cleans the resume's text, with Undo on the toast. */
+  const [atsBusy, setAtsBusy] = useState(false);
+  const makeSafe = () =>
+    startTransition(async () => {
+      setAtsBusy(true);
+      const result = await makeAtsSafe({ id: application.id });
+      setAtsBusy(false);
+      if (!result.ok) return toast(result.error);
+      const { changed, beforeVersionId } = result.data;
+      toast(`Made ${changed} ${changed === 1 ? "part" : "parts"} of the resume safe for applicant-tracking systems.`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            startTransition(async () => {
+              const undone = await restoreVersion({ id: application.id, versionId: beforeVersionId });
+              if (!undone.ok) toast(undone.error);
+            }),
+        },
+      });
+    });
+
   /** "Leave out" on a part of the tailored resume (#217), with Undo on the toast. */
   const leaveOut = (unit: Unit) =>
     startTransition(async () => {
@@ -626,6 +654,7 @@ export function ApplicationView({
                 From the job agent · waiting for review
               </Link>
             )}
+            <ProposalPill applicationId={application.id} applicationTitle={application.title || "this application"} proposal={proposal} />
             <StatusControl id={application.id} status={application.status} interviewAt={application.nextInterviewAt} timeZone={timeZone} />
             {(resume || letter) && (
               // The document on screen; from the Job posting tab, the resume (E8-8).
@@ -664,8 +693,11 @@ export function ApplicationView({
               notice={
                 viewed(DocumentKind.RESUME) ? (
                   versionBanner(viewed(DocumentKind.RESUME)!)
-                ) : resume.trimmed?.length ? (
-                  <TrimmedNotice items={resume.trimmed} onPutBack={putBack} />
+                ) : resume.trimmed?.length || lintUnits(resumeUnits).length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {resume.trimmed?.length ? <TrimmedNotice items={resume.trimmed} onPutBack={putBack} /> : null}
+                    <AtsNotice units={resumeUnits} onFix={makeSafe} busy={atsBusy} />
+                  </div>
                 ) : undefined
               }
               label={

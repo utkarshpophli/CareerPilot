@@ -1,6 +1,7 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
 
 import { ActivityActor } from "@/generated/prisma/enums";
+import { noteMcpClient } from "@/lib/connect/assistants";
 import { connectorLimits, MAX_MCP_BODY_BYTES } from "@/lib/connector/limits";
 import { connectorSince, mcpUrl, readClient, SCOPE, verifyAccessToken } from "@/lib/connector/oauth";
 import { toolCallsIn } from "@/lib/connector/tool-calls";
@@ -44,6 +45,8 @@ async function handle(request: Request): Promise<Response> {
   if (!access) return unauthorized(origin);
   const name = (await readClient(access.clientId))?.name ?? "Claude";
   const actor = { kind: ActivityActor.MCP, name };
+  // For the Connect screen: which apps are connected, and when each was last seen. Never fails the call.
+  await noteMcpClient(prisma, access.clientId, name).catch((error: unknown) => logServerError("MCP last seen", error));
 
   // Read the body once, within a size limit, to see which tools it calls (audit A-06, B-20).
   let tools: string[] = [];

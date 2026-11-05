@@ -5,6 +5,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 
 import { AiError } from "../errors";
 import { BaseProvider, SCHEMA_REFUSED, withJsonSchema, type ChatAnswer, type ChatCall, type Effort } from "../provider";
+import { usageOf } from "../usage";
 import { keyGuardedFetch } from "./guarded-fetch";
 
 /** Offered when the model list can't be fetched, e.g. before a key is saved. */
@@ -87,6 +88,7 @@ export class AnthropicProvider extends BaseProvider {
     return {
       text: message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join(""),
       cutOff: message.stop_reason === "max_tokens" || message.stop_reason === "model_context_window_exceeded",
+      usage: usageOf(message.usage?.input_tokens, message.usage?.output_tokens),
     };
   }
 

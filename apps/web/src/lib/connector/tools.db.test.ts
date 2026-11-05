@@ -116,6 +116,27 @@ describe("the Claude connector's tools (#221)", () => {
     expect(await tool("get_application", { id: "gone" })).toMatchObject({ isError: true, text: "That application no longer exists." });
   });
 
+  // The way to progress: Claude proposes, the user confirms with one click. A proposal never moves anything.
+  it("lets Claude propose a progress status, which waits for the user and changes nothing", async () => {
+    const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });
+    await prisma().application.update({ where: { id: ledgerly.id }, data: { status: "DRAFT", sentAt: null, furthestStage: null } });
+    const proposed = await tool("propose_status", { id: ledgerly.id, status: "SENT", reason: "The user told me they sent it on Friday" });
+    expect(proposed).toMatchObject({ isError: false, json: { status: "Sent", waiting_for: "the user to confirm it on the dashboard" } });
+    expect(await prisma().application.findUniqueOrThrow({ where: { id: ledgerly.id } })).toMatchObject({ status: "DRAFT", sentAt: null });
+    expect(await prisma().statusProposal.findFirstOrThrow({ where: { applicationId: ledgerly.id } })).toMatchObject({ state: "PENDING", status: "SENT", reason: "The user told me they sent it on Friday" });
+    // The ledger names the connected app, not the owner.
+    expect(await prisma().activityEvent.findFirstOrThrow({ where: { action: "proposal.created" } })).toMatchObject({ actorKind: "MCP" });
+  });
+
+  it("refuses to propose what Claude may set directly, an unknown application, and a draft waiting for review", async () => {
+    const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });
+    expect(await tool("propose_status", { id: ledgerly.id, status: "REJECTED" })).toMatchObject({ isError: true, text: expect.stringContaining("set it directly") });
+    expect(await tool("propose_status", { id: "gone", status: "SENT" })).toMatchObject({ isError: true });
+    await prisma().application.update({ where: { id: ledgerly.id }, data: { awaitingReview: true } });
+    expect(await tool("propose_status", { id: ledgerly.id, status: "SENT" })).toMatchObject({ isError: true, text: expect.stringContaining("waiting for the user's review") });
+    expect(await prisma().statusProposal.count()).toBe(0);
+  });
+
   // Audit A-05, A-09: Claude may retract or close a lead, but not claim progress, and cannot approve an agent draft.
   it("lets Claude mark an application rejected, but refuses moves that claim progress", async () => {
     const ledgerly = await prisma().application.findFirstOrThrow({ where: { company: "Ledgerly" } });
@@ -201,11 +222,32 @@ describe("the Claude connector's tools (#221)", () => {
     expect(saved.json).toMatchObject({ status: "Draft", application_id: expect.any(String) });
     const id = saved.json.application_id as string;
     expect(await prisma().application.findUniqueOrThrow({ where: { id } })).toMatchObject({ company: "Acme", status: "DRAFT", postingUrl: "https://jobs.example/p1" });
+    // The first drafts are the assistant's, and the history says so.
+    expect(await prisma().documentVersion.findMany({ where: { document: { applicationId: id } }, select: { cause: true, actor: true } })).toEqual([
+      { cause: "WRITTEN", actor: "ASSISTANT" },
+      { cause: "WRITTEN", actor: "ASSISTANT" },
+    ]);
     expect((await prisma().posting.findFirstOrThrow({ where: { externalId: "p1" } })).applicationId).toBe(id);
 
     expect(await tool("save_application", { details: { company: "Acme", role: "Designer" }, resume: { summary: "", roles: [], skills: [] }, cover_letter: { paragraphs: [{ text: "Hi" }] } })).toMatchObject({
       isError: true,
     });
+  });
+
+  it("tells the assistant when an application it saves repeats one the owner already has", async () => {
+    const sent = await prisma().application.create({
+      data: { title: "Product Designer · Acme", company: "Acme GmbH", role: "Product Designer (m/f/d)", location: "Berlin", status: "SENT", sentAt: new Date(Date.now() - 4 * 86_400_000) },
+    });
+    const saved = await tool("save_application", {
+      details: { company: "Acme", role: "Product Designer", location: "Berlin" },
+      posting_text: "Product Designer at Acme in Berlin",
+      resume: { summary: "Designer who ships calm products.", roles: [], skills: ["Figma"] },
+      cover_letter: { paragraphs: [{ text: "I'd like to help Acme." }] },
+      match: [{ requirement: "Figma", result: "covered" }],
+    });
+    expect(saved.json).toMatchObject({ status: "Draft", already_applied: [expect.stringContaining(`sent 4 days ago (inside the 90-day wait) [${sent.id}]`)] });
+    // Reported, not refused: the owner reviews the draft and decides.
+    expect(await prisma().application.count({ where: { company: { startsWith: "Acme" } } })).toBe(2);
   });
 
   it("has CareerPilot's own model draft one only when there is one, and says how it's coming along", async () => {

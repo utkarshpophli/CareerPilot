@@ -409,6 +409,11 @@ model Application {
   deadline            DateTime?         @db.Date
   /// Saved, not fetched (NEW-1).
   postingUrl          String            @default("")
+  /// Whether the posting was still open when last checked (lib/job-liveness.ts): true, false, or null when never checked or it could not be told.
+  postingOpen         Boolean?
+  postingCheckedAt    DateTime?
+  /// One plain sentence saying how that was found out, or why it could not be.
+  postingCheckNote    String            @default("")
   postingText         String            @default("")
   /// What the AI read from the posting (extractedSchema).
   extracted           Json?
@@ -450,6 +455,7 @@ model Application {
   emails              EmailMessage[]
   events              StatusEvent[]
   documents           Document[]
+  proposals           StatusProposal[]
   messages            ChatMessage[]
   notes               Note[]
   /// What the user tells the AI for this application; "Anything I should know?" (NEW-6) becomes the first.
@@ -522,6 +528,20 @@ enum VersionCause {
   BEFORE_RESTORE
   /// An earlier version brought back.
   RESTORED
+  /// Text made safe for applicant-tracking parsers, at the owner's request (M7.3).
+  CLEANED
+  /// Edited by hand; edits made close together share one version (M7.2).
+  EDITED
+}
+
+/// Who made a version of a document (M7.2).
+enum VersionActor {
+  /// The owner, by hand or by undoing, restoring or cleaning.
+  YOU
+  /// CareerPilot's own AI model.
+  APP_AI
+  /// An assistant (Claude, OpenCode…) that wrote it through the connector, the API or the CLI.
+  ASSISTANT
 }
 
 /// A tailored document's units as they were at one point (E8-10).
@@ -531,6 +551,7 @@ model DocumentVersion {
   document   Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   units      Json
   cause      VersionCause
+  actor      VersionActor @default(APP_AI)
   /// What changed, e.g. the part's name or the chat request.
   detail     String       @default("")
   createdAt  DateTime     @default(now())
@@ -585,6 +606,7 @@ enum PostingSource {
   ADZUNA
   ARBEITSAGENTUR
   FREEHIRE
+  JOBDANMARK
 }
 
 /// A posting from Find jobs that the user kept (E14-5): saved, dismissed, or
@@ -1043,4 +1065,188 @@ model ApiToken {
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?
+}
+
+// ─── Connected assistants (CareerPilot) ──────────────────────────────────────
+
+/// An AI app that has used the MCP connector, and when it was last seen, for the Connect screen. Only a hash of the
+/// OAuth client id is kept (the id itself is a signed note that is not needed again).
+model McpClient {
+  /// SHA-256 of the client id, in hex.
+  id          String   @id
+  name        String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+}
+
+// ─── Status proposals (CareerPilot) ──────────────────────────────────────────
+
+enum ProposalState {
+  PENDING
+  CONFIRMED
+  DISMISSED
+  /// Replaced by a newer proposal for the same application.
+  SUPERSEDED
+}
+
+/// An assistant's suggestion that an application has reached a progress status
+/// (sent, screening, interview, offer, accepted). Assistants cannot set those:
+/// only the owner records that something happened, so a proposal waits for one
+/// click to confirm or dismiss it. Confirming goes through the status machine,
+/// so the move can be undone like any other.
+model StatusProposal {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  /// The progress status proposed.
+  status        ApplicationStatus
+  /// The assistant's own words, one short line. Shown as what it said, never as a fact.
+  reason        String            @default("")
+  actorKind     ActivityActor     @default(CLI)
+  /// Which assistant, for example "claude-code".
+  actorName     String            @default("")
+  state         ProposalState     @default(PENDING)
+  createdAt     DateTime          @default(now())
+  /// After this it can no longer be confirmed.
+  expiresAt     DateTime
+  resolvedAt    DateTime?
+  /// The status change a confirmation made, so it can be undone.
+  statusEventId String?
+
+  @@index([state, createdAt])
+  @@index([applicationId, state])
+}
+
+/// Which board source an employer's job board is on (ADR 0003).
+enum BoardSource {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  WORKABLE
+  RECRUITEE
+  TEAMTAILOR
+  ATLASSIAN
+}
+
+/// An employer whose own job board the owner (or an assistant, as a draft-level
+/// action: it only reads public data) asked to watch. A scan reads each enabled
+/// board in turn and records how it went here, so a broken board shows as such
+/// instead of quietly returning nothing.
+model TrackedCompany {
+  id         String      @id @default(cuid())
+  source     BoardSource
+  /// The board's name on the source, for example "stripe".
+  slug       String
+  /// "eu" where the source has a separate EU service (Lever); empty otherwise.
+  region     String      @default("")
+  /// What the owner calls it; shown on postings.
+  name       String
+  enabled    Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  lastScanAt DateTime?
+  lastOkAt   DateTime?
+  /// Words for the screen, safe to show; empty when the last scan worked.
+  lastError  String      @default("")
+  /// How many postings the last good scan found.
+  lastFound  Int         @default(0)
+  postings   ScannedPosting[]
+
+  @@unique([source, slug, region])
+  @@index([enabled, name])
+}
+
+/// Where a posting found by a scan stands for the owner (the review queue, M4d.5).
+enum ScannedState {
+  NEW
+  SAVED
+  DISMISSED
+}
+
+/// A posting found on a watched employer's board (ADR 0003, M4d). The board is the truth about whether it is
+/// open: a posting a good scan no longer lists is closed. Text from the board is data: the description is
+/// stored after the posting guard cleaned it, with a flag where something in it looked like an instruction.
+model ScannedPosting {
+  id               String          @id @default(cuid())
+  source           BoardSource
+  /// "<board name>:<the board's own id>"; unique within the source.
+  externalId       String
+  companyId        String?
+  company          TrackedCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyName      String
+  title            String
+  location         String          @default("")
+  /// Null when the board does not say.
+  remote           Boolean?
+  url              String
+  /// Plain text after the posting guard, capped.
+  description      String          @default("")
+  postedAt         DateTime?
+  salaryMin        Int?
+  salaryMax        Int?
+  salaryCurrency   String          @default("")
+  /// See lib/job-identity.ts.
+  urlKey           String          @default("")
+  canonicalKey     String
+  fingerprint      String
+  /// The earlier posting this is the same opening as (a repost, or a copy on another board).
+  duplicateOfId    String?
+  guardAlarm       Boolean         @default(false)
+  /// How far the posting's link can be trusted to be the employer's own, 0 to 100 (lib/job-search/helpers/trust.ts); only flags, never drops.
+  trustScore       Int?
+  /// What looked odd about the link: invalid_url, missing_apply_url, suspicious_domain, company_domain_mismatch.
+  trustFlags       Json            @default("[]")
+  /// The guard's verdict in words, counts only.
+  guardNote        String          @default("")
+  firstSeenAt      DateTime
+  lastSeenAt       DateTime
+  /// Set when a good scan of its board no longer lists it; cleared if it comes back.
+  closedAt         DateTime?
+  state            ScannedState    @default(NEW)
+  score            Int?
+  scoreBand        String          @default("")
+  /// JSON lists of strings: why the score is what it is, and what counted against.
+  scoreReasons     Json            @default("[]")
+  scoreRedFlags    Json            @default("[]")
+  scoredWith       String          @default("")
+  scoredAt         DateTime?
+
+  @@unique([source, externalId])
+  @@index([state, closedAt, score])
+  @@index([canonicalKey])
+  @@index([urlKey])
+  @@index([companyId, closedAt])
+}
+
+// ─── Worker (M5) ─────────────────────────────────────────────────────────────
+
+/// One row per worker process, rewritten every half minute while it runs. Lets the health check and Settings say whether a
+/// worker is there, without a second service to ask. The queue itself lives in its own schema (pg-boss), not here.
+model WorkerHeartbeat {
+  /// The worker's name, for example "worker-1"; one row per name.
+  id        String   @id
+  startedAt DateTime
+  beatAt    DateTime
+  version   String   @default("")
+}
+
+// ─── AI usage (M5.4) ─────────────────────────────────────────────────────────
+
+/// One AI call that answered: which model, which task, and the tokens the server said it used. Kept so the Usage page can
+/// total them. Never holds a prompt or an answer. `inputTokens` and `outputTokens` are null when the server gave no numbers
+/// (nothing is estimated). No foreign keys: the record outlives what it was for.
+model AiCall {
+  id           String        @id @default(cuid())
+  at           DateTime      @default(now())
+  /// The provider kind: LOCAL, OPENAI, ANTHROPIC, MISTRAL, LMSTUDIO.
+  provider     String
+  model        String
+  /// The schema's name for a structured call (for example "extracted_posting"), "text" for a plain one.
+  task         String
+  inputTokens  Int?
+  outputTokens Int?
+  actorKind    ActivityActor @default(USER)
+  actorName    String        @default("")
+
+  @@index([at])
+  @@index([model, at])
 }

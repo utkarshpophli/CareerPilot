@@ -35,8 +35,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
+    environment: &careerpilot-env
       DATABASE_URL: postgresql://dossier:${POSTGRES_PASSWORD}@db:5432/dossier
+      # The worker below reads boards for "Scan now" and the schedule; with this off, the web process does it itself.
+      CAREERPILOT_WORKER: ${CAREERPILOT_WORKER:-on}
+      # A cron expression, in TZ, for a scan of every watched board by the worker, e.g. "0 6 * * *". Empty: no scheduled scan.
+      CAREERPILOT_SCAN_SCHEDULE: ${CAREERPILOT_SCAN_SCHEDULE:-}
+      # A cron expression for the worker to check whether your drafts' jobs are still open (at most once a day each). Empty: no scheduled checks.
+      CAREERPILOT_LIVENESS_SCHEDULE: ${CAREERPILOT_LIVENESS_SCHEDULE:-}
       CAREERPILOT_PASSWORD: ${CAREERPILOT_PASSWORD:?Set CAREERPILOT_PASSWORD in .env to a hash from hash-password}
       CAREERPILOT_SECRET: ${CAREERPILOT_SECRET:?Set CAREERPILOT_SECRET in .env}
       CAREERPILOT_BACKUP_RETENTION_DAYS: ${CAREERPILOT_BACKUP_RETENTION_DAYS:-}
@@ -74,6 +80,20 @@ services:
     # (:1234) on the host.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # The worker (docs/adr/0004): the same image and settings, serving the job queue. It waits for the app to apply the
+  # migrations. Remove this service and set CAREERPILOT_WORKER=off to run everything in the app container instead.
+  worker:
+    image: ${CAREERPILOT_IMAGE:?Set CAREERPILOT_IMAGE to an image you built from this repository (see the top of this file)}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "/app/tools/worker.mjs"]
+    environment: *careerpilot-env
+    healthcheck:
+      disable: true
+    mem_limit: 512m
 
   # A local model, with COMPOSE_PROFILES=ai in .env: `docker compose up -d`,
   # then pull one (see "Choosing an AI provider" in the wiki). Dossier reaches it at http://ollama:11434.

@@ -173,9 +173,19 @@ describe("job search variables (E14-4)", () => {
     ]);
   });
 
+  it("reads whether a worker runs the owner's scans, and the schedule it scans on", () => {
+    expect(parseEnv(valid).CAREERPILOT_WORKER).toBeUndefined();
+    expect(parseEnv({ ...valid, CAREERPILOT_WORKER: " ON " }).CAREERPILOT_WORKER).toBe("on");
+    expect(problems({ ...valid, CAREERPILOT_WORKER: "yes" })).toEqual(['CAREERPILOT_WORKER must be on or off (got "yes").']);
+    expect(parseEnv({ ...valid, CAREERPILOT_SCAN_SCHEDULE: " 0 6 * * * " }).CAREERPILOT_SCAN_SCHEDULE).toBe("0 6 * * *");
+    expect(problems({ ...valid, CAREERPILOT_SCAN_SCHEDULE: "every morning" })).toEqual(["CAREERPILOT_SCAN_SCHEDULE must be a cron expression with five fields, for example 0 6 * * *."]);
+    expect(parseEnv({ ...valid, CAREERPILOT_LIVENESS_SCHEDULE: "30 5 * * *" }).CAREERPILOT_LIVENESS_SCHEDULE).toBe("30 5 * * *");
+    expect(problems({ ...valid, CAREERPILOT_LIVENESS_SCHEDULE: "daily" })).toEqual(["CAREERPILOT_LIVENESS_SCHEDULE must be a cron expression with five fields, for example 30 5 * * *."]);
+  });
+
   it("rejects sources and hosts it doesn't know, without echoing keys", () => {
     expect(problems({ ...valid, CAREERPILOT_JOBS_SOURCE: "linkedin", CAREERPILOT_JSEARCH_HOST: "google", CAREERPILOT_JSEARCH_KEY: "ak_secret" })).toEqual([
-      'CAREERPILOT_JOBS_SOURCE must be one of jsearch, adzuna, arbeitsagentur, freehire, off (got "linkedin").',
+      'CAREERPILOT_JOBS_SOURCE must be one of jsearch, adzuna, arbeitsagentur, freehire, jobdanmark, off (got "linkedin").',
       'CAREERPILOT_JSEARCH_HOST must be openwebninja or rapidapi (got "google").',
     ]);
   });

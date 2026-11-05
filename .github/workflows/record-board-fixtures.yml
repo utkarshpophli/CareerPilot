@@ -1,0 +1,37 @@
+name: Record board fixtures
+
+# Reads a few real postings from Greenhouse, Lever and Ashby and runs the opt-in live tests, so the adapters'
+# fixtures can be real recordings. It does nothing unless the pull request contains the marker file
+# .github/record-board-fixtures (add the file to ask for a run, delete it when done). Never part of the normal CI.
+on:
+  pull_request:
+    paths:
+      - .github/record-board-fixtures
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    name: Record real postings and run the live board tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/record-board-fixtures.mjs
+      - name: Live board tests
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+          BOARDS_LIVE: greenhouse,lever,ashby
+          BOARDS_LIVE_GREENHOUSE: stripe
+          BOARDS_LIVE_LEVER: palantir
+          BOARDS_LIVE_ASHBY: openai
+        run: |
+          corepack enable
+          yarn install --immutable
+          yarn vitest run src/lib/job-search/boards/boards.live.test.ts

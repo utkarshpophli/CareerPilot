@@ -1,0 +1,41 @@
+name: Probe job sources
+
+# Reads robots.txt, the terms-like links on the front page, and one small sample of each source's answer, so a verdict can
+# be written from evidence (docs/sources) and adapters can be tested against the real shape. It does nothing unless the pull
+# request contains the marker file .github/probe-sources (add it to ask for a run, delete it when done). Never part of the
+# normal CI. One request per site; the script honours robots.txt.
+on:
+  pull_request:
+    paths:
+      - .github/probe-sources
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Read the careers sites robots.txt and samples
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: >-
+          node scripts/probe-sources.mjs terms-urls
+          https://www.arbeitnow.com/terms
+          https://remotive.com/terms-of-use
+          https://remotive.com/remote-jobs/api
+          https://remoteok.com/legal
+          https://himalayas.app/terms
+          https://himalayas.app/api
+          https://www.themuse.com/user/terms
+          https://www.themuse.com/developers/api/v2
+          https://jobicy.com/terms-and-conditions
+          https://jobi.cy/apidocs
+          https://weworkremotely.com/terms
+          https://hn.algolia.com/api
+          https://news.ycombinator.com/newsfaq.html

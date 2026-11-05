@@ -4,6 +4,7 @@ import { adzuna } from "./adzuna";
 import { arbeitsagentur } from "./arbeitsagentur";
 import { requestContext } from "./config";
 import { freehire } from "./freehire";
+import { jobdanmark } from "./jobdanmark";
 import { EMPTY_QUERY } from "./search";
 
 // Checks against the real Adzuna, Arbeitsagentur and FreeHire services,
@@ -13,6 +14,9 @@ import { EMPTY_QUERY } from "./search";
 //   JOBS_LIVE=arbeitsagentur docker/bin/yarn vitest run src/lib/job-search/sources.live.test.ts
 //   JOBS_LIVE=adzuna ADZUNA_TEST_APP_ID=… ADZUNA_TEST_KEY=… docker/bin/yarn vitest run src/lib/job-search/sources.live.test.ts
 //   JOBS_LIVE=freehire docker/bin/yarn vitest run src/lib/job-search/sources.live.test.ts
+//   JOBS_LIVE=jobdanmark docker/bin/yarn vitest run src/lib/job-search/sources.live.test.ts
+//
+// Jobdanmark's runs ask the site for one page, once: its verdict (docs/sources/jobdanmark.md) allows a person's own search, so run it by hand, not in a loop.
 //
 // FreeHire's is freehire.me, or the self-hosted one CAREERPILOT_FREEHIRE_URL
 // names, on the command line or in `.env`.
@@ -67,5 +71,17 @@ describe.runIf(live.has("freehire"))("FreeHire (live)", { timeout: 30_000 }, () 
     expect(postings.length).toBeGreaterThan(0);
     const weekAgo = Date.now() - 8 * 86_400_000;
     expect(postings.every((posting) => posting.postedAt !== null && Date.parse(posting.postedAt) > weekAgo)).toBe(true);
+  });
+});
+
+describe.runIf(live.has("jobdanmark"))("Jobdanmark (live)", { timeout: 30_000 }, () => {
+  it("finds listings with an address on the site, and never marks one complete", async () => {
+    const page = await jobdanmark.search({ ...EMPTY_QUERY, keywords: "udvikler", country: "dk" }, {}, null);
+    expect(page.postings.length).toBeGreaterThan(0);
+    for (const posting of page.postings) {
+      expect(posting.title).not.toBe("");
+      expect(posting.url).toMatch(/^https:\/\/jobdanmark\.dk\/job\//);
+      expect(posting.complete).toBe(false);
+    }
   });
 });

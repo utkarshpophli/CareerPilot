@@ -2,7 +2,7 @@ import { ApiScope, RunStatus } from "@/generated/prisma/enums";
 import { optionalString, requiredString, runJson, withServiceErrors } from "@/lib/api-runs";
 import { api, ApiError, intParam, jsonBody } from "@/lib/api-v1";
 import { prisma } from "@/lib/prisma";
-import { listRuns, startRun } from "@/lib/runs";
+import { listRuns, startRun } from "@/lib/services/runs";
 
 /** GET /api/v1/runs?status=RUNNING&limit=50&before=<next>: runs, newest first. */
 export const GET = (request: Request) =>

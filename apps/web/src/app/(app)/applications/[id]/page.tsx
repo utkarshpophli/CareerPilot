@@ -15,6 +15,8 @@ import { googleConnection } from "@/lib/google/account";
 import { pullInterviewEvents } from "@/lib/google/availability";
 import { loadConversation } from "@/lib/google/inbox-data";
 import { refineSuggestions } from "@/lib/refine-suggestions";
+import { prisma } from "@/lib/prisma";
+import { pendingProposalFor } from "@/lib/proposals";
 import { loadThemes } from "@/lib/theme-data";
 import { userTimeZone } from "@/lib/time-zone";
 
@@ -40,7 +42,7 @@ export async function generateMetadata({ params }: PageProps<"/applications/[id]
 export default async function ApplicationPage({ params, searchParams }: PageProps<"/applications/[id]">) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   await pullCalendar(id);
-  const [{ application, profile, settings, extracted, resume, letter, email, includeReferences, letterDate }, aiReady, unitJobs, refineJobs, emailJobs, timeZone, google, emails, themes] =
+  const [{ application, profile, settings, extracted, resume, letter, email, includeReferences, letterDate }, aiReady, unitJobs, refineJobs, emailJobs, timeZone, google, emails, themes, proposal] =
     await Promise.all([
       loadDocuments(id),
       isAiConfigured(),
@@ -51,6 +53,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
       googleConnection(),
       loadConversation(id),
       loadThemes(),
+      pendingProposalFor(prisma, id),
     ]);
 
   const match = readJson(matchSchema, application.match);
@@ -79,6 +82,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
 
   return (
     <ApplicationView
+      proposal={proposal}
       application={{
         id,
         title,
@@ -99,6 +103,9 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         // New applications only keep web links, but an imported file could carry any URL (E11-5).
         url: /^https?:\/\//i.test(application.postingUrl) ? application.postingUrl : "",
         pasted: formatShortDate(application.createdAt),
+        open: application.postingOpen,
+        checked: application.postingCheckedAt ? formatShortDate(application.postingCheckedAt) : null,
+        checkNote: application.postingCheckNote,
       }}
       match={match}
       requirements={extracted?.requirements ?? []}

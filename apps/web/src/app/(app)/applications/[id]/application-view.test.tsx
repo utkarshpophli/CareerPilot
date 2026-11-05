@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,8 +13,11 @@ import type { JobView } from "@/lib/jobs/runner";
 import {
   addMatchSkill,
   addNote,
+  checkPostingOpen,
   deleteNote,
+  compareVersion,
   leaveOutUnit,
+  makeAtsSafe,
   listVersions,
   loadVersion,
   putBackTrimmed,
@@ -38,6 +41,7 @@ vi.mock("./actions", () => ({
   setApplicationTheme: vi.fn(async () => ({ ok: true, data: null })),
   setFollowThemeLayout: vi.fn(async () => ({ ok: true, data: null })),
   setShowPhoto: vi.fn(async () => ({ ok: true, data: null })),
+  checkPostingOpen: vi.fn(async () => ({ ok: true, data: { state: "closed", note: "Greenhouse no longer lists it on the employer's board." } })),
   saveUnit: vi.fn(async ({ text }: { text: string }) => ({ ok: true, data: { text } })),
   startRegenerating: vi.fn(async () => ({ ok: true, data: "job-1" })),
   restoreUnit: vi.fn(async () => ({ ok: true, data: null })),
@@ -50,6 +54,8 @@ vi.mock("./actions", () => ({
   restoreNote: vi.fn(async () => ({ ok: true, data: null })),
   putBackTrimmed: vi.fn(async () => ({ ok: true, data: null })),
   leaveOutUnit: vi.fn(async () => ({ ok: true, data: { index: 2 } })),
+  makeAtsSafe: vi.fn(async () => ({ ok: true, data: { changed: 2, beforeVersionId: "v-before" } })),
+  compareVersion: vi.fn(async () => ({ ok: true, data: { first: false, changes: [] } })),
   listVersions: vi.fn(async () => ({ ok: true, data: [] })),
   loadVersion: vi.fn(),
   restoreVersion: vi.fn(async () => ({ ok: true, data: null, toast: "Restored the resume as it was then." })),
@@ -100,7 +106,7 @@ const props: ApplicationViewProps = {
     archived: false,
     nextInterviewAt: null,
   },
-  posting: { text: "Ledgerly is hiring.\n\n  - Figma", url: "", pasted: "27 Sep" },
+  posting: { text: "Ledgerly is hiring.\n\n  - Figma", url: "", pasted: "27 Sep", open: null, checked: null, checkNote: "" },
   match: null,
   requirements: [],
   facts: [{ id: "f1", text: "I know their product as a customer." }],
@@ -714,6 +720,31 @@ describe("the Job posting tab (E8-7)", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("checks whether the posting is still open on request, and says what it found", async () => {
+    const user = userEvent.setup();
+    open({ posting: { ...props.posting, url: "https://job-boards.greenhouse.io/ledgerly/jobs/1" } });
+    expect(screen.getByText("Not checked yet.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Check if it's still open" }));
+    expect(checkPostingOpen).toHaveBeenCalledWith({ id: "app-1" });
+    expect(await screen.findByText("Closed · Greenhouse no longer lists it on the employer's board.")).toBeInTheDocument();
+  });
+
+  it("shows that a check was queued for the worker instead of an answer", async () => {
+    vi.mocked(checkPostingOpen).mockResolvedValueOnce({ ok: true, data: { state: "queued", note: "Queued, but no worker is running right now. The check waits until one starts." } });
+    const user = userEvent.setup();
+    open({ posting: { ...props.posting, url: "https://job-boards.greenhouse.io/ledgerly/jobs/1" } });
+    await user.click(screen.getByRole("button", { name: "Check if it's still open" }));
+    expect(await screen.findByText("Waiting for the worker · Queued, but no worker is running right now. The check waits until one starts.")).toBeInTheDocument();
+  });
+
+  it("shows the last check, and offers none without a link", () => {
+    open({ posting: { ...props.posting, url: "https://jobs.example/1", open: true, checked: "2 Nov", checkNote: "Greenhouse still lists it." } });
+    expect(screen.getByText("Open · Greenhouse still lists it. Checked 2 Nov.")).toBeInTheDocument();
+    cleanup();
+    open();
+    expect(screen.queryByRole("button", { name: "Check if it's still open" })).not.toBeInTheDocument();
+  });
+
   it("shows only the posting when it wasn't matched", () => {
     open({ match: null });
     expect(screen.queryByRole("heading", { name: "How you match" })).not.toBeInTheDocument();
@@ -817,6 +848,28 @@ describe("notes and activity (E8-9)", () => {
   });
 });
 
+describe("the ATS check on the Resume tab (M7.3)", () => {
+  const withDashes = () => [{ id: "summary", label: "Summary", text: "Designer — “quietly” good" }];
+
+  it("lists what applicant-tracking systems may trip over, and fixes it with an Undo on the toast", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationView {...props} resume={{ units: withDashes(), theme: theme("editorial") }} />);
+    const note = screen.getByRole("note", { name: "ATS check" });
+    expect(note).toHaveTextContent("1 long dash (—)");
+    await user.click(within(note).getByRole("button", { name: "Make ATS-safe" }));
+    expect(makeAtsSafe).toHaveBeenCalledWith({ id: "app-1" });
+    expect(toast).toHaveBeenLastCalledWith("Made 2 parts of the resume safe for applicant-tracking systems.", expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) }));
+    const { action } = vi.mocked(toast).mock.lastCall![1] as { action: { onClick: () => void } };
+    action.onClick();
+    await vi.waitFor(() => expect(restoreVersion).toHaveBeenCalledWith({ id: "app-1", versionId: "v-before" }));
+  });
+
+  it("says nothing about a clean resume", () => {
+    render(<ApplicationView {...props} resume={{ units: [{ id: "summary", label: "Summary", text: "Plain." }], theme: theme("editorial") }} />);
+    expect(screen.queryByRole("note", { name: "ATS check" })).not.toBeInTheDocument();
+  });
+});
+
 describe("one-page trimming on the Resume tab (E10-10)", () => {
   it("lists what was left out, each with Put back", async () => {
     const user = userEvent.setup();
@@ -825,7 +878,7 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
       { kind: "bullets" as const, unitId: "experience:e2", label: "Fieldnote role", lines: ["Ran research"] },
     ];
     render(<ApplicationView {...props} resume={{ units: demoResumeUnits(), theme: theme("editorial"), trimmed }} />);
-    const note = screen.getByRole("note");
+    const note = screen.getByRole("note", { name: "Left out of the resume" });
     expect(note).toHaveTextContent("Left out to fit the page limit:Studio Brik rolePut back1 bullet from the Fieldnote rolePut back");
     await user.click(within(note).getByRole("button", { name: "Put back 1 bullet from the Fieldnote role" }));
     expect(putBackTrimmed).toHaveBeenCalledWith({ id: "app-1", index: 1 });
@@ -839,7 +892,7 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
       { kind: "unit" as const, unit: { id: "languages", label: "Languages", text: "Dutch: Native" }, index: 9, byHand: true as const },
     ];
     render(<ApplicationView {...props} resume={{ units: demoResumeUnits(), theme: theme("editorial"), trimmed }} />);
-    const note = screen.getByRole("note");
+    const note = screen.getByRole("note", { name: "Left out of the resume" });
     expect(note).toHaveTextContent("Left out of this resume:Studio Brik role · to fit the page limitPut backLanguagesPut back");
     await user.click(within(note).getByRole("button", { name: "Put back the Languages" }));
     expect(putBackTrimmed).toHaveBeenCalledWith({ id: "app-1", index: 1 });
@@ -848,13 +901,13 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
 
   it("says nothing when nothing was left out", () => {
     render(<ApplicationView {...props} />);
-    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("note", { name: "Left out of the resume" })).not.toBeInTheDocument();
   });
 });
 
 describe("version history (E8-10)", () => {
-  const written = { id: "v1", cause: "WRITTEN" as const, detail: "", createdAt: "2026-09-29T08:05:00.000Z" };
-  const refined = { id: "v2", cause: "REFINED" as const, detail: "Make it shorter", createdAt: "2026-09-29T09:10:00.000Z" };
+  const written = { id: "v1", cause: "WRITTEN" as const, actor: "APP_AI" as const, detail: "", createdAt: "2026-09-29T08:05:00.000Z" };
+  const refined = { id: "v2", cause: "REFINED" as const, actor: "APP_AI" as const, detail: "Make it shorter", createdAt: "2026-09-29T09:10:00.000Z" };
 
   it("lists the versions with why and when, and says when there are none", async () => {
     const user = userEvent.setup();
@@ -872,6 +925,42 @@ describe("version history (E8-10)", () => {
     expect(items[0]).toHaveTextContent("Changed from the chat: “Make it shorter”");
     expect(items[0]).toHaveTextContent("· the newest");
     expect(items[1]).toHaveTextContent("Written by the AI");
+  });
+
+  it("says who made each version, and shows what a version changed, word by word", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listVersions).mockResolvedValue({ ok: true, data: [{ ...refined, actor: "ASSISTANT" as const }, { ...written, actor: "YOU" as const }] });
+    vi.mocked(compareVersion).mockResolvedValue({
+      ok: true,
+      data: { first: false, changes: [{ id: "summary", label: "Summary", kind: "changed" as const, parts: [{ type: "same" as const, text: "Designer who " }, { type: "del" as const, text: "ships" }, { type: "add" as const, text: "delivers" }] }] },
+    });
+    render(<ApplicationView {...props} />);
+
+    await user.click(screen.getAllByRole("button", { name: "History" })[0]);
+    const items = within(await screen.findByRole("list", { name: "Versions" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("An assistant");
+    expect(items[1]).toHaveTextContent("You");
+
+    await user.click(within(items[0]).getByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(compareVersion).toHaveBeenCalledWith({ id: props.application.id, versionId: "v2" });
+    const changes = await within(items[0]).findByRole("list", { name: "What changed" });
+    expect(changes).toHaveTextContent("Summary · Changed");
+    expect(changes).toHaveTextContent("Removed: ships");
+    expect(changes).toHaveTextContent("Added: delivers");
+
+    // Asking again hides it.
+    await user.click(within(items[0]).getByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(within(items[0]).queryByRole("list", { name: "What changed" })).not.toBeInTheDocument();
+  });
+
+  it("says so for the first version, which has nothing before it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listVersions).mockResolvedValue({ ok: true, data: [written] });
+    vi.mocked(compareVersion).mockResolvedValue({ ok: true, data: { first: true, changes: [] } });
+    render(<ApplicationView {...props} />);
+    await user.click(screen.getAllByRole("button", { name: "History" })[0]);
+    await user.click(await screen.findByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(await screen.findByText(/This is the first version/)).toBeInTheDocument();
   });
 
   it("shows an earlier version in place, restores it, or goes back", async () => {

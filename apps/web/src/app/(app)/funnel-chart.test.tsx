@@ -93,4 +93,12 @@ describe("the funnel as a Sankey diagram", () => {
     expect(container.querySelector("svg")).toBeNull();
     expect(screen.queryByText("Show the numbers")).not.toBeInTheDocument();
   });
+
+  // On a narrow screen the chart and its table scroll sideways; a scrolling area must be reachable by keyboard.
+  it("makes its scrolling areas focusable regions", () => {
+    render(<FunnelChart funnel={funnel} />);
+    for (const name of ["Funnel chart", "Funnel numbers"]) {
+      expect(screen.getByRole("region", { name })).toHaveAttribute("tabindex", "0");
+    }
+  });
 });

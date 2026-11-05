@@ -47,8 +47,11 @@ const SCREENS = [
   // The dashboard's calendar on another month.
   "/?date=2026-11-01",
   "/settings?section=ai",
+  "/settings?section=budget",
   "/settings?section=jobs",
   "/settings?section=scoring",
+  "/settings?section=companies",
+  "/settings?section=matching",
   "/settings?section=agent",
   "/settings?section=documents",
   "/settings?section=google",
@@ -57,6 +60,8 @@ const SCREENS = [
   "/settings?section=about",
   // Added with the Runs page (Sprint 1) and the Security section (Sprint 2).
   "/runs",
+  "/review",
+  "/usage",
   "/applications/nope",
   "/nowhere",
 ];
