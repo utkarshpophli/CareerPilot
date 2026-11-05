@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE_TEMPLATE, NO_PLATFORM, computeInsights, weekStart, type InsightApplication } from "./insights";
+import { BASE_TEMPLATE, NO_PLATFORM, SMALL_SAMPLE, computeInsights, weekStart, type InsightApplication } from "./insights";
 
 const now = new Date("2026-11-04T10:00:00Z"); // a Wednesday
 
@@ -15,6 +15,7 @@ function app(overrides: Partial<InsightApplication> & { id: string }): InsightAp
     postingUrl: "",
     postingSource: null,
     documents: [],
+    firstReplyAt: null,
     ...overrides,
   };
 }
@@ -100,5 +101,46 @@ describe("computeInsights", () => {
     expect(insights.totals).toMatchObject({ applications: 0, sent: 0, replyRate: null });
     expect(insights.resume).toMatchObject({ resumes: 0, versions: 0, revisions: 0, perApplication: 0, mostRevised: [] });
     expect(insights.byPlatform).toEqual([]);
+  });
+});
+
+describe("how long replies take, and whether a row is big enough to trust", () => {
+  const days = (n: number) => new Date(new Date("2026-10-01T10:00:00Z").getTime() + n * 86_400_000);
+  const replied = (id: string, platformUrl: string, replyAfterDays: number | null) =>
+    app({
+      id,
+      postingUrl: platformUrl,
+      sentAt: days(0),
+      status: replyAfterDays === null ? "SENT" : "SCREENING",
+      furthestStage: replyAfterDays === null ? "SENT" : "SCREENING",
+      firstReplyAt: replyAfterDays === null ? null : days(replyAfterDays),
+    });
+
+  it("gives the median days from sending to the first reply, per platform and template", () => {
+    const { byPlatform, totals } = computeInsights(
+      [replied("a", "https://jobs.lever.co/x/1", 2), replied("b", "https://jobs.lever.co/y/2", 10), replied("c", "https://jobs.lever.co/z/3", 4), replied("d", "https://jobs.lever.co/w/4", null), replied("e", "https://boards.greenhouse.io/q/5", 1)],
+      now,
+    );
+    expect(byPlatform.find((row) => row.key === "lever")!.medianDaysToReply).toBe(4);
+    expect(byPlatform.find((row) => row.key === "greenhouse")!.medianDaysToReply).toBe(1);
+    expect(totals.medianDaysToReply).toBe(3);
+  });
+
+  it("takes the middle two for an even count, and has none while nothing replied", () => {
+    const { byPlatform } = computeInsights([replied("a", "https://jobs.lever.co/x/1", 2), replied("b", "https://jobs.lever.co/y/2", 5), replied("c", "https://boards.greenhouse.io/z/3", null)], now);
+    expect(byPlatform.find((row) => row.key === "lever")!.medianDaysToReply).toBe(3.5);
+    expect(byPlatform.find((row) => row.key === "greenhouse")!.medianDaysToReply).toBeNull();
+  });
+
+  it("never counts a reply that is dated before the application was sent", () => {
+    const { totals } = computeInsights([app({ id: "a", sentAt: days(5), furthestStage: "SCREENING", status: "SCREENING", firstReplyAt: days(1) })], now);
+    expect(totals.medianDaysToReply).toBeNull();
+  });
+
+  it("marks rows with too few sent to compare", () => {
+    const many = Array.from({ length: SMALL_SAMPLE }, (_, index) => replied(`m${index}`, "https://jobs.lever.co/x/1", 2));
+    const { byPlatform } = computeInsights([...many, replied("g", "https://boards.greenhouse.io/z/3", 1)], now);
+    expect(byPlatform.find((row) => row.key === "lever")!.fewSent).toBe(false);
+    expect(byPlatform.find((row) => row.key === "greenhouse")!.fewSent).toBe(true);
   });
 });
