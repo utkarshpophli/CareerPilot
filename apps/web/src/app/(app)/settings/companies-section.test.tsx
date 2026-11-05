@@ -110,10 +110,17 @@ describe("CompaniesSection", () => {
   });
 
   it("says the scans were queued for the worker, and that the Review page fills as they finish", async () => {
-    vi.mocked(scanNowAction).mockResolvedValueOnce({ ok: true, data: { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: 3, alreadyWaiting: 1, companies: [company()] }, toast: "Queued 3 boards for the worker. The Review page fills as they finish." });
+    vi.mocked(scanNowAction).mockResolvedValueOnce({ ok: true, data: { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: 3, alreadyWaiting: 1, worker: "ok", companies: [company()] }, toast: "x" });
     render(<CompaniesSection initial={[company()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Scan now" }));
     expect(await screen.findByText("Queued 3 boards for the worker (1 already waiting). The Review page fills as they finish.")).toBeInTheDocument();
+  });
+
+  it("says honestly when no worker is running to take the queued scans", async () => {
+    vi.mocked(scanNowAction).mockResolvedValueOnce({ ok: true, data: { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: 2, alreadyWaiting: 0, worker: "none", companies: [company()] }, toast: "x" });
+    render(<CompaniesSection initial={[company()]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Scan now" }));
+    expect(await screen.findByText("Queued 2 boards, but no worker is running right now. They wait until one starts.")).toBeInTheDocument();
   });
 
   it("shows the reason when a scan cannot run", async () => {

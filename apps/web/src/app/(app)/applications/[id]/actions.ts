@@ -19,6 +19,10 @@ import { refineJob, refineJobKey } from "@/lib/jobs/refine";
 import { regenerateUnitJob, unitJobKey } from "@/lib/jobs/regenerate-unit";
 import { findUnfinishedJobs, startJob } from "@/lib/jobs/runner";
 import { emailJobKey, writeEmailJob } from "@/lib/jobs/write-email";
+import { enqueueLivenessChecks } from "@/lib/queue/enqueue";
+import { queueClient, workerEnabled } from "@/lib/queue/web";
+import { logServerError } from "@/lib/log";
+import { loadWorkerStatus } from "@/lib/worker-status-data";
 import { checkApplicationPosting } from "@/lib/services/liveness";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateSkill } from "@/lib/profile-entries";
@@ -45,6 +49,23 @@ export const setFollowThemeLayout = action(
  * the answer on the application. Only the owner's click; an assistant has no door to it.
  */
 export const checkPostingOpen = action(z.object({ id: z.string().min(1) }), async ({ id }) => {
+  // With a worker (CAREERPILOT_WORKER=on) the check is queued for it, and the page shows the answer once it has run.
+  if (workerEnabled()) {
+    if (!(await prisma.application.count({ where: { id } }))) throw new ActionError(GONE);
+    let queued;
+    try {
+      queued = await enqueueLivenessChecks(await queueClient(), [id]);
+    } catch (error) {
+      logServerError("queue", error);
+      throw new ActionError("The worker isn't reachable, so the check wasn't queued. Check that it is running, then try again.");
+    }
+    if (queued.queued === 0) return { state: "queued" as const, note: "A check for this application is already waiting for the worker." };
+    const worker = await loadWorkerStatus();
+    return {
+      state: "queued" as const,
+      note: worker === "ok" ? "Queued for the worker. Reload in a moment to see what it found." : "Queued, but no worker is running right now. The check waits until one starts.",
+    };
+  }
   const { state, note } = await checkApplicationPosting(prisma, id);
   refresh(id);
   return { state, note };

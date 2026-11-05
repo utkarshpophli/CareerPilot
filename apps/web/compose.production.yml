@@ -41,6 +41,8 @@ services:
       CAREERPILOT_WORKER: ${CAREERPILOT_WORKER:-on}
       # A cron expression, in TZ, for a scan of every watched board by the worker, e.g. "0 6 * * *". Empty: no scheduled scan.
       CAREERPILOT_SCAN_SCHEDULE: ${CAREERPILOT_SCAN_SCHEDULE:-}
+      # A cron expression for the worker to check whether your drafts' jobs are still open (at most once a day each). Empty: no scheduled checks.
+      CAREERPILOT_LIVENESS_SCHEDULE: ${CAREERPILOT_LIVENESS_SCHEDULE:-}
       CAREERPILOT_PASSWORD: ${CAREERPILOT_PASSWORD:?Set CAREERPILOT_PASSWORD in .env to a hash from hash-password}
       CAREERPILOT_SECRET: ${CAREERPILOT_SECRET:?Set CAREERPILOT_SECRET in .env}
       CAREERPILOT_BACKUP_RETENTION_DAYS: ${CAREERPILOT_BACKUP_RETENTION_DAYS:-}

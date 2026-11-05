@@ -7,7 +7,7 @@ import { QUEUES } from "@/lib/queue/queues";
 import { addCompany } from "@/lib/services/companies";
 import { createTestClient, resetDatabase, testDatabaseUrl } from "@/test/db";
 
-import { handleBoardScan, handleScanAll, startWorker } from "./worker";
+import { handleBoardScan, handleLivenessCheck, handleLivenessSweep, handleProposalPrune, handleScanAll, startWorker } from "./worker";
 
 const db = createTestClient();
 const schema = `queue_test_${process.pid}`;
@@ -101,6 +101,78 @@ describe("the queue, with a real worker", () => {
       expect(await enqueueBoardScans(client, [acme.id])).toEqual({ queued: 0, alreadyWaiting: 1 });
     } finally {
       await client.stop({ graceful: true, timeout: 2000 });
+    }
+  }, 40_000);
+});
+
+describe("handleLivenessCheck", () => {
+  it("checks the application's job and keeps the answer on it", async () => {
+    await db.application.create({ data: { id: "lv1", title: "Designer", postingUrl: "https://example.test/jobs/1" } });
+    await handleLivenessCheck(deps(), { applicationId: "lv1" });
+    const app = await db.application.findUniqueOrThrow({ where: { id: "lv1" } });
+    expect(app.postingCheckedAt).toBeInstanceOf(Date);
+    expect(app.postingOpen).toBeNull(); // a link nobody can read: "can't tell", never "closed"
+  });
+
+  it("does nothing for an application that is gone", async () => {
+    await expect(handleLivenessCheck(deps(), { applicationId: "missing" })).resolves.toBeUndefined();
+  });
+});
+
+describe("handleLivenessSweep", () => {
+  const now = new Date("2026-11-05T12:00:00Z");
+  const make = (id: string, data: Record<string, unknown>) => db.application.create({ data: { id, title: id, postingUrl: "https://example.test/jobs/" + id, ...data } });
+
+  it("queues the drafts never checked or last checked over a day ago, and not the rest", async () => {
+    await make("never", {});
+    await make("stale", { postingCheckedAt: new Date("2026-11-03T12:00:00Z") });
+    await make("fresh", { postingCheckedAt: new Date("2026-11-05T06:00:00Z") });
+    await make("sent", { status: "SENT", sentAt: now });
+    await make("archived", { archivedAt: now });
+    await make("agent-draft", { awaitingReview: true });
+    await make("no-link", { postingUrl: "" });
+    const sent: { name: string; options: { singletonKey?: string } }[] = [];
+    const boss = { send: async (name: string, _data: object, options: { singletonKey?: string }) => (sent.push({ name, options }), "id") };
+    expect(await handleLivenessSweep({ db }, boss as never, now)).toEqual({ queued: 2, alreadyWaiting: 0 });
+    expect(sent.map((job) => job.options.singletonKey).sort()).toEqual(["never", "stale"]);
+    expect(sent.every((job) => job.name === "liveness-check")).toBe(true);
+  });
+});
+
+describe("handleProposalPrune", () => {
+  it("deletes proposals that finished or expired long ago and keeps the rest", async () => {
+    await db.application.create({ data: { id: "pp", title: "App" } });
+    const base = { applicationId: "pp", status: "SENT" as const, reason: "r", actorKind: "CLI" as const, actorName: "x" };
+    const old = new Date("2026-06-01T00:00:00Z");
+    await db.statusProposal.create({ data: { ...base, state: "PENDING", createdAt: old, expiresAt: new Date("2026-06-15T00:00:00Z") } });
+    await db.statusProposal.create({ data: { ...base, state: "CONFIRMED", createdAt: old, expiresAt: new Date("2026-11-20T00:00:00Z"), resolvedAt: new Date("2026-06-02T00:00:00Z") } });
+    await db.statusProposal.create({ data: { ...base, state: "PENDING", createdAt: new Date("2026-11-04T00:00:00Z"), expiresAt: new Date("2026-11-18T00:00:00Z") } });
+    expect(await handleProposalPrune({ db }, new Date("2026-11-05T12:00:00Z"))).toBe(2);
+    expect(await db.statusProposal.count()).toBe(1);
+  });
+});
+
+describe("the worker's schedules", () => {
+  it("schedules the daily prune always, and the liveness sweep only when asked", async () => {
+    const worker = newBoss();
+    const running = await startWorker(worker, deps(), { name: "sched-worker", version: "0", pollSeconds: 600, livenessSchedule: "30 5 * * *" });
+    const peek = newBoss();
+    await peek.start();
+    try {
+      const names = (await peek.getSchedules()).map((schedule) => `${schedule.name} ${schedule.cron}`).sort();
+      expect(names).toEqual(["liveness-sweep 30 5 * * *", "proposal-prune 17 3 * * *"]);
+    } finally {
+      await peek.stop({ graceful: true, timeout: 2000 });
+      await running.stop();
+    }
+    const again = await startWorker(newBoss(), deps(), { name: "sched-worker-2", version: "0", pollSeconds: 600 });
+    const peek2 = newBoss();
+    await peek2.start();
+    try {
+      expect((await peek2.getSchedules()).map((schedule) => schedule.name)).toEqual(["proposal-prune"]);
+    } finally {
+      await peek2.stop({ graceful: true, timeout: 2000 });
+      await again.stop();
     }
   }, 40_000);
 });

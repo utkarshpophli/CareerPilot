@@ -725,6 +725,14 @@ describe("the Job posting tab (E8-7)", () => {
     expect(await screen.findByText("Closed · Greenhouse no longer lists it on the employer's board.")).toBeInTheDocument();
   });
 
+  it("shows that a check was queued for the worker instead of an answer", async () => {
+    vi.mocked(checkPostingOpen).mockResolvedValueOnce({ ok: true, data: { state: "queued", note: "Queued, but no worker is running right now. The check waits until one starts." } });
+    const user = userEvent.setup();
+    open({ posting: { ...props.posting, url: "https://job-boards.greenhouse.io/ledgerly/jobs/1" } });
+    await user.click(screen.getByRole("button", { name: "Check if it's still open" }));
+    expect(await screen.findByText("Waiting for the worker · Queued, but no worker is running right now. The check waits until one starts.")).toBeInTheDocument();
+  });
+
   it("shows the last check, and offers none without a link", () => {
     open({ posting: { ...props.posting, url: "https://jobs.example/1", open: true, checked: "2 Nov", checkNote: "Greenhouse still lists it." } });
     expect(screen.getByText("Open · Greenhouse still lists it. Checked 2 Nov.")).toBeInTheDocument();

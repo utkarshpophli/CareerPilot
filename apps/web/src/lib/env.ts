@@ -146,6 +146,14 @@ const schema = z.object({
       .trim()
       .regex(/^\S+(\s+\S+){4}$/, { error: "CAREERPILOT_SCAN_SCHEDULE must be a cron expression with five fields, for example 0 6 * * *." }),
   ),
+  // A cron expression (five fields) for the worker to check whether the jobs your drafts are for are still open, once a day at most
+  // per draft. Unset means no scheduled checks; the button on the Job posting tab always works.
+  CAREERPILOT_LIVENESS_SCHEDULE: optional(
+    z
+      .string()
+      .trim()
+      .regex(/^\S+(\s+\S+){4}$/, { error: "CAREERPILOT_LIVENESS_SCHEDULE must be a cron expression with five fields, for example 30 5 * * *." }),
+  ),
   // Off takes the Bundesagentur für Arbeit out everywhere (#223): it isn't an
   // official API, so a server can choose not to offer it. Unset means on.
   CAREERPILOT_JOBS_ARBEITSAGENTUR: optional(

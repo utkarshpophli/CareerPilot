@@ -63,14 +63,14 @@ export function PostingTab({
   const factsHint = useId();
   const [pending, startTransition] = useTransition();
   // What the last check said, until the page is loaded again with the saved one.
-  const [fresh, setFresh] = useState<{ state: "open" | "closed" | "unknown"; note: string } | null>(null);
+  const [fresh, setFresh] = useState<{ state: "open" | "closed" | "unknown" | "queued"; note: string } | null>(null);
   const check = () =>
     startTransition(async () => {
       const result = await checkPostingOpen({ id: applicationId });
       if (!result.ok) return toast(result.error);
       setFresh(result.data);
     });
-  const stateWord = fresh ? { open: "Open", closed: "Closed", unknown: "Can't tell" }[fresh.state] : posting.open === null ? (posting.checked ? "Can't tell" : null) : posting.open ? "Open" : "Closed";
+  const stateWord = fresh ? { open: "Open", closed: "Closed", unknown: "Can't tell", queued: "Waiting for the worker" }[fresh.state] : posting.open === null ? (posting.checked ? "Can't tell" : null) : posting.open ? "Open" : "Closed";
   const status = fresh
     ? `${stateWord} · ${fresh.note}`
     : posting.checked

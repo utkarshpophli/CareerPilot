@@ -35,5 +35,6 @@ Use pg-boss for the queue and schedules, in a separate process (`node worker.js`
 
 - **One more process in the compose file.** A deployment that runs only the web process keeps working with `CAREERPILOT_WORKER` off. With it on and no worker running, a queued scan waits (the screen says it was queued for the worker; the health check says `worker: none`). CapRover's single-container definition is unchanged and stays in the web process.
 - **Recovery takes up to a minute or two**, not seconds. That is fine for scans and checks and is shown as such in the run.
-- **Still to move:** liveness checks, the agent's daily run, backups.
+- **Moved on 2026-11-05:** the liveness check (queue `liveness-check`, optional `liveness-sweep` schedule) and the proposal prune (`proposal-prune`, daily). When no worker is reporting, the screens say a queued job is waiting for one, never that it is running.
+- **Still to move:** the agent's daily run, backups.
 - **Tokens and cost (5.4)** do not depend on the queue: they need the AI providers to report the tokens each call used, which they do not today (`ChatAnswer` carries text and a cut-off flag only). That is its own change.

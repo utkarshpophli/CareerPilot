@@ -38,6 +38,11 @@ vi.mock("@/lib/auth/session", () => ({
   getSession: async () => ({ persistent: false, issuedAt: new Date(), expiresAt: new Date(Date.now() + 60_000) }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const queue = vi.hoisted(() => ({ on: false, sent: [] as { name: string; data: unknown; options: { singletonKey?: string } }[], refuse: false }));
+vi.mock("@/lib/queue/web", () => ({
+  workerEnabled: () => queue.on,
+  queueClient: async () => ({ send: async (name: string, data: object, options: { singletonKey?: string }) => (queue.refuse ? null : (queue.sent.push({ name, data, options }), "job-1")) }),
+}));
 // The calendar's side is tested in src/lib/google; here it's off unless a test says otherwise.
 const calendar = vi.hoisted(() => ({
   sync: vi.fn<(id: string) => Promise<{ inCalendar: boolean; eventLink: string | null }>>(async () => ({ inCalendar: false, eventLink: null })),
@@ -152,6 +157,33 @@ describe("checkPostingOpen (M4d.2)", () => {
 
   it("says so when the application is gone", async () => {
     expect(await checkPostingOpen({ id: "gone" })).toEqual({ ok: false, error: "That application no longer exists." });
+  });
+
+  describe("with a worker (CAREERPILOT_WORKER=on)", () => {
+    beforeEach(() => {
+      queue.on = true;
+      queue.sent = [];
+      queue.refuse = false;
+    });
+    afterAll(() => {
+      queue.on = false;
+    });
+
+    it("queues the check instead of making it, and says whether a worker is there to take it", async () => {
+      const waiting = await checkPostingOpen({ id: "app-1" });
+      expect(waiting).toMatchObject({ ok: true, data: { state: "queued", note: "Queued, but no worker is running right now. The check waits until one starts." } });
+      expect(queue.sent).toMatchObject([{ name: "liveness-check", data: { applicationId: "app-1" }, options: { singletonKey: "app-1" } }]);
+      // Nothing was asked of the network or written to the application.
+      expect((await prisma().application.findUniqueOrThrow({ where: { id: "app-1" } })).postingCheckedAt).toBeNull();
+      await prisma().workerHeartbeat.create({ data: { id: "w1", startedAt: new Date(), beatAt: new Date() } });
+      expect(await checkPostingOpen({ id: "app-1" })).toMatchObject({ data: { state: "queued", note: "Queued for the worker. Reload in a moment to see what it found." } });
+    });
+
+    it("says when a check for it is already waiting, and when the application is gone", async () => {
+      queue.refuse = true;
+      expect(await checkPostingOpen({ id: "app-1" })).toMatchObject({ ok: true, data: { state: "queued", note: expect.stringMatching(/already waiting/i) } });
+      expect(await checkPostingOpen({ id: "gone" })).toEqual({ ok: false, error: "That application no longer exists." });
+    });
   });
 });
 

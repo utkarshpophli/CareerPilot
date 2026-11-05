@@ -79,8 +79,15 @@ export function CompaniesSection({ initial }: { initial: CompanyListItem[] }) {
     if (!result.ok) return;
     setCompanies([...result.data.companies].sort(byName));
     if (result.data.queued !== undefined) {
-      const { queued, alreadyWaiting = 0 } = result.data;
-      setScanned(queued === 0 ? "Nothing new to queue." : `Queued ${plural(queued, "board")} for the worker${alreadyWaiting ? ` (${alreadyWaiting} already waiting)` : ""}. The Review page fills as they finish.`);
+      const { queued, alreadyWaiting = 0, worker } = result.data;
+      const waiting = alreadyWaiting ? ` (${alreadyWaiting} already waiting)` : "";
+      setScanned(
+        queued === 0
+          ? "Nothing new to queue."
+          : worker === "ok"
+            ? `Queued ${plural(queued, "board")} for the worker${waiting}. The Review page fills as they finish.`
+            : `Queued ${plural(queued, "board")}${waiting}, but no worker is running right now. ${queued === 1 ? "It waits" : "They wait"} until one starts.`,
+      );
       return;
     }
     setScanned(

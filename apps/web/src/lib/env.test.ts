@@ -179,6 +179,8 @@ describe("job search variables (E14-4)", () => {
     expect(problems({ ...valid, CAREERPILOT_WORKER: "yes" })).toEqual(['CAREERPILOT_WORKER must be on or off (got "yes").']);
     expect(parseEnv({ ...valid, CAREERPILOT_SCAN_SCHEDULE: " 0 6 * * * " }).CAREERPILOT_SCAN_SCHEDULE).toBe("0 6 * * *");
     expect(problems({ ...valid, CAREERPILOT_SCAN_SCHEDULE: "every morning" })).toEqual(["CAREERPILOT_SCAN_SCHEDULE must be a cron expression with five fields, for example 0 6 * * *."]);
+    expect(parseEnv({ ...valid, CAREERPILOT_LIVENESS_SCHEDULE: "30 5 * * *" }).CAREERPILOT_LIVENESS_SCHEDULE).toBe("30 5 * * *");
+    expect(problems({ ...valid, CAREERPILOT_LIVENESS_SCHEDULE: "daily" })).toEqual(["CAREERPILOT_LIVENESS_SCHEDULE must be a cron expression with five fields, for example 30 5 * * *."]);
   });
 
   it("rejects sources and hosts it doesn't know, without echoing keys", () => {

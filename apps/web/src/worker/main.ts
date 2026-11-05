@@ -44,9 +44,9 @@ async function main() {
   const worker = await startWorker(
     boss,
     { db: prisma, preferences: async () => preferencesFor(await loadProfile(), (await loadSettings()).scanPreferences) },
-    { name: NAME, version: appVersion, scanSchedule: env.CAREERPILOT_SCAN_SCHEDULE },
+    { name: NAME, version: appVersion, scanSchedule: env.CAREERPILOT_SCAN_SCHEDULE, livenessSchedule: env.CAREERPILOT_LIVENESS_SCHEDULE },
   );
-  console.log(`worker ${NAME} ready (version ${appVersion})${env.CAREERPILOT_SCAN_SCHEDULE ? `, scanning on "${env.CAREERPILOT_SCAN_SCHEDULE}"` : ", no scan schedule"}`);
+  console.log(`worker ${NAME} ready (version ${appVersion})${env.CAREERPILOT_SCAN_SCHEDULE ? `, scanning on "${env.CAREERPILOT_SCAN_SCHEDULE}"` : ", no scan schedule"}${env.CAREERPILOT_LIVENESS_SCHEDULE ? `, checking drafts on "${env.CAREERPILOT_LIVENESS_SCHEDULE}"` : ", no liveness schedule"}, pruning proposals daily`);
 
   let stopping = false;
   const stop = async (signal: string) => {

@@ -124,10 +124,16 @@ describe("scanNowAction", () => {
       const paused = await addCompanyAction({ board: "beta", source: "GREENHOUSE", name: "Beta" });
       await setCompanyEnabledAction({ id: (paused as { data: { id: string } }).data.id, enabled: false });
       const result = await scanNowAction({});
-      expect(result).toMatchObject({ ok: true, data: { scanned: 0, queued: 2, alreadyWaiting: 0 }, toast: "Queued 2 boards for the worker. The Review page fills as they finish." });
+      expect(result).toMatchObject({ ok: true, data: { scanned: 0, queued: 2, alreadyWaiting: 0, worker: "none" }, toast: "Queued 2 boards, but no worker is running right now. They wait until one starts." });
       expect(queue.sent.map((job) => job.options.singletonKey).sort()).toEqual([(acme as { data: { id: string } }).data.id, (gone as { data: { id: string } }).data.id].sort());
       // Nothing was read in the web process.
       expect(await prisma().scannedPosting.count()).toBe(0);
+    });
+
+    it("says it plainly when a worker is there to take them", async () => {
+      await addCompanyAction({ board: "acme", source: "GREENHOUSE", name: "Acme" });
+      await prisma().workerHeartbeat.create({ data: { id: "w1", startedAt: new Date(), beatAt: new Date() } });
+      expect(await scanNowAction({})).toMatchObject({ ok: true, data: { queued: 1, worker: "ok" }, toast: "Queued 1 board for the worker. The Review page fills as they finish." });
     });
 
     it("says when a board already has a scan waiting, and when the queue is not there", async () => {

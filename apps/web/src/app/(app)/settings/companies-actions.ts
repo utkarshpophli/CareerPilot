@@ -9,6 +9,7 @@ import { logServerError } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
 import { enqueueBoardScans } from "@/lib/queue/enqueue";
 import { queueClient, workerEnabled } from "@/lib/queue/web";
+import { loadWorkerStatus } from "@/lib/worker-status-data";
 import { loadProfile } from "@/lib/profile-data";
 import { ServiceError } from "@/lib/service-error";
 import { addCompany, listCompanies, removeCompany, scanCompanies, setCompanyEnabled, toCompanyListItem } from "@/lib/services/companies";
@@ -68,15 +69,18 @@ export const scanNowAction = action(z.object({}), async (_input, { toast }) => {
       throw new ActionError("The worker isn't reachable, so nothing was queued. Check that it is running, then try again.");
     }
     const waiting = queued.alreadyWaiting;
+    const worker = await loadWorkerStatus();
     toast(
       queued.queued === 0 && waiting === 0
         ? "Nothing to scan. Add a company first, or turn one back on."
         : queued.queued === 0
           ? `Already waiting for the worker: ${waiting} board${waiting === 1 ? "" : "s"}. Nothing new to queue.`
-          : `Queued ${queued.queued} board${queued.queued === 1 ? "" : "s"} for the worker. The Review page fills as they finish.`,
+          : worker === "ok"
+            ? `Queued ${queued.queued} board${queued.queued === 1 ? "" : "s"} for the worker. The Review page fills as they finish.`
+            : `Queued ${queued.queued} board${queued.queued === 1 ? "" : "s"}, but no worker is running right now. ${queued.queued === 1 ? "It waits" : "They wait"} until one starts.`,
     );
     revalidatePath("/settings");
-    return { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: queued.queued, alreadyWaiting: waiting, companies: (await listCompanies(prisma)).map(toCompanyListItem) };
+    return { scanned: 0, added: 0, closed: 0, failed: 0, skipped: 0, queued: queued.queued, alreadyWaiting: waiting, worker, companies: (await listCompanies(prisma)).map(toCompanyListItem) };
   }
   const preferences = preferencesFor(await loadProfile(), (await loadSettings()).scanPreferences);
   const result = await scanCompanies(prisma, { preferences, limit: 1 });
