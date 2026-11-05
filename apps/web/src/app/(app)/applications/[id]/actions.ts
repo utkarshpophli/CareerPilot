@@ -9,6 +9,7 @@ import { action, ActionError } from "@/lib/action";
 import { isAiConfigured } from "@/lib/ai/config";
 import { editsSchema, extractedSchema, matchSchema, trimmedSchema, unitsSchema, withSkillAdded } from "@/lib/application-data";
 import { WRITTEN_EMAIL_UNITS } from "@/lib/application-email";
+import { cleanUnits } from "@/lib/ats-lint";
 import { updateDocuments } from "@/lib/document-units";
 import { DOCUMENT_LABELS } from "@/lib/file-name";
 import { syncInterviewToCalendar } from "@/lib/google/availability";
@@ -437,6 +438,32 @@ export const putBackTrimmed = action(z.object({ id: z.string().min(1), index: z.
   await prisma.document.update({ where: { id: row.id }, data: { trimmed: rest.length > 0 ? rest : Prisma.DbNull } });
   refresh(id);
   return null;
+});
+
+/**
+ * "Make ATS-safe" (M7.3): replaces the characters applicant-tracking parsers drop or garble in the resume (see
+ * ats-lint.ts). The resume as it was is saved as a version first, whose id comes back so the toast can offer Undo,
+ * and the cleaned one is a version of its own.
+ */
+export const makeAtsSafe = action(z.object({ id: z.string().min(1) }), async ({ id }) => {
+  let beforeVersionId = "";
+  const changed = await updateDocuments(
+    id,
+    async (documents, tx) => {
+      const units = documents[DocumentKind.RESUME];
+      if (!units) throw new ActionError("This application has no resume.");
+      const cleaned = cleanUnits(units);
+      if (cleaned.changed === 0) throw new ActionError("There's nothing to fix. The resume is already safe.");
+      const row = await tx.document.findUniqueOrThrow({ where: { applicationId_kind: { applicationId: id, kind: DocumentKind.RESUME } }, select: { id: true } });
+      await saveVersion(tx, row.id, units, { cause: VersionCause.CLEANED, detail: "before" });
+      beforeVersionId = (await tx.documentVersion.findFirstOrThrow({ where: { documentId: row.id }, orderBy: { createdAt: "desc" }, select: { id: true } })).id;
+      documents[DocumentKind.RESUME] = cleaned.units;
+      return cleaned.changed;
+    },
+    { version: { cause: VersionCause.CLEANED, detail: "after" } },
+  );
+  refresh(id);
+  return { changed, beforeVersionId };
 });
 
 // ─── Versions (E8-10, APP-13) ────────────────────────────────────────────────

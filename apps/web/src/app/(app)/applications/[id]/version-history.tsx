@@ -40,6 +40,8 @@ export function versionLabel({ cause, detail }: Pick<Version, "cause" | "detail"
       return "As it was before a restore";
     case "RESTORED":
       return detail ? `Brought back the version from ${versionTime(detail)}` : "Brought back an earlier version";
+    case "CLEANED":
+      return detail === "before" ? "As it was before making the text ATS-safe" : "Made the text safe for applicant-tracking systems";
   }
 }
 

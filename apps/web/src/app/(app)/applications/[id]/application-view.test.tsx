@@ -16,6 +16,7 @@ import {
   checkPostingOpen,
   deleteNote,
   leaveOutUnit,
+  makeAtsSafe,
   listVersions,
   loadVersion,
   putBackTrimmed,
@@ -52,6 +53,7 @@ vi.mock("./actions", () => ({
   restoreNote: vi.fn(async () => ({ ok: true, data: null })),
   putBackTrimmed: vi.fn(async () => ({ ok: true, data: null })),
   leaveOutUnit: vi.fn(async () => ({ ok: true, data: { index: 2 } })),
+  makeAtsSafe: vi.fn(async () => ({ ok: true, data: { changed: 2, beforeVersionId: "v-before" } })),
   listVersions: vi.fn(async () => ({ ok: true, data: [] })),
   loadVersion: vi.fn(),
   restoreVersion: vi.fn(async () => ({ ok: true, data: null, toast: "Restored the resume as it was then." })),
@@ -844,6 +846,28 @@ describe("notes and activity (E8-9)", () => {
   });
 });
 
+describe("the ATS check on the Resume tab (M7.3)", () => {
+  const withDashes = () => [{ id: "summary", label: "Summary", text: "Designer — “quietly” good" }];
+
+  it("lists what applicant-tracking systems may trip over, and fixes it with an Undo on the toast", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationView {...props} resume={{ units: withDashes(), theme: theme("editorial") }} />);
+    const note = screen.getByRole("note", { name: "ATS check" });
+    expect(note).toHaveTextContent("1 long dash (—)");
+    await user.click(within(note).getByRole("button", { name: "Make ATS-safe" }));
+    expect(makeAtsSafe).toHaveBeenCalledWith({ id: "app-1" });
+    expect(toast).toHaveBeenLastCalledWith("Made 2 parts of the resume safe for applicant-tracking systems.", expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) }));
+    const { action } = vi.mocked(toast).mock.lastCall![1] as { action: { onClick: () => void } };
+    action.onClick();
+    await vi.waitFor(() => expect(restoreVersion).toHaveBeenCalledWith({ id: "app-1", versionId: "v-before" }));
+  });
+
+  it("says nothing about a clean resume", () => {
+    render(<ApplicationView {...props} resume={{ units: [{ id: "summary", label: "Summary", text: "Plain." }], theme: theme("editorial") }} />);
+    expect(screen.queryByRole("note", { name: "ATS check" })).not.toBeInTheDocument();
+  });
+});
+
 describe("one-page trimming on the Resume tab (E10-10)", () => {
   it("lists what was left out, each with Put back", async () => {
     const user = userEvent.setup();
@@ -852,7 +876,7 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
       { kind: "bullets" as const, unitId: "experience:e2", label: "Fieldnote role", lines: ["Ran research"] },
     ];
     render(<ApplicationView {...props} resume={{ units: demoResumeUnits(), theme: theme("editorial"), trimmed }} />);
-    const note = screen.getByRole("note");
+    const note = screen.getByRole("note", { name: "Left out of the resume" });
     expect(note).toHaveTextContent("Left out to fit the page limit:Studio Brik rolePut back1 bullet from the Fieldnote rolePut back");
     await user.click(within(note).getByRole("button", { name: "Put back 1 bullet from the Fieldnote role" }));
     expect(putBackTrimmed).toHaveBeenCalledWith({ id: "app-1", index: 1 });
@@ -866,7 +890,7 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
       { kind: "unit" as const, unit: { id: "languages", label: "Languages", text: "Dutch: Native" }, index: 9, byHand: true as const },
     ];
     render(<ApplicationView {...props} resume={{ units: demoResumeUnits(), theme: theme("editorial"), trimmed }} />);
-    const note = screen.getByRole("note");
+    const note = screen.getByRole("note", { name: "Left out of the resume" });
     expect(note).toHaveTextContent("Left out of this resume:Studio Brik role · to fit the page limitPut backLanguagesPut back");
     await user.click(within(note).getByRole("button", { name: "Put back the Languages" }));
     expect(putBackTrimmed).toHaveBeenCalledWith({ id: "app-1", index: 1 });
@@ -875,7 +899,7 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
 
   it("says nothing when nothing was left out", () => {
     render(<ApplicationView {...props} />);
-    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("note", { name: "Left out of the resume" })).not.toBeInTheDocument();
   });
 });
 

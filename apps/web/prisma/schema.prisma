@@ -528,6 +528,8 @@ enum VersionCause {
   BEFORE_RESTORE
   /// An earlier version brought back.
   RESTORED
+  /// Text made safe for applicant-tracking parsers, at the owner's request (M7.3).
+  CLEANED
 }
 
 /// A tailored document's units as they were at one point (E8-10).

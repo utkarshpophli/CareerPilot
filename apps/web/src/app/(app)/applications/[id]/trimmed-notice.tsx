@@ -19,7 +19,7 @@ export const byPageLimit = (item: Trimmed[number]) => item.kind === "bullets" ||
 export function TrimmedNotice({ items, onPutBack }: { items: Trimmed; onPutBack: (index: number) => void }) {
   const allByPageLimit = items.every(byPageLimit);
   return (
-    <div role="note" className="flex flex-col gap-1.5 rounded-card border border-line-card bg-card px-4 py-3 text-meta">
+    <div role="note" aria-label="Left out of the resume" className="flex flex-col gap-1.5 rounded-card border border-line-card bg-card px-4 py-3 text-meta">
       <p className="text-muted">{allByPageLimit ? "Left out to fit the page limit:" : "Left out of this resume:"}</p>
       <ul className="flex flex-col gap-1">
         {items.map((item, index) => (

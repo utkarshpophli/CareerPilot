@@ -10,6 +10,7 @@ import {
   leaveOutUnit,
   listVersions,
   loadVersion,
+  makeAtsSafe,
   putBackTrimmed,
   restoreNote,
   restoreUnit,
@@ -521,6 +522,38 @@ describe("putBackTrimmed (E10-10)", () => {
 
   it("says so when it's already back", async () => {
     expect(await putBackTrimmed({ id: "app-1", index: 5 })).toMatchObject({ ok: false, error: expect.stringMatching(/^That's already back/) });
+  });
+});
+
+describe("makeAtsSafe (M7.3)", () => {
+  const document = () => prisma().document.findUniqueOrThrow({ where: { applicationId_kind: { applicationId: "app-1", kind: "RESUME" } }, include: { versions: { orderBy: { createdAt: "asc" } } } });
+
+  it("cleans the resume's text, keeps the resume as it was as a version, and Undo brings it back", async () => {
+    await prisma().document.update({
+      where: { applicationId_kind: { applicationId: "app-1", kind: "RESUME" } },
+      data: { units: [{ id: "summary", label: "Summary", text: "Designer — “quietly” good" }, { id: "skills", label: "Skills", text: "Figma" }] },
+    });
+    const done = await makeAtsSafe({ id: "app-1" });
+    expect(done).toMatchObject({ ok: true, data: { changed: 1, beforeVersionId: expect.any(String) } });
+    const saved = await document();
+    expect((saved.units as { id: string; text: string }[]).map((unit) => unit.text)).toEqual(['Designer - "quietly" good', "Figma"]);
+    expect(saved.versions.map((version) => [version.cause, version.detail])).toEqual([["CLEANED", "before"], ["CLEANED", "after"]]);
+    expect((saved.versions[0]!.units as { text: string }[])[0]!.text).toBe("Designer — “quietly” good");
+
+    const undone = await restoreVersion({ id: "app-1", versionId: (done as { data: { beforeVersionId: string } }).data.beforeVersionId });
+    expect(undone.ok).toBe(true);
+    expect(((await document()).units as { text: string }[])[0]!.text).toBe("Designer — “quietly” good");
+  });
+
+  it("says so, and saves nothing, when the resume is already safe", async () => {
+    const before = (await document()).versions.length;
+    expect(await makeAtsSafe({ id: "app-1" })).toMatchObject({ ok: false, error: expect.stringMatching(/^There's nothing to fix/) });
+    expect((await document()).versions.length).toBe(before);
+  });
+
+  it("says so when the application has no resume", async () => {
+    await prisma().document.deleteMany({ where: { applicationId: "app-1", kind: "RESUME" } });
+    expect(await makeAtsSafe({ id: "app-1" })).toMatchObject({ ok: false, error: "This application has no resume." });
   });
 });
 

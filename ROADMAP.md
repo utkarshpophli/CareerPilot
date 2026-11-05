@@ -214,7 +214,7 @@ The part that makes "how many times did my resume change, which template" rich, 
 |---|---|
 | 7.1 | Tailored resume and letter on dossier's unit model; template and theme recorded per version (fields exist) |
 | 7.2 | **Version history with diffs** between any two versions, who made each (you, the app's AI, an assistant), and why |
-| 7.3 | ATS lint (career-ops text normalisation and ai-job-search layout checks) |
+| 7.3 | ATS lint (career-ops text normalisation and ai-job-search layout checks) | **DONE 2026-11-05 for the text rules; layout checks do not apply.** `lib/ats-lint.ts` (pure, 8 tests) ports career-ops's `normalizeTextForATS` list (long and en dashes, curly quotes, the ellipsis character, invisible characters, non-breaking spaces, arrows, `**bold**` marks) and adds two notes only the owner can fix (a bullet over 240 characters, a summary over 700). The Resume tab shows an "ATS check" note with **Make ATS-safe**; the fix saves the resume as it was (a `CLEANED` version, new enum value and migration), then the cleaned one, and the toast has Undo (the existing restore). Nothing is rewritten without the click. ai-job-search's layout checks (tables, columns, images) do not apply: CareerPilot's resume is built from plain text units, not free layout. Tests: unit, database (3), component (4 + 2 in the view) and a browser spec |
 | 7.4 | PDF with page limit (exists); add ATS normalisation; LaTeX stays an optional later worker |
 | 7.5 | **One fact gate** for generated documents: career-ops's hard gate plus dossier's heuristics, flagged postings and emails not trusted as sources |
 | 7.6 | A reviewer pass (ai-job-search's drafter and reviewer pattern) |
