@@ -24,6 +24,4 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - run: >-
-          node scripts/probe-sources.mjs terms-urls
-          https://www.amazon.com/gp/help/customer/display.html?nodeId=508088
+      - run: node scripts/probe-sources.mjs aggregators

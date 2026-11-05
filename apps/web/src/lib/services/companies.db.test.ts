@@ -223,6 +223,32 @@ describe("a scan keeps what it finds", () => {
   });
 });
 
+describe("what the run says about why", () => {
+  const preferences: Preferences = { titles: ["Designer"], skills: ["Figma"], places: ["Berlin"], remote: "unknown", excludeKeywords: [], excludeCompanies: [] };
+
+  it("gives each board step its source, what was decided and, when it scored, the scorer's version", async () => {
+    await addCompany(db, { source: "GREENHOUSE", board: "acme", name: "Acme" });
+    await addCompany(db, { source: "GREENHOUSE", board: "gone", name: "Gone" });
+    const adapters = fake({ acme: [posting("acme", "1", "Designer"), posting("acme", "2", "Cook")], gone: new BoardError("not-found", "No such board.") });
+    await asAssistant(() => scanCompanies(db, { preferences }, { adapters }));
+    const run = await db.agentRun.findFirstOrThrow({ where: { kind: "companies.scan" } });
+    const steps = await db.activityEvent.findMany({ where: { runId: run.id, action: ACTIONS.runStep }, orderBy: { at: "asc" } });
+    expect(steps[0]!.data).toMatchObject({ source: "GREENHOUSE · acme", decision: "kept 2 new, closed 0, scored 2", scorerVersion: "board-score@1", found: 2, added: 2, closed: 0, scored: 2 });
+    expect(steps[1]!.data).toMatchObject({ source: "GREENHOUSE · gone", decision: "not read: No such board." });
+    expect(steps[1]!.data).not.toHaveProperty("scorerVersion");
+  });
+
+  it("says that a board was not reached when the time was up", async () => {
+    await addCompany(db, { source: "GREENHOUSE", board: "a1", name: "A1" });
+    await addCompany(db, { source: "GREENHOUSE", board: "b2", name: "B2" });
+    let clock = 0;
+    await asAssistant(() => scanCompanies(db, { budgetMs: 1000 }, { adapters: fake({ a1: [posting("a1", "1", "x")] }), now: () => (clock += 2000) }));
+    const run = await db.agentRun.findFirstOrThrow({ where: { kind: "companies.scan" } });
+    const steps = await db.activityEvent.findMany({ where: { runId: run.id, action: ACTIONS.runStep }, orderBy: { at: "asc" } });
+    expect(steps.find((step) => step.summary.includes("not reached"))!.data).toMatchObject({ source: expect.stringContaining("·"), decision: "not reached: the time was up" });
+  });
+});
+
 describe("scan time budget", () => {
   it("stops starting new boards when the time is up, says which were not reached, and leaves their health alone", async () => {
     await addCompany(db, { source: "GREENHOUSE", board: "a1", name: "A1" });
@@ -291,7 +317,7 @@ describe("scanOneBoard", () => {
     const other = await addCompany(db, { source: "GREENHOUSE", board: "beta", name: "Beta" });
     const adapters = fake({ acme: [posting("acme", "1", "Designer"), posting("acme", "2", "Cook")], beta: [posting("beta", "1", "Never read")] });
     const outcome = await scanOneBoard(db, acme.id, {}, { adapters });
-    expect(outcome).toEqual({ id: acme.id, name: "Acme", found: 2, added: 2, closed: 0 });
+    expect(outcome).toEqual({ id: acme.id, name: "Acme", found: 2, added: 2, closed: 0, source: "GREENHOUSE · acme" });
     expect(await db.scannedPosting.count({ where: { companyId: acme.id } })).toBe(2);
     expect(await db.trackedCompany.findUniqueOrThrow({ where: { id: acme.id } })).toMatchObject({ lastFound: 2, lastError: "" });
     // The other board was not touched.
@@ -301,7 +327,7 @@ describe("scanOneBoard", () => {
   it("records a board that failed, with words safe to show, and does not throw", async () => {
     const gone = await addCompany(db, { source: "GREENHOUSE", board: "gone", name: "Gone" });
     const adapters = fake({ gone: new BoardError("not-found", "The source has no such board. Check the name.", "HTTP 404") });
-    expect(await scanOneBoard(db, gone.id, {}, { adapters })).toEqual({ id: gone.id, name: "Gone", found: 0, error: "The source has no such board. Check the name." });
+    expect(await scanOneBoard(db, gone.id, {}, { adapters })).toEqual({ id: gone.id, name: "Gone", found: 0, error: "The source has no such board. Check the name.", source: "GREENHOUSE · gone" });
     expect((await db.trackedCompany.findUniqueOrThrow({ where: { id: gone.id } })).lastError).toBe("The source has no such board. Check the name.");
   });
 

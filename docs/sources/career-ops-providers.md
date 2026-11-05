@@ -11,7 +11,7 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | adp-workforcenow | not sorted yet | queued: verdict file first | - |
 | agentic-jobs | not sorted yet | queued: verdict file first | - |
 | alibaba | deferred | deferred: no robots.txt, no terms found | [alibaba.md](alibaba.md) |
-| amazon | deferred | deferred: its terms are amazon.com's Conditions of Use, not yet read | [amazon.md](amazon.md) |
+| amazon | dropped | dropped: amazon.jobs points to amazon.com's Conditions of Use, which forbid robots and data mining | [amazon.md](amazon.md) |
 | apple | dropped | dropped: its website terms forbid page-scraping and robots | [apple.md](apple.md) |
 | applitrack | not sorted yet | queued: verdict file first | - |
 | arbeitnow | not sorted yet | queued: verdict file first | - |
@@ -133,4 +133,4 @@ Status words: **ported** (a verdict file exists and the adapter ships), **verdic
 | yourator | not sorted yet | queued: verdict file first | - |
 | zoho-recruit | not sorted yet | queued: verdict file first | - |
 
-Totals: 126 providers; 8 ported, 1 verdict written, 3 dropped, 6 deferred, 108 queued.
+Totals: 126 providers; 8 ported, 1 verdict written, 4 dropped, 5 deferred, 108 queued.

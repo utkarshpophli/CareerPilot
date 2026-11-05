@@ -91,6 +91,7 @@ node apps/cli/pilot.mjs run finish $ID --status ok "12 new postings"   # or --st
 
 - `run start --key <k>` (or an `Idempotency-Key` header over HTTP) makes a retry safe: the same key gives the same run.
 - A step is one readable line plus small counts in `--data` (`found=12,boards=3`, or a JSON object where your shell keeps its quotes; PowerShell strips the quotes, so use `key=value` there). Never put secrets or whole documents in a step.
+- Four keys in `--data` are shown by name on the run page, before the counts, so a run can be replayed and not only listed: `source` (where the information came from, e.g. `source="Greenhouse · stripe"`), `promptVersion` (which prompt or instruction made a judgement), `scorerVersion` (which scoring rules gave a number) and `decision` (what was decided, e.g. `decision="kept as new"`). Each is one line of plain text, cut at 200 characters, and shown as text, never as markup. The app's own board scans write `source`, `decision` and `scorerVersion`.
 - A run still going with no step for 30 minutes shows as **Stalled**.
 - Every step is also an Activity event carrying the run's id, under the token's name.
 

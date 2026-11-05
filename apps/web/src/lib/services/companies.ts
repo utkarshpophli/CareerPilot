@@ -2,9 +2,10 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { boardAdapter, BOARD_SOURCES, BoardError, isBoardSource, sourceOfAddress, type BoardSource } from "@/lib/job-search/boards";
-import type { Preferences } from "@/lib/job-scoring";
+import { SCORE_VERSION, type Preferences } from "@/lib/job-scoring";
 import { ACTIONS, recordActivity, recordActivitySafe } from "@/lib/ledger";
 import { logServerError } from "@/lib/log";
+import { stepData } from "@/lib/run-step";
 import { ServiceError } from "@/lib/service-error";
 
 import { reportAsRun } from "./runs";
@@ -96,7 +97,7 @@ export type ScanOptions = {
 
 export type ScanResult = {
   scanned: number;
-  companies: { id: string; name: string; found: number; added?: number; closed?: number; error?: string; skipped?: true }[];
+  companies: { id: string; name: string; found: number; added?: number; closed?: number; scored?: number; error?: string; skipped?: true; /** Where it was read, e.g. "Greenhouse · stripe". */ source: string }[];
   /** Boards not reached because the time was up. */
   skipped: number;
   /** New postings kept, and postings closed because their board no longer lists them. */
@@ -148,19 +149,23 @@ export async function scanOneBoard(
   return row ? readBoard(db, row, preferences, adapters, new Date(clock())) : null;
 }
 
+const sourceLabel = (adapterName: string, slug: string) => `${adapterName} · ${slug}`;
+
 type CompanyRow = NonNullable<Awaited<ReturnType<PrismaClient["trackedCompany"]["findFirst"]>>>;
 
 async function readBoard(db: PrismaClient, row: CompanyRow, preferences: Preferences | undefined, adapters: Adapters, now: Date): Promise<BoardOutcome> {
+  const adapter = adapters(row.source);
+  const source = sourceLabel(adapter.name, row.slug);
   try {
-    const postings = await adapters(row.source).fetchBoard({ slug: row.slug, ...(row.region === "eu" ? { region: "eu" as const } : {}) }, row.name);
+    const postings = await adapter.fetchBoard({ slug: row.slug, ...(row.region === "eu" ? { region: "eu" as const } : {}) }, row.name);
     const kept = await ingestBoardScan(db, row, postings, now);
-    if (preferences) await scoreOpenPostings(db, row.id, preferences, now);
+    const scored = preferences ? await scoreOpenPostings(db, row.id, preferences, now) : undefined;
     await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastOkAt: now, lastError: "", lastFound: postings.length } });
-    return { id: row.id, name: row.name, found: postings.length, added: kept.added, closed: kept.closed };
+    return { id: row.id, name: row.name, found: postings.length, added: kept.added, closed: kept.closed, ...(scored !== undefined ? { scored } : {}), source };
   } catch (error) {
     const reason = reasonFor(row.name, error);
     await db.trackedCompany.update({ where: { id: row.id }, data: { lastScanAt: now, lastError: reason } });
-    return { id: row.id, name: row.name, found: 0, error: reason };
+    return { id: row.id, name: row.name, found: 0, error: reason, source };
   }
 }
 
@@ -187,19 +192,32 @@ export const scanCompanies = (db: PrismaClient, options: ScanOptions = {}, { ada
 
       for (const row of rows) {
         if (clock() - startedAt >= budget) {
-          companies.push({ id: row.id, name: row.name, found: 0, skipped: true });
-          await step(`${row.name}: not reached, the time was up`);
+          const source = sourceLabel(adapters(row.source).name, row.slug);
+          companies.push({ id: row.id, name: row.name, found: 0, skipped: true, source });
+          await step(`${row.name}: not reached, the time was up`, stepData({ source, decision: "not reached: the time was up" }));
           continue;
         }
         const outcome = await readBoard(db, row, options.preferences, adapters, new Date(clock()));
         companies.push(outcome);
         if (outcome.error) {
-          await step(`${row.name}: could not be read (${outcome.error})`);
+          await step(`${row.name}: could not be read (${outcome.error})`, stepData({ source: outcome.source, decision: `not read: ${outcome.error}` }));
         } else {
           read.push(row.id);
           added += outcome.added ?? 0;
           closed += outcome.closed ?? 0;
-          await step(`${row.name}: ${plural(outcome.found, "posting")} (${outcome.added} new, ${outcome.closed} closed)`, { found: outcome.found, added: outcome.added ?? 0, closed: outcome.closed ?? 0 });
+          await step(
+            `${row.name}: ${plural(outcome.found, "posting")} (${outcome.added} new, ${outcome.closed} closed)`,
+            stepData({
+              source: outcome.source,
+              decision: `kept ${outcome.added ?? 0} new, closed ${outcome.closed ?? 0}${outcome.scored ? `, scored ${outcome.scored}` : ""}`,
+              // The scorer is code, not a prompt: its version is what says which rules gave the numbers.
+              scorerVersion: outcome.scored ? SCORE_VERSION : undefined,
+              found: outcome.found,
+              added: outcome.added ?? 0,
+              closed: outcome.closed ?? 0,
+              ...(outcome.scored !== undefined ? { scored: outcome.scored } : {}),
+            }),
+          );
         }
       }
 
