@@ -222,6 +222,11 @@ describe("the Claude connector's tools (#221)", () => {
     expect(saved.json).toMatchObject({ status: "Draft", application_id: expect.any(String) });
     const id = saved.json.application_id as string;
     expect(await prisma().application.findUniqueOrThrow({ where: { id } })).toMatchObject({ company: "Acme", status: "DRAFT", postingUrl: "https://jobs.example/p1" });
+    // The first drafts are the assistant's, and the history says so.
+    expect(await prisma().documentVersion.findMany({ where: { document: { applicationId: id } }, select: { cause: true, actor: true } })).toEqual([
+      { cause: "WRITTEN", actor: "ASSISTANT" },
+      { cause: "WRITTEN", actor: "ASSISTANT" },
+    ]);
     expect((await prisma().posting.findFirstOrThrow({ where: { externalId: "p1" } })).applicationId).toBe(id);
 
     expect(await tool("save_application", { details: { company: "Acme", role: "Designer" }, resume: { summary: "", roles: [], skills: [] }, cover_letter: { paragraphs: [{ text: "Hi" }] } })).toMatchObject({

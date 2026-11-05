@@ -15,6 +15,7 @@ import {
   addNote,
   checkPostingOpen,
   deleteNote,
+  compareVersion,
   leaveOutUnit,
   makeAtsSafe,
   listVersions,
@@ -54,6 +55,7 @@ vi.mock("./actions", () => ({
   putBackTrimmed: vi.fn(async () => ({ ok: true, data: null })),
   leaveOutUnit: vi.fn(async () => ({ ok: true, data: { index: 2 } })),
   makeAtsSafe: vi.fn(async () => ({ ok: true, data: { changed: 2, beforeVersionId: "v-before" } })),
+  compareVersion: vi.fn(async () => ({ ok: true, data: { first: false, changes: [] } })),
   listVersions: vi.fn(async () => ({ ok: true, data: [] })),
   loadVersion: vi.fn(),
   restoreVersion: vi.fn(async () => ({ ok: true, data: null, toast: "Restored the resume as it was then." })),
@@ -904,8 +906,8 @@ describe("one-page trimming on the Resume tab (E10-10)", () => {
 });
 
 describe("version history (E8-10)", () => {
-  const written = { id: "v1", cause: "WRITTEN" as const, detail: "", createdAt: "2026-09-29T08:05:00.000Z" };
-  const refined = { id: "v2", cause: "REFINED" as const, detail: "Make it shorter", createdAt: "2026-09-29T09:10:00.000Z" };
+  const written = { id: "v1", cause: "WRITTEN" as const, actor: "APP_AI" as const, detail: "", createdAt: "2026-09-29T08:05:00.000Z" };
+  const refined = { id: "v2", cause: "REFINED" as const, actor: "APP_AI" as const, detail: "Make it shorter", createdAt: "2026-09-29T09:10:00.000Z" };
 
   it("lists the versions with why and when, and says when there are none", async () => {
     const user = userEvent.setup();
@@ -923,6 +925,42 @@ describe("version history (E8-10)", () => {
     expect(items[0]).toHaveTextContent("Changed from the chat: “Make it shorter”");
     expect(items[0]).toHaveTextContent("· the newest");
     expect(items[1]).toHaveTextContent("Written by the AI");
+  });
+
+  it("says who made each version, and shows what a version changed, word by word", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listVersions).mockResolvedValue({ ok: true, data: [{ ...refined, actor: "ASSISTANT" as const }, { ...written, actor: "YOU" as const }] });
+    vi.mocked(compareVersion).mockResolvedValue({
+      ok: true,
+      data: { first: false, changes: [{ id: "summary", label: "Summary", kind: "changed" as const, parts: [{ type: "same" as const, text: "Designer who " }, { type: "del" as const, text: "ships" }, { type: "add" as const, text: "delivers" }] }] },
+    });
+    render(<ApplicationView {...props} />);
+
+    await user.click(screen.getAllByRole("button", { name: "History" })[0]);
+    const items = within(await screen.findByRole("list", { name: "Versions" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("An assistant");
+    expect(items[1]).toHaveTextContent("You");
+
+    await user.click(within(items[0]).getByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(compareVersion).toHaveBeenCalledWith({ id: props.application.id, versionId: "v2" });
+    const changes = await within(items[0]).findByRole("list", { name: "What changed" });
+    expect(changes).toHaveTextContent("Summary · Changed");
+    expect(changes).toHaveTextContent("Removed: ships");
+    expect(changes).toHaveTextContent("Added: delivers");
+
+    // Asking again hides it.
+    await user.click(within(items[0]).getByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(within(items[0]).queryByRole("list", { name: "What changed" })).not.toBeInTheDocument();
+  });
+
+  it("says so for the first version, which has nothing before it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listVersions).mockResolvedValue({ ok: true, data: [written] });
+    vi.mocked(compareVersion).mockResolvedValue({ ok: true, data: { first: true, changes: [] } });
+    render(<ApplicationView {...props} />);
+    await user.click(screen.getAllByRole("button", { name: "History" })[0]);
+    await user.click(await screen.findByRole("button", { name: /^(Hide changes|Changes) in the version from/ }));
+    expect(await screen.findByText(/This is the first version/)).toBeInTheDocument();
   });
 
   it("shows an earlier version in place, restores it, or goes back", async () => {

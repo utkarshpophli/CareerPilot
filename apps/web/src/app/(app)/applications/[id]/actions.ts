@@ -15,7 +15,7 @@ import { DOCUMENT_LABELS } from "@/lib/file-name";
 import { syncInterviewToCalendar } from "@/lib/google/availability";
 import { GoogleError } from "@/lib/google/errors";
 import { isFrameUnit, withFrame, WRITTEN_FRAME_UNITS } from "@/lib/letter-frame";
-import { saveVersion } from "@/lib/document-versions";
+import { EDIT_COALESCE_MS, saveVersion } from "@/lib/document-versions";
 import { refineJob, refineJobKey } from "@/lib/jobs/refine";
 import { regenerateUnitJob, unitJobKey } from "@/lib/jobs/regenerate-unit";
 import { findUnfinishedJobs, startJob } from "@/lib/jobs/runner";
@@ -27,6 +27,7 @@ import { loadWorkerStatus } from "@/lib/worker-status-data";
 import { checkApplicationPosting } from "@/lib/services/liveness";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateSkill } from "@/lib/profile-entries";
+import { diffUnits } from "@/lib/text-diff";
 import { cleanUnitText, isPublicationUnit, unitName } from "@/lib/unit-text";
 
 const GONE = "That application no longer exists.";
@@ -143,21 +144,26 @@ export const saveUnit = action(
       throw new ActionError("Write something first, or cancel to keep it as it was.");
     }
 
-    await updateDocuments(id, async (documents) => {
-      const units = documents[document];
-      const unit = units?.find((entry) => entry.id === unitId);
-      // A letter written before E8-11 shows its frame without storing it: the first edit stores that part.
-      if (!unit && units && document === DocumentKind.COVER_LETTER && isFrameUnit(unitId)) {
-        documents[document] = withFrame(units, { [unitId]: clean });
-        return;
-      }
-      if (!unit) throw new ActionError(PART_GONE);
-      if (unit.text !== expected) {
-        throw new ActionError("This part changed while you were editing it. Copy your text, cancel, and edit the new version.");
-      }
-      unit.text = clean;
-      delete unit.unverified;
-    });
+    await updateDocuments(
+      id,
+      async (documents) => {
+        const units = documents[document];
+        const unit = units?.find((entry) => entry.id === unitId);
+        // A letter written before E8-11 shows its frame without storing it: the first edit stores that part.
+        if (!unit && units && document === DocumentKind.COVER_LETTER && isFrameUnit(unitId)) {
+          documents[document] = withFrame(units, { [unitId]: clean });
+          return;
+        }
+        if (!unit) throw new ActionError(PART_GONE);
+        if (unit.text !== expected) {
+          throw new ActionError("This part changed while you were editing it. Copy your text, cancel, and edit the new version.");
+        }
+        unit.text = clean;
+        delete unit.unverified;
+      },
+      // Edits by hand are versions too (M7.2), those made close together sharing one, so the history says who changed what.
+      { version: { cause: VersionCause.EDITED, coalesceMs: EDIT_COALESCE_MS } },
+    );
     refresh(id);
     return { text: clean };
   },
@@ -475,9 +481,28 @@ export const listVersions = action(z.object({ id: z.string().min(1), document: z
   const versions = await prisma.documentVersion.findMany({
     where: { document: { applicationId: id, kind: document } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, cause: true, detail: true, createdAt: true },
+    select: { id: true, cause: true, actor: true, detail: true, createdAt: true },
   });
   return versions.map((version) => ({ ...version, createdAt: version.createdAt.toISOString() }));
+});
+
+/**
+ * What a version changed: its parts compared with the version before it of the same document, word by word (M7.2).
+ * `first` is true for the oldest version, which has nothing before it to compare with.
+ */
+export const compareVersion = action(z.object({ id: z.string().min(1), versionId: z.string().min(1) }), async ({ id, versionId }) => {
+  const version = await prisma.documentVersion.findFirst({
+    where: { id: versionId, document: { applicationId: id } },
+    select: { units: true, createdAt: true, documentId: true },
+  });
+  if (!version) throw new ActionError(VERSION_GONE);
+  const before = await prisma.documentVersion.findFirst({
+    where: { documentId: version.documentId, createdAt: { lt: version.createdAt } },
+    orderBy: { createdAt: "desc" },
+    select: { units: true },
+  });
+  if (!before) return { first: true as const, changes: [] };
+  return { first: false as const, changes: diffUnits(unitsSchema.parse(before.units), unitsSchema.parse(version.units)).filter((change) => change.kind !== "same") };
 });
 
 /** One version's units, to look at before restoring it. */

@@ -17,6 +17,7 @@ const CAUSES: Record<VersionCause, string> = {
   BEFORE_RESTORE: "Saved before a restore",
   RESTORED: "Earlier version restored",
   CLEANED: "Made ATS-safe",
+  EDITED: "Edited by hand",
 };
 
 const percent = (value: number | null) => (value === null ? "–" : `${Math.round(value * 100)}%`);

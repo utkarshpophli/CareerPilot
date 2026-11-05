@@ -70,6 +70,8 @@ const CLAIMED = "application:";
 
 /** Creates the application once; creating again with the same claim returns the one that exists. */
 export async function createApplicationFromDocuments({ reading, documents, match, details, postingUrl, tone, note, claim }: CreateApplicationInput): Promise<string> {
+  // An assistant that wrote it through the connector, or CareerPilot's own model.
+  const firstDraftBy = claim.kind === "connector" ? ("ASSISTANT" as const) : ("APP_AI" as const);
   const [settings, profile] = await Promise.all([loadSettings(), loadProfile()]);
   const { extracted, extractedWith, matchedWith } = reading;
   const language = settings.docLanguage ?? extracted.language ?? "English";
@@ -149,14 +151,14 @@ export async function createApplicationFromDocuments({ reading, documents, match
               units: documents.resume,
               themeId: settings.baseThemeId,
               writtenWith: documents.resumeWith,
-              versions: { create: { units: documents.resume, cause: "WRITTEN" } },
+              versions: { create: { units: documents.resume, cause: "WRITTEN", actor: firstDraftBy } },
             },
             {
               kind: "COVER_LETTER",
               units: letter,
               themeId: settings.baseThemeId,
               writtenWith: documents.letterWith,
-              versions: { create: { units: letter, cause: "WRITTEN" } },
+              versions: { create: { units: letter, cause: "WRITTEN", actor: firstDraftBy } },
             },
           ],
         },

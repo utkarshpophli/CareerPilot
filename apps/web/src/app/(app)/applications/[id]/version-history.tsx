@@ -5,14 +5,23 @@ import { useEffect, useState } from "react";
 
 import { toastResult } from "@/components/toast";
 import { Button } from "@/components/ui/button";
-import type { DocumentKind, VersionCause } from "@/generated/prisma/enums";
+import type { DocumentKind, VersionActor, VersionCause } from "@/generated/prisma/enums";
 import type { Unit } from "@/lib/application-data";
 import { formatShortDate } from "@/lib/dates";
 import { DOCUMENT_LABELS } from "@/lib/file-name";
 
-import { listVersions, loadVersion } from "./actions";
+import type { UnitChange } from "@/lib/text-diff";
 
-type Version = { id: string; cause: VersionCause; detail: string; createdAt: string };
+import { compareVersion, listVersions, loadVersion } from "./actions";
+import { VersionChanges } from "./version-changes";
+
+type Version = { id: string; cause: VersionCause; actor: VersionActor; detail: string; createdAt: string };
+
+/** Who made a version, in words. */
+export const ACTOR_LABELS: Record<VersionActor, string> = { YOU: "You", APP_AI: "CareerPilot's AI", ASSISTANT: "An assistant" };
+
+/** A record without one key. */
+const without = <T,>(record: Record<string, T>, key: string): Record<string, T> => Object.fromEntries(Object.entries(record).filter(([name]) => name !== key));
 
 /** A version as the preview shows it (E8-10). */
 export type ViewedVersion = { document: DocumentKind; id: string; units: Unit[]; label: string; when: string };
@@ -42,6 +51,8 @@ export function versionLabel({ cause, detail }: Pick<Version, "cause" | "detail"
       return detail ? `Brought back the version from ${versionTime(detail)}` : "Brought back an earlier version";
     case "CLEANED":
       return detail === "before" ? "As it was before making the text ATS-safe" : "Made the text safe for applicant-tracking systems";
+    case "EDITED":
+      return "Edited by hand";
   }
 }
 
@@ -64,6 +75,8 @@ export function VersionHistory({
 }) {
   const [versions, setVersions] = useState<Version[] | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  // The changes of the versions asked about, by version id.
+  const [changes, setChanges] = useState<Record<string, { first: boolean; changes: UnitChange[] } | "loading">>({});
 
   useEffect(() => {
     if (!document) return;
@@ -86,6 +99,21 @@ export function VersionHistory({
     onView({ document: result.data.document, id: version.id, units: result.data.units, label: versionLabel(version), when: versionTime(version.createdAt) });
   };
 
+  const toggleChanges = async (version: Version) => {
+    if (changes[version.id]) {
+      setChanges((current) => without(current, version.id));
+      return;
+    }
+    setChanges((current) => ({ ...current, [version.id]: "loading" }));
+    const result = toastResult(await compareVersion({ id: applicationId, versionId: version.id }));
+    setChanges((current) => (result.ok ? { ...current, [version.id]: result.data } : without(current, version.id)));
+  };
+
+  const shownChanges = (id: string) => {
+    const entry = changes[id];
+    return entry && entry !== "loading" ? <VersionChanges first={entry.first} changes={entry.changes} /> : null;
+  };
+
   const name = DOCUMENT_LABELS[document ?? "RESUME"].toLowerCase();
   return (
     <Dialog.Root open={document !== null} onOpenChange={onOpenChange}>
@@ -96,7 +124,7 @@ export function VersionHistory({
             <div className="flex flex-col gap-1">
               <Dialog.Title className="font-serif text-[22px] leading-tight">History of the {name}</Dialog.Title>
               <Dialog.Description className="text-sm text-muted">
-                A version is saved with each AI change and before each restore. Your own edits are in the current version.
+                A version is saved with each change by the AI or an assistant, each restore, and your own edits (edits made close together share one).
               </Dialog.Description>
             </div>
             <Dialog.Close className="rounded-control px-2 py-1 text-sm text-muted hover:bg-hover hover:text-ink">Close</Dialog.Close>
@@ -110,23 +138,37 @@ export function VersionHistory({
           ) : (
             <ol aria-label="Versions" className="flex flex-col">
               {versions.map((version, index) => (
-                <li key={version.id} className="flex items-start justify-between gap-3 border-t border-line py-3">
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm break-words">{versionLabel(version)}</span>
-                    <span className="text-meta text-muted tabular-nums">
-                      {versionTime(version.createdAt)}
-                      {index === 0 && " · the newest"}
+                <li key={version.id} className="flex flex-col gap-2 border-t border-line py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm break-words">{versionLabel(version)}</span>
+                      <span className="text-meta text-muted tabular-nums">
+                        {versionTime(version.createdAt)} · {ACTOR_LABELS[version.actor]}
+                        {index === 0 && " · the newest"}
+                      </span>
                     </span>
-                  </span>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    aria-label={`Look at the version from ${versionTime(version.createdAt)}`}
-                    aria-disabled={opening !== null || undefined}
-                    onClick={() => void (opening ? undefined : view(version))}
-                  >
-                    {opening === version.id ? "Opening…" : "Look"}
-                  </Button>
+                    <span className="flex shrink-0 gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-expanded={changes[version.id] !== undefined}
+                        aria-label={`${changes[version.id] === "loading" ? "Comparing" : changes[version.id] ? "Hide changes" : "Changes"} in the version from ${versionTime(version.createdAt)}`}
+                        onClick={() => void toggleChanges(version)}
+                      >
+                        {changes[version.id] === "loading" ? "Comparing…" : changes[version.id] ? "Hide changes" : "Changes"}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-label={`Look at the version from ${versionTime(version.createdAt)}`}
+                        aria-disabled={opening !== null || undefined}
+                        onClick={() => void (opening ? undefined : view(version))}
+                      >
+                        {opening === version.id ? "Opening…" : "Look"}
+                      </Button>
+                    </span>
+                  </div>
+                  {shownChanges(version.id)}
                 </li>
               ))}
             </ol>

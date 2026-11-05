@@ -9,6 +9,7 @@ import {
   deleteNote,
   leaveOutUnit,
   listVersions,
+  compareVersion,
   loadVersion,
   makeAtsSafe,
   putBackTrimmed,
@@ -593,11 +594,36 @@ describe("versions (E8-10)", () => {
     return result.data;
   };
 
-  it("makes a version for an AI change, but not for an edit by hand", async () => {
+  it("makes a version for an edit by hand and for an undone AI change, each saying who made it", async () => {
     await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "By hand.", expected: resume[0].text });
-    expect(await versions()).toEqual([]);
+    expect(await versions()).toEqual([{ id: expect.any(String), cause: "EDITED", actor: "YOU", detail: "", createdAt: expect.any(String) }]);
     await restoreUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "The AI's text.", expected: "By hand." });
-    expect(await versions()).toEqual([{ id: expect.any(String), cause: "UNDONE", detail: "", createdAt: expect.any(String) }]);
+    expect((await versions()).map((version) => [version.cause, version.actor])).toEqual([["UNDONE", "YOU"], ["EDITED", "YOU"]]);
+  });
+
+  it("lets edits made close together share one version, and starts another once enough time has passed", async () => {
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "First.", expected: resume[0].text });
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "Second.", expected: "First." });
+    const [only] = await versions();
+    expect(await versions()).toHaveLength(1);
+    const kept = await loadVersion({ id: "app-1", versionId: only.id });
+    expect(kept.ok && kept.data.units[0].text).toBe("Second.");
+
+    await prisma().documentVersion.update({ where: { id: only.id }, data: { createdAt: new Date(Date.now() - 30 * 60_000) } });
+    await saveUnit({ id: "app-1", document: "RESUME", unitId: "summary", text: "Third.", expected: "Second." });
+    expect((await versions()).map((version) => version.cause)).toEqual(["EDITED", "EDITED"]);
+  });
+
+  it("compares a version with the one before it, and says when there is none", async () => {
+    const { id: documentId } = await document();
+    const first = await prisma().documentVersion.create({ data: { documentId, units: resume, cause: "WRITTEN", createdAt: new Date("2026-09-29T08:00:00Z") } });
+    const second = await prisma().documentVersion.create({
+      data: { documentId, units: [{ ...resume[0], text: resume[0].text + " More." }, resume[1]], cause: "REFINED", actor: "APP_AI", detail: "Longer", createdAt: new Date("2026-09-29T09:00:00Z") },
+    });
+    expect(await compareVersion({ id: "app-1", versionId: first.id })).toEqual({ ok: true, data: { first: true, changes: [] } });
+    const result = await compareVersion({ id: "app-1", versionId: second.id });
+    expect(result).toMatchObject({ ok: true, data: { first: false, changes: [{ id: resume[0].id, kind: "changed", parts: expect.arrayContaining([{ type: "add", text: " More." }]) }] } });
+    expect(await compareVersion({ id: "app-1", versionId: "gone" })).toMatchObject({ ok: false, error: expect.stringMatching(/no longer exists/) });
   });
 
   it("restores a version, saving what was there first, and marks the restored one", async () => {
@@ -612,7 +638,8 @@ describe("versions (E8-10)", () => {
     expect(restored).toMatchObject({ ok: true, toast: "Restored the resume as it was then. The version you had is in the history too." });
     expect((await units())[0].text).toBe(resume[0].text);
     const list = await versions();
-    expect(list.map((version) => version.cause)).toEqual(["RESTORED", "BEFORE_RESTORE", "WRITTEN"]);
+    // The edit by hand was a version already, so it is not saved a second time before the restore.
+    expect(list.map((version) => version.cause)).toEqual(["RESTORED", "EDITED", "WRITTEN"]);
     expect(list[0].detail).toBe("2026-09-29T08:00:00.000Z");
     const before = await loadVersion({ id: "app-1", versionId: list[1].id });
     expect(before.ok && before.data.units[0].text).toBe("Rewritten by hand.");

@@ -530,6 +530,18 @@ enum VersionCause {
   RESTORED
   /// Text made safe for applicant-tracking parsers, at the owner's request (M7.3).
   CLEANED
+  /// Edited by hand; edits made close together share one version (M7.2).
+  EDITED
+}
+
+/// Who made a version of a document (M7.2).
+enum VersionActor {
+  /// The owner, by hand or by undoing, restoring or cleaning.
+  YOU
+  /// CareerPilot's own AI model.
+  APP_AI
+  /// An assistant (Claude, OpenCode…) that wrote it through the connector, the API or the CLI.
+  ASSISTANT
 }
 
 /// A tailored document's units as they were at one point (E8-10).
@@ -539,6 +551,7 @@ model DocumentVersion {
   document   Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   units      Json
   cause      VersionCause
+  actor      VersionActor @default(APP_AI)
   /// What changed, e.g. the part's name or the chat request.
   detail     String       @default("")
   createdAt  DateTime     @default(now())

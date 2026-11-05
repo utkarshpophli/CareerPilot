@@ -24,6 +24,7 @@ import {
   ThemeFont,
   ThemeLayout,
   Tone,
+  VersionActor,
   VersionCause,
 } from "@/generated/prisma/enums";
 import { decryptApiKey } from "@/lib/ai/api-key";
@@ -199,7 +200,7 @@ const document = z.object({
   trimmed: z.unknown().nullable().optional(),
   /** Earlier versions (E8-10); absent in older files. */
   versions: z
-    .array(z.object({ id: text, units: z.unknown(), cause: z.enum(VersionCause), detail: text, createdAt: date }))
+    .array(z.object({ id: text, units: z.unknown(), cause: z.enum(VersionCause), actor: z.enum(VersionActor).optional(), detail: text, createdAt: date }))
     .optional(),
   updatedAt: date,
 });
