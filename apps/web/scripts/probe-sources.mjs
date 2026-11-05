@@ -35,6 +35,17 @@ const GROUPS = {
     { name: "dassault", origin: "https://www.3ds.com", sample: { method: "GET", path: "/apisearch/card_search_api", note: "search API root; the real call needs parameters, not made" } },
     { name: "alibaba", origin: "https://talent.alibaba.com", sample: { method: "GET", path: "/off-campus/position-list", note: "front page of the careers app" } },
   ],
+  // M4c batch 3: aggregators with a public API. These are job boards, so the source policy asks for more than robots.txt: terms, attribution rules, free for candidates.
+  aggregators: [
+    { name: "arbeitnow", origin: "https://www.arbeitnow.com", sample: { method: "GET", path: "/api/job-board-api", note: "documented public job board API" } },
+    { name: "remotive", origin: "https://remotive.com", sample: { method: "GET", path: "/api/remote-jobs?limit=3", note: "public remote jobs API" } },
+    { name: "remoteok", origin: "https://remoteok.com", sample: { method: "GET", path: "/api", note: "public JSON API" } },
+    { name: "himalayas", origin: "https://himalayas.app", sample: { method: "GET", path: "/jobs/api?limit=3", note: "public jobs API" } },
+    { name: "themuse", origin: "https://www.themuse.com", sample: { method: "GET", path: "/api/public/jobs?page=1", note: "public jobs API" } },
+    { name: "jobicy", origin: "https://jobicy.com", sample: { method: "GET", path: "/api/v2/remote-jobs?count=3", note: "public remote jobs API" } },
+    { name: "weworkremotely", origin: "https://weworkremotely.com", sample: { method: "GET", path: "/remote-jobs.rss", note: "public RSS feed" } },
+    { name: "hackernews", origin: "https://hn.algolia.com", front: "https://news.ycombinator.com", sample: { method: "GET", path: "/api/v1/search_by_date?tags=story&query=who%20is%20hiring&hitsPerPage=3", note: "Algolia's public HN search API" } },
+  ],
   danish: [
     {
       name: "jobindex",
