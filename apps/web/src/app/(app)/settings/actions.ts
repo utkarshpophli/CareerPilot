@@ -422,6 +422,39 @@ export const revokeToken = action(z.object({ id: z.string().min(1).max(64) }), a
   return { tokens: await apiTokenRows() };
 });
 
+// Settings → Budget (M5.5): the prices the owner pays and the monthly caps.
+const priceInput = z.object({ model: z.string().trim().min(1).max(200), currency: z.string().regex(/^[A-Za-z]{3}$/), inputPerMillion: z.number().min(0).max(1_000_000), outputPerMillion: z.number().min(0).max(1_000_000) });
+const budgetInput = z
+  .object({
+    prices: z.array(priceInput).max(50),
+    budget: z.object({
+      monthlyLimit: z.object({ amount: z.number().positive().max(100_000_000), currency: z.string().regex(/^[A-Za-z]{3}$/) }).nullable(),
+      monthlyTokens: z.number().int().positive().max(1_000_000_000_000).nullable(),
+      warnPercent: z.number().int().min(1).max(99),
+      atLimit: z.enum(["stop", "fallback"]),
+      fallbackModel: z.string().trim().min(1).max(200).nullable(),
+    }),
+  })
+  .refine((input) => input.budget.atLimit !== "fallback" || input.budget.fallbackModel !== null, { message: "Name the cheaper model to switch to." });
+
+/** Saves the prices (a model once, the first line wins) and the caps. Takes effect on the next AI call. */
+export const saveBudget = action(budgetInput, async (input, { toast }) => {
+  const seen = new Set<string>();
+  const modelPrices = input.prices
+    .map((price) => ({ ...price, currency: price.currency.toUpperCase() }))
+    .filter((price) => !seen.has(price.model) && seen.add(price.model));
+  await saveSettings({
+    modelPrices,
+    aiBudget: {
+      ...input.budget,
+      monthlyLimit: input.budget.monthlyLimit ? { amount: input.budget.monthlyLimit.amount, currency: input.budget.monthlyLimit.currency.toUpperCase() } : null,
+    },
+  });
+  revalidatePath("/usage");
+  toast("Saved.");
+  return null;
+});
+
 // Settings → Posting preferences (M4d): what scans score postings against besides the profile.
 const line = z.string().trim().min(1).max(80);
 const lines = z.array(line).max(30);

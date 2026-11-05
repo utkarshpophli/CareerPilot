@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/page-header";
+import { loadBudget } from "@/lib/ai/budget-data";
 import { userTimeZone } from "@/lib/time-zone";
 import { loadUsageRows } from "@/lib/usage-data";
 import { summarizeUsage } from "@/lib/usage-summary";
@@ -12,15 +13,12 @@ export const metadata: Metadata = { title: "Usage" };
 const DAYS = 30;
 /** What the AI calls used, in tokens: by day, model, task and who asked. */
 export default async function UsagePage() {
-  const [rows, timeZone] = await Promise.all([
-    loadUsageRows(DAYS),
-    userTimeZone(),
-  ]);
+  const [rows, timeZone, { prices, state }] = await Promise.all([loadUsageRows(DAYS), userTimeZone(), loadBudget()]);
   return (
     <>
-      <PageHeader title="Usage" description="The tokens your AI calls used, so you can see what a scan, a draft or an assistant costs you in your provider's terms." />
+      <PageHeader title="Usage" description="What your AI calls used, in tokens and, where you have told it the price, in money; and how far this month has got against your budget." />
       <div className="flex flex-col gap-4 px-10 pb-10">
-        <UsageView summary={summarizeUsage(rows, timeZone ?? "UTC")} days={DAYS} />
+        <UsageView summary={summarizeUsage(rows, timeZone ?? "UTC", prices)} days={DAYS} budget={state} />
       </div>
     </>
   );

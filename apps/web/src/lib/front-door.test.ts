@@ -46,7 +46,7 @@ describe("with nothing at all", () => {
     expect(empty.where).toEqual({ rows: [], more: 0 });
     expect(empty.resume).toMatchObject({ resumes: 0, versions: 0, revisions: 0, perApplication: 0, templates: [], bestTemplate: null });
     expect(empty.assistants).toMatchObject({ connected: 0, shown: [], more: 0, running: [], callsToday: 0, runs: 0 });
-    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, total: 0 });
+    expect(empty.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, budgetWarning: null, total: 0 });
   });
 });
 
@@ -163,7 +163,7 @@ describe("assistants", () => {
 
 describe("needs you", () => {
   it("adds agent drafts waiting for review to the things worth a look", () => {
-    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, total: 5 });
+    expect(door([], { agentDrafts: 2, attention: 3 }).needsYou).toEqual({ agentDrafts: 2, attention: 3, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, budgetWarning: null, total: 5 });
   });
 
   it("counts the postings found by scans that wait on the Review page", () => {
@@ -182,6 +182,14 @@ describe("needs you", () => {
     expect(needs.proposals.map((entry) => entry.id)).toEqual(["p1", "p2", "p3", "p4", "p5"]);
     expect(needs.proposalCount).toBe(7);
     expect(needs.total).toBe(10);
+  });
+});
+
+describe("the AI budget", () => {
+  it("counts toward Needs you once it is at the warning level or over, and carries the share used", () => {
+    const front = door([], { budgetWarning: { state: "warn", percent: 85 }, newPostings: 1 });
+    expect(front.needsYou).toMatchObject({ budgetWarning: { state: "warn", percent: 85 }, total: 2 });
+    expect(door([]).needsYou.budgetWarning).toBeNull();
   });
 });
 

@@ -165,7 +165,7 @@ export function FrontDoorCards({ door, timeZone }: { door: FrontDoor; timeZone?:
           <>
             <ProposalList proposals={needsYou.proposals} />
             {needsYou.proposalCount > needsYou.proposals.length && <p className="text-meta text-muted">{needsYou.proposalCount - needsYou.proposals.length} more waiting.</p>}
-            {(needsYou.agentDrafts > 0 || needsYou.attention > 0 || needsYou.newPostings > 0 || needsYou.closedDrafts.count > 0) && (
+            {(needsYou.agentDrafts > 0 || needsYou.attention > 0 || needsYou.newPostings > 0 || needsYou.closedDrafts.count > 0 || needsYou.budgetWarning !== null) && (
               <ul className="flex flex-col gap-1.5 text-sm">
                 {needsYou.agentDrafts > 0 && (
                   <li>
@@ -189,6 +189,25 @@ export function FrontDoorCards({ door, timeZone }: { door: FrontDoor; timeZone?:
                       {plural(needsYou.closedDrafts.count, "draft", "drafts")}
                     </Link>{" "}
                     whose job {needsYou.closedDrafts.count === 1 ? "looks" : "look"} closed on the employer&apos;s board
+                  </li>
+                )}
+                {needsYou.budgetWarning && (
+                  <li>
+                    {needsYou.budgetWarning.state === "over" ? (
+                      <>
+                        <Link href="/usage" className="underline underline-offset-2">
+                          AI budget used up
+                        </Link>{" "}
+                        for this month
+                      </>
+                    ) : (
+                      <>
+                        <Link href="/usage" className="underline underline-offset-2">
+                          {needsYou.budgetWarning.percent}% of this month&apos;s AI budget
+                        </Link>{" "}
+                        is used
+                      </>
+                    )}
                   </li>
                 )}
                 {needsYou.attention > 0 && (

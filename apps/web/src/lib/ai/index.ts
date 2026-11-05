@@ -4,6 +4,8 @@ import { AiProvider } from "@/generated/prisma/enums";
 
 import { loadAiConfig, type AiConfig } from "./config";
 import { AiError } from "./errors";
+import { loadBudget } from "./budget-data";
+import { BudgetedProvider } from "./budgeted-provider";
 import { providerOption } from "./provider-options";
 import { ensureAiCallsKept } from "./usage-store";
 import type { AIProvider } from "./provider";
@@ -16,8 +18,15 @@ import { OpenAICompatibleProvider } from "./providers/openai-compatible";
 export { AiError } from "./errors";
 export type { AIProvider, ChatMessage, CompletionRequest, JsonCompletionRequest } from "./provider";
 
-/** A provider for `config`. A saved key that can't be read stops hosted providers with a clear message. */
+/**
+ * A provider for `config`, held to the owner's monthly budget (Settings → Budget). A saved key that can't be read stops
+ * hosted providers with a clear message.
+ */
 export function createProvider(config: AiConfig): AIProvider {
+  return new BudgetedProvider(createUnbudgeted(config), { budget: () => loadBudget(), fallback: (model) => createUnbudgeted({ ...config, model }) });
+}
+
+function createUnbudgeted(config: AiConfig): AIProvider {
   const { provider, baseUrl, model, apiKey, apiKeyProblem, timeoutMs } = config;
   ensureAiCallsKept();
   if (apiKeyProblem && providerOption(provider).apiKey) throw AiError.config(apiKeyProblem);

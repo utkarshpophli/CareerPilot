@@ -73,6 +73,8 @@ describe("stored settings", () => {
       agentAutoDraft: false,
       agentRuns: [],
       scanPreferences: { remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] },
+      modelPrices: [],
+      aiBudget: { monthlyLimit: null, monthlyTokens: null, warnPercent: 80, atLimit: "stop", fallbackModel: null },
       startupsViewedAt: null,
       startupsLastRefresh: null,
       updateCheck: false,

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { computeFrontDoor } from "@/lib/front-door";
@@ -95,6 +95,23 @@ describe("FrontDoorCards with a few applications", () => {
     expect(within(needs).getByRole("link", { name: "3 things" })).toHaveAttribute("href", "#attention-heading");
     expect(within(needs).getByRole("link", { name: "7 new postings" })).toHaveAttribute("href", "/review");
     expect(within(needs).getByRole("link", { name: "2 drafts" })).toHaveAttribute("href", "/applications");
+  });
+
+  it("says when the AI budget is nearly used or used up, and links to the Usage page", () => {
+    const warn = fullDoor();
+    warn.needsYou.budgetWarning = { state: "warn", percent: 85 };
+    const { unmount } = render(<FrontDoorCards door={warn} />);
+    const link = screen.getByRole("link", { name: "85% of this month's AI budget" });
+    expect(link).toHaveAttribute("href", "/usage");
+    expect(link.closest("li")).toHaveTextContent("85% of this month's AI budget is used");
+    unmount();
+    const over = fullDoor();
+    over.needsYou.budgetWarning = { state: "over", percent: 120 };
+    render(<FrontDoorCards door={over} />);
+    expect(screen.getByRole("link", { name: "AI budget used up" }).closest("li")).toHaveTextContent("AI budget used up for this month");
+    cleanup();
+    render(<FrontDoorCards door={fullDoor()} />);
+    expect(screen.queryByText(/AI budget/)).toBeNull();
   });
 
   it("links straight to the draft when only one job looks closed, and says nothing when none does", () => {

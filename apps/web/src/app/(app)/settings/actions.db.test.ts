@@ -23,6 +23,7 @@ import {
   saveJobSearchDetails,
   saveJobSource,
   saveJobSourceKey,
+  saveBudget,
   saveScanPreferences,
   saveScorer,
   saveTypesafeKey,
@@ -335,5 +336,41 @@ describe("saveScanPreferences", () => {
       expect(await saveScanPreferences(bad as never), JSON.stringify(bad)).toMatchObject({ ok: false });
     }
     expect((await loadSettings()).scanPreferences).toEqual({ remote: "unknown", minSalary: null, excludeKeywords: [], excludeCompanies: [] });
+  });
+});
+
+describe("saveBudget", () => {
+  const prices = [{ model: "claude-sonnet-5", currency: "eur", inputPerMillion: 3, outputPerMillion: 15 }];
+  const budget = { monthlyLimit: { amount: 5, currency: "eur" }, monthlyTokens: 2_000_000, warnPercent: 80, atLimit: "fallback" as const, fallbackModel: " claude-haiku-5 " };
+
+  it("saves the prices and the caps, tidied (currency in capitals, a model named once)", async () => {
+    const result = await saveBudget({ prices: [...prices, { ...prices[0], inputPerMillion: 99 }], budget });
+    expect(result).toMatchObject({ ok: true });
+    const saved = await loadSettings();
+    expect(saved.modelPrices).toEqual([{ model: "claude-sonnet-5", currency: "EUR", inputPerMillion: 3, outputPerMillion: 15 }]);
+    expect(saved.aiBudget).toEqual({ monthlyLimit: { amount: 5, currency: "EUR" }, monthlyTokens: 2_000_000, warnPercent: 80, atLimit: "fallback", fallbackModel: "claude-haiku-5" });
+  });
+
+  it("clears the caps when they are emptied", async () => {
+    await saveBudget({ prices, budget });
+    await saveBudget({ prices: [], budget: { monthlyLimit: null, monthlyTokens: null, warnPercent: 80, atLimit: "stop", fallbackModel: null } });
+    const saved = await loadSettings();
+    expect(saved.modelPrices).toEqual([]);
+    expect(saved.aiBudget).toMatchObject({ monthlyLimit: null, monthlyTokens: null, atLimit: "stop" });
+  });
+
+  it("refuses a switch to a model it was not told, and values that make no sense", async () => {
+    for (const bad of [
+      { prices, budget: { ...budget, fallbackModel: null } },
+      { prices, budget: { ...budget, monthlyLimit: { amount: -1, currency: "EUR" } } },
+      { prices, budget: { ...budget, monthlyLimit: { amount: 5, currency: "EURO" } } },
+      { prices, budget: { ...budget, monthlyTokens: 1.5 } },
+      { prices, budget: { ...budget, warnPercent: 100 } },
+      { prices: [{ ...prices[0], inputPerMillion: -1 }], budget },
+      { prices: Array.from({ length: 51 }, (_, index) => ({ ...prices[0], model: `m${index}` })), budget },
+    ]) {
+      expect(await saveBudget(bad as never), JSON.stringify(bad)).toMatchObject({ ok: false });
+    }
+    expect((await loadSettings()).aiBudget.monthlyLimit).toBeNull();
   });
 });

@@ -27,7 +27,10 @@ import { loadSettings } from "@/lib/settings-data";
 import { availableUpdate } from "@/lib/update-check";
 
 import { AgentSection } from "./agent-section";
+import { loadBudget } from "@/lib/ai/budget-data";
+
 import { AiBehaviour } from "./ai-behaviour";
+import { BudgetSection } from "./budget-section";
 import { AiProviderSection } from "./ai-provider-section";
 import { DataSection } from "./data-section";
 import { DocumentsSection } from "./documents-section";
@@ -61,6 +64,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <AiProviderSection initial={await loadAiSettingsView()} />
           <AiBehaviour initial={{ creativity: settings.creativity, strict: settings.strict, showDiff: settings.showDiff }} />
         </>
+      ) : section === "budget" ? (
+        <BudgetSection initial={await loadBudget()} />
       ) : section === "jobs" ? (
         <JobSearchSection initial={jobSearchView(await loadJobSearchConfig())} />
       ) : section === "scoring" ? (

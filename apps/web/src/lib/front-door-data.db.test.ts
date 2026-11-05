@@ -25,7 +25,7 @@ describe("loadFrontDoor", () => {
     const door = await loadFrontDoor({ runs: [], attention: 0, timeZone: "UTC", now });
     expect(door.applications).toMatchObject({ total: 0, sent: 0, trend: "flat" });
     expect(door.assistants).toMatchObject({ connected: 0, running: [] });
-    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, total: 0 });
+    expect(door.needsYou).toEqual({ agentDrafts: 0, attention: 0, proposals: [], proposalCount: 0, newPostings: 0, closedDrafts: { count: 0, firstId: null }, budgetWarning: null, total: 0 });
   });
 
   it("counts applications, platforms and resume versions from real rows", async () => {

@@ -15,6 +15,8 @@ test("totals the AI calls kept, and says what it does not know", async ({ page }
   await expect(page.getByText("2 calls in the last 30 days: 1,200 tokens in, 300 out.")).toBeVisible();
   await expect(page.getByText(/1 call came back without token numbers/)).toBeVisible();
   await expect(page.getByRole("table", { name: "By model" }).getByRole("row", { name: /claude-sonnet-5 1 1,200 300/ })).toBeVisible();
+  await expect(page.getByText(/The prices are the ones you entered under Settings → Budget/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Budget settings" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Usage" })).toBeVisible();
   await sql(`DELETE FROM "AiCall"`);
 });
