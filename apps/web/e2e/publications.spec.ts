@@ -72,13 +72,13 @@ test("leaves a publication out of a tailored resume, and puts it back", async ({
   await expect(publication.getByRole("button")).toHaveText(["Edit", "Leave out"]);
   await publication.getByRole("button", { name: "Leave out" }).click();
   await expect(publication).toHaveCount(0);
-  const notice = page.getByRole("note");
+  const notice = page.getByRole("note", { name: "Left out of the resume" });
   await expect(notice).toContainText("Left out of this resume:");
   await expect(notice).toContainText("Publication “Doe, J., & Vermeer, K. (2016). Trust in…”");
 
   await page.reload();
   await expect(page.locator('[data-unit^="publication:"]')).toHaveCount(0);
-  await page.getByRole("note").getByRole("button", { name: /^Put back the Publication/ }).click();
+  await page.getByRole("note", { name: "Left out of the resume" }).getByRole("button", { name: /^Put back the Publication/ }).click();
   await expect(page.locator('[data-unit^="publication:"]')).toContainText("Trust in automated scheduling");
-  await expect(page.getByRole("note")).toHaveCount(0);
+  await expect(page.getByRole("note", { name: "Left out of the resume" })).toHaveCount(0);
 });
